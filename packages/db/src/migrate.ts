@@ -9,6 +9,7 @@ const pool = new Pool({ connectionString: process.env.DATABASE_URL })
 
 async function migrate() {
   const client = await pool.connect()
+  let inTransaction = false
   try {
     await client.query(`
       CREATE TABLE IF NOT EXISTS migrations (
@@ -32,14 +33,18 @@ async function migrate() {
       }
       const sql = fs.readFileSync(path.join(migrationsDir, file), 'utf8')
       await client.query('BEGIN')
+      inTransaction = true
       await client.query(sql)
       await client.query('INSERT INTO migrations (filename) VALUES ($1)', [file])
       await client.query('COMMIT')
+      inTransaction = false
       console.log(`  apply ${file}`)
     }
     console.log('Migrations complete.')
   } catch (err) {
-    await client.query('ROLLBACK')
+    if (inTransaction) {
+      await client.query('ROLLBACK')
+    }
     throw err
   } finally {
     client.release()

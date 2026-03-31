@@ -1,1 +1,1 @@
-export { pool } from './client.js'
+export { pool, getPool } from './client.js'
