@@ -1,6 +1,14 @@
 node_modules/
 .env
 .env.local
+.env.*.local
 dist/
 .next/
+out/
 *.tsbuildinfo
+.DS_Store
+Thumbs.db
+*.log
+pnpm-debug.log*
+coverage/
+.turbo/
