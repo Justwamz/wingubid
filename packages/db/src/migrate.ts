@@ -5,14 +5,12 @@ import { Pool } from 'pg'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 
-function isLocalDb(url: string | undefined): boolean {
-  return !url || url.includes('localhost') || url.includes('127.0.0.1')
-}
+const ssl = process.env.DATABASE_SSL === 'false' ? false : { rejectUnauthorized: false }
 
 export async function runMigrations(): Promise<void> {
   const pool = new Pool({
     connectionString: process.env.DATABASE_URL,
-    ssl: isLocalDb(process.env.DATABASE_URL) ? false : { rejectUnauthorized: false },
+    ssl,
   })
 
   const client = await pool.connect()
