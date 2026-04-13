@@ -1,5 +1,9 @@
 import { Pool } from 'pg'
 
+function isLocalDb(url: string | undefined): boolean {
+  return !url || url.includes('localhost') || url.includes('127.0.0.1')
+}
+
 let _pool: Pool | null = null
 
 export function getPool(): Pool {
@@ -12,7 +16,7 @@ export function getPool(): Pool {
       max: 10,
       idleTimeoutMillis: 30000,
       connectionTimeoutMillis: 5000,
-      ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false,
+      ssl: isLocalDb(process.env.DATABASE_URL) ? false : { rejectUnauthorized: false },
     })
     _pool.on('error', (err) => {
       console.error('Unexpected pg pool error', err)
