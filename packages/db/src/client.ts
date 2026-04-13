@@ -12,6 +12,7 @@ export function getPool(): Pool {
       max: 10,
       idleTimeoutMillis: 30000,
       connectionTimeoutMillis: 5000,
+      ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false,
     })
     _pool.on('error', (err) => {
       console.error('Unexpected pg pool error', err)
