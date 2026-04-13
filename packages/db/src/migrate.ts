@@ -9,12 +9,12 @@ function isLocalDb(url: string | undefined): boolean {
   return !url || url.includes('localhost') || url.includes('127.0.0.1')
 }
 
-const pool = new Pool({
-  connectionString: process.env.DATABASE_URL,
-  ssl: isLocalDb(process.env.DATABASE_URL) ? false : { rejectUnauthorized: false },
-})
+export async function runMigrations(): Promise<void> {
+  const pool = new Pool({
+    connectionString: process.env.DATABASE_URL,
+    ssl: isLocalDb(process.env.DATABASE_URL) ? false : { rejectUnauthorized: false },
+  })
 
-async function migrate() {
   const client = await pool.connect()
   let inTransaction = false
   try {
@@ -59,7 +59,11 @@ async function migrate() {
   }
 }
 
-migrate().catch(err => {
-  console.error(err)
-  process.exit(1)
-})
+// Allow running directly: pnpm --filter @betting/db migrate
+const isMain = process.argv[1] === fileURLToPath(import.meta.url)
+if (isMain) {
+  runMigrations().catch(err => {
+    console.error(err)
+    process.exit(1)
+  })
+}
