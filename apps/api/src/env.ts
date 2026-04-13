@@ -7,6 +7,9 @@ const schema = z.object({
   REDIS_URL:          z.string().min(1),
   JWT_SECRET:         z.string().min(32),
   JWT_REFRESH_SECRET: z.string().min(32),
+  ADMIN_JWT_SECRET:   z.string().min(32),
+  AT_API_KEY:         z.string().min(1),
+  AT_USERNAME:        z.string().min(1),
 })
 
 const parsed = schema.safeParse(process.env)
