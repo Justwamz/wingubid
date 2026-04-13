@@ -30,7 +30,7 @@ describe('generateOtp', () => {
 
     expect(code).toMatch(/^\d{6}$/)
     expect(mockQuery).toHaveBeenCalledOnce()
-    const [sql, params] = mockQuery.mock.calls[0] as [string, unknown[]]
+    const [sql, params] = mockQuery.mock.calls[0] as unknown as [string, unknown[]]
     expect(sql).toContain('INSERT INTO otp_codes')
     expect(params[0]).toBe('+254700000000')
     expect(params[2]).toBe('registration')
@@ -48,7 +48,7 @@ describe('verifyOtp', () => {
 
     const result = await verifyOtp('+254700000000', '123456', 'registration')
     expect(result).toBe(true)
-    const [updateSql] = mockQuery.mock.calls[1] as [string, unknown[]]
+    const [updateSql] = mockQuery.mock.calls[1] as unknown as [string, unknown[]]
     expect(updateSql).toContain('UPDATE otp_codes')
   })
 

@@ -13,7 +13,7 @@ import { loginAdmin } from './admin-auth.service.js'
 
 const mockQuery = vi.mocked(pool.query)
 
-beforeEach(() => mockQuery.mockReset())
+beforeEach(() => { mockQuery.mockReset() })
 
 describe('loginAdmin', () => {
   it('returns tokens for valid credentials', async () => {
