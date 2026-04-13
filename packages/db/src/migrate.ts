@@ -1,17 +1,33 @@
 import fs from 'fs'
 import path from 'path'
 import { fileURLToPath } from 'url'
-import { Pool } from 'pg'
+import { Pool, PoolConfig } from 'pg'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 
-const ssl = process.env.DATABASE_SSL === 'false' ? false : { rejectUnauthorized: false }
+/**
+ * Parse a postgres:// URL into explicit pg PoolConfig fields.
+ * This bypasses pg-connection-string, which can override the ssl option
+ * when no SSL params are present in the URL.
+ */
+function parseDbUrl(url: string): PoolConfig {
+  const u = new URL(url)
+  const ssl = process.env.DATABASE_SSL === 'false' ? false : { rejectUnauthorized: false }
+  return {
+    host: u.hostname,
+    port: u.port ? parseInt(u.port, 10) : 5432,
+    database: u.pathname.slice(1),
+    user: u.username,
+    password: decodeURIComponent(u.password),
+    ssl,
+  }
+}
 
 export async function runMigrations(): Promise<void> {
-  const pool = new Pool({
-    connectionString: process.env.DATABASE_URL,
-    ssl,
-  })
+  if (!process.env.DATABASE_URL) {
+    throw new Error('DATABASE_URL environment variable is required')
+  }
+  const pool = new Pool(parseDbUrl(process.env.DATABASE_URL))
 
   const client = await pool.connect()
   let inTransaction = false
