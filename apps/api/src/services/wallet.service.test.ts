@@ -26,7 +26,7 @@ function makeMockClient(rows: any[][] = []) {
   }
 }
 
-beforeEach(() => mockQuery.mockReset())
+beforeEach(() => { mockQuery.mockReset() })
 
 describe('getWalletBalance', () => {
   it('returns wallet fields for player', async () => {
@@ -74,7 +74,7 @@ describe('debitForBet', () => {
     const result = await debitForBet(client as any, 'player-1', 10000, 8750, { roundId: 'r-1' })
 
     expect(result.transactionId).toBe('tx-1')
-    const updateCall = client.query.mock.calls[1] as [string, unknown[]]
+    const updateCall = client.query.mock.calls[1] as unknown as [string, unknown[]]
     expect(updateCall[0]).toContain('balance = balance - $1')
     expect(updateCall[0]).toContain('locked_balance = locked_balance + $2')
     expect(updateCall[1]).toContain(10000) // gross
@@ -103,7 +103,7 @@ describe('creditDeposit', () => {
     const result = await creditDeposit(client as any, 'player-1', 10000, 'idem-key', {})
     expect(result.transactionId).toBe('tx-2')
 
-    const insertCall = client.query.mock.calls[2] as [string, unknown[]]
+    const insertCall = client.query.mock.calls[2] as unknown as [string, unknown[]]
     expect(insertCall[0]).toContain('INSERT INTO transactions')
     expect(insertCall[1]).toContain('deposit')
     expect(insertCall[1]).toContain('idem-key')
@@ -138,9 +138,9 @@ describe('settleWithdrawal', () => {
 
     await settleWithdrawal(client as any, 'player-1', 10000, 8000, true, {})
 
-    const updateCall = client.query.mock.calls[1] as [string, unknown[]]
+    const updateCall = client.query.mock.calls[1] as unknown as [string, unknown[]]
     expect(updateCall[0]).toContain('locked_balance = locked_balance - $1')
-    const insertCall = client.query.mock.calls[2] as [string, unknown[]]
+    const insertCall = client.query.mock.calls[2] as unknown as [string, unknown[]]
     expect(insertCall[1]).toContain('withdrawal')
     expect(insertCall[1]).toContain('completed')
     expect(insertCall[1]).toContain(8000) // net payout
@@ -155,9 +155,9 @@ describe('settleWithdrawal', () => {
 
     await settleWithdrawal(client as any, 'player-1', 10000, 8000, false, {})
 
-    const updateCall = client.query.mock.calls[1] as [string, unknown[]]
+    const updateCall = client.query.mock.calls[1] as unknown as [string, unknown[]]
     expect(updateCall[0]).toContain('balance = balance + $2')
-    const insertCall = client.query.mock.calls[2] as [string, unknown[]]
+    const insertCall = client.query.mock.calls[2] as unknown as [string, unknown[]]
     expect(insertCall[1]).toContain('failed')
   })
 })

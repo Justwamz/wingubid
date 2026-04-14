@@ -6,7 +6,7 @@ import { pool } from '@betting/db'
 import { calculateTax, recordTax } from './tax.service.js'
 
 const mockQuery = vi.mocked(pool.query)
-beforeEach(() => mockQuery.mockReset())
+beforeEach(() => { mockQuery.mockReset() })
 
 describe('calculateTax', () => {
   it('returns correct tax and effective amount when enabled', async () => {
@@ -66,7 +66,7 @@ describe('recordTax', () => {
     })
 
     expect(mockClient.query).toHaveBeenCalledOnce()
-    const [sql, params] = mockClient.query.mock.calls[0] as [string, unknown[]]
+    const [sql, params] = mockClient.query.mock.calls[0] as unknown as [string, unknown[]]
     expect(sql).toContain('INSERT INTO tax_transactions')
     expect(params).toContain('player-1')
     expect(params).toContain(1250)
