@@ -1,12 +1,19 @@
+import { runMigrations } from '@betting/db'
 import { buildServer } from './server.js'
 import { env } from './env.js'
+import { startCron } from './lib/cron.js'
 
-const app = buildServer()
+async function main() {
+  await runMigrations()
 
-app.listen({ port: env.PORT, host: '0.0.0.0' }, (err) => {
-  if (err) {
-    app.log.error(err)
-    process.exit(1)
-  }
+  const app = buildServer()
+  await app.listen({ port: env.PORT, host: '0.0.0.0' })
   app.log.info(`API server listening on port ${env.PORT}`)
+
+  startCron()
+}
+
+main().catch(err => {
+  console.error(err)
+  process.exit(1)
 })

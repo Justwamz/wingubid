@@ -5,9 +5,8 @@ import { Pool } from 'pg'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 
-const pool = new Pool({ connectionString: process.env.DATABASE_URL })
-
-async function migrate() {
+export async function runMigrations(): Promise<void> {
+  const pool = new Pool({ connectionString: process.env.DATABASE_URL })
   const client = await pool.connect()
   let inTransaction = false
   try {
@@ -52,7 +51,10 @@ async function migrate() {
   }
 }
 
-migrate().catch(err => {
-  console.error(err)
-  process.exit(1)
-})
+// Allow running as standalone script: tsx src/migrate.ts
+if (process.argv[1] && fileURLToPath(import.meta.url) === path.resolve(process.argv[1])) {
+  runMigrations().catch(err => {
+    console.error(err)
+    process.exit(1)
+  })
+}
