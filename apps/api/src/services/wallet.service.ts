@@ -1,4 +1,4 @@
-import type { PoolClient } from 'pg'
+import type { PoolClient } from '@betting/db'
 import { pool } from '@betting/db'
 import { AppError } from '../lib/errors.js'
 
