@@ -4,7 +4,7 @@ import { pool } from '@betting/db'
 export async function gameLeaderboardRoutes(app: FastifyInstance) {
   app.get('/games/leaderboard', async (_req, reply) => {
     const { rows } = await pool.query(
-      `SELECT p.first_name AS player_name, b.game_type AS game,
+      `SELECT p.name AS player_name, b.game_type AS game,
               b.cashout_multiplier AS multiplier, b.winnings, w.currency, b.settled_at AS won_at
        FROM bets b
        JOIN players p ON p.id = b.player_id
