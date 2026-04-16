@@ -5,8 +5,8 @@ const config: Config = {
   theme: {
     extend: {
       colors: {
-        'game-bg':       '#272422',
-        'game-card':     '#1e1b18',
+        'game-bg':       '#1a1025',
+        'game-card':     '#272422',
         'game-border':   '#3a3530',
         'accent-cyan':   '#00F2FE',
         'accent-violet': '#80508B',
