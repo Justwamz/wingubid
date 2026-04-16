@@ -2,7 +2,10 @@
   "name": "betting-platform",
   "private": true,
   "version": "0.0.1",
-  "engines": { "node": "20.x", "pnpm": ">=9" },
+  "engines": {
+    "node": "20.x",
+    "pnpm": ">=9"
+  },
   "scripts": {
     "dev:api": "pnpm --filter api dev",
     "dev:web": "pnpm --filter web dev",
@@ -12,6 +15,7 @@
     "migrate": "pnpm --filter @betting/db migrate"
   },
   "devDependencies": {
+    "@rollup/rollup-win32-x64-msvc": "^4.60.1",
     "typescript": "^5.4.5"
   }
 }
