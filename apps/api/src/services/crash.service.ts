@@ -15,6 +15,7 @@ export async function placeBet(
 ): Promise<PlacedBet> {
   const client = await pool.connect()
   try {
+    await client.query('BEGIN')
     const { walletId } = await debitForBet(client, playerId, grossStake, grossStake, {
       game: 'crash', roundId,
     })
@@ -24,7 +25,11 @@ export async function placeBet(
        RETURNING id, effective_stake`,
       [playerId, walletId, roundId, grossStake, grossStake, autoCashoutAt ?? null],
     )
+    await client.query('COMMIT')
     return { betId: rows[0].id, effectiveStake: Number(rows[0].effective_stake) }
+  } catch (err) {
+    await client.query('ROLLBACK')
+    throw err
   } finally {
     client.release()
   }
@@ -37,6 +42,7 @@ export async function cashout(
 ): Promise<{ winnings: number }> {
   const client = await pool.connect()
   try {
+    await client.query('BEGIN')
     const { rows } = await client.query<{ id: string; effective_stake: string }>(
       `SELECT id, effective_stake FROM bets
        WHERE id = $1 AND player_id = $2 AND status = 'active' FOR UPDATE`,
@@ -56,7 +62,11 @@ export async function cashout(
       `UPDATE bets SET status = 'won', cashout_multiplier = $1, winnings = $2, settled_at = NOW() WHERE id = $3`,
       [multiplier, winnings, betId],
     )
+    await client.query('COMMIT')
     return { winnings }
+  } catch (err) {
+    await client.query('ROLLBACK')
+    throw err
   } finally {
     client.release()
   }
@@ -69,6 +79,7 @@ export async function settleLostBets(
 ): Promise<void> {
   const client = await pool.connect()
   try {
+    await client.query('BEGIN')
     const { rows: activeBets } = await client.query<{
       id: string; player_id: string; effective_stake: string
     }>(
@@ -94,6 +105,10 @@ export async function settleLostBets(
        WHERE id = $3`,
       [serverSeed, crashPoint, roundId],
     )
+    await client.query('COMMIT')
+  } catch (err) {
+    await client.query('ROLLBACK')
+    throw err
   } finally {
     client.release()
   }

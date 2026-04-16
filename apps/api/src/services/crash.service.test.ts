@@ -20,10 +20,12 @@ beforeEach(() => vi.clearAllMocks())
 describe('placeBet', () => {
   it('debits wallet, inserts bet row, returns betId', async () => {
     const client = makeMockClient([
+      [],                                                  // BEGIN
       [{ id: 'w-1', balance: '50000', currency: 'KES' }], // selectWalletForUpdate
       [{ balance: '40000' }],                              // UPDATE wallets
       [{ id: 'tx-1' }],                                   // INSERT transactions
       [{ id: 'bet-1', effective_stake: '10000' }],        // INSERT bets
+      // COMMIT: beyond array → []
     ])
     mockConnect.mockResolvedValueOnce(client as any)
 
@@ -33,7 +35,11 @@ describe('placeBet', () => {
   })
 
   it('throws INSUFFICIENT_FUNDS when balance too low', async () => {
-    const client = makeMockClient([[{ id: 'w-1', balance: '500', currency: 'KES' }]])
+    const client = makeMockClient([
+      [],                                                 // BEGIN
+      [{ id: 'w-1', balance: '500', currency: 'KES' }],  // selectWalletForUpdate
+      // ROLLBACK: beyond array → []
+    ])
     mockConnect.mockResolvedValueOnce(client as any)
 
     await expect(placeBet('p-1', 'round-1', 10000, undefined))
@@ -45,12 +51,14 @@ describe('placeBet', () => {
 describe('cashout', () => {
   it('credits winnings, marks bet won, returns winnings', async () => {
     const client = makeMockClient([
+      [],                                                             // BEGIN
       [{ id: 'bet-1', effective_stake: '10000', status: 'active' }], // SELECT bet FOR UPDATE
-      [{ id: 'w-1', balance: '0', currency: 'KES' }],               // selectWalletForUpdate
+      [{ id: 'w-1', balance: '0', currency: 'KES' }],               // selectWalletForUpdate (creditWinnings)
       [{ balance: '20000' }],                                        // UPDATE wallets balance
       [{ id: 'tx-2' }],                                             // INSERT transactions
       [{}],                                                          // UPDATE wallets locked_balance
       [{}],                                                          // UPDATE bets
+      // COMMIT: beyond array → []
     ])
     mockConnect.mockResolvedValueOnce(client as any)
 
@@ -59,7 +67,11 @@ describe('cashout', () => {
   })
 
   it('throws BET_NOT_FOUND when bet not active', async () => {
-    const client = makeMockClient([[]])
+    const client = makeMockClient([
+      [], // BEGIN
+      [], // SELECT bet FOR UPDATE → empty → throws BET_NOT_FOUND
+      // ROLLBACK: beyond array → []
+    ])
     mockConnect.mockResolvedValueOnce(client as any)
 
     await expect(cashout('p-1', 'bet-999', 2.00))
@@ -70,7 +82,8 @@ describe('cashout', () => {
 describe('settleLostBets', () => {
   it('marks active bets as lost and decrements locked_balance', async () => {
     const client = makeMockClient([
-      [
+      [],                                                                             // BEGIN
+      [                                                                               // SELECT active bets
         { id: 'bet-1', player_id: 'p-1', effective_stake: '10000' },
         { id: 'bet-2', player_id: 'p-2', effective_stake: '5000' },
       ],
@@ -78,17 +91,23 @@ describe('settleLostBets', () => {
       [{}], // UPDATE wallets p-1 locked
       [{}], // UPDATE wallets p-2 locked
       [{}], // UPDATE game_rounds
+      // COMMIT: beyond array → []
     ])
     mockConnect.mockResolvedValueOnce(client as any)
 
     await settleLostBets('round-1', 'revealed-seed', 1.23)
 
-    const betCall = client.query.mock.calls[1] as unknown as [string, unknown[]]
+    const betCall = client.query.mock.calls[2] as unknown as [string, unknown[]]
     expect(betCall[0]).toContain("status = 'lost'")
   })
 
   it('still updates game_round when no active bets', async () => {
-    const client = makeMockClient([[], [{}]])
+    const client = makeMockClient([
+      [],   // BEGIN
+      [],   // SELECT active bets → empty
+      [{}], // UPDATE game_rounds
+      // COMMIT: beyond array → []
+    ])
     mockConnect.mockResolvedValueOnce(client as any)
 
     await expect(settleLostBets('round-1', 'seed', 1.00)).resolves.toBeUndefined()
