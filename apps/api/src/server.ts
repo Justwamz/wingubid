@@ -20,6 +20,10 @@ import { providerBalanceRoutes } from './routes/provider/balance.js'
 import { providerDebitRoutes } from './routes/provider/debit.js'
 import { providerCreditRoutes } from './routes/provider/credit.js'
 import { providerRollbackRoutes } from './routes/provider/rollback.js'
+import { gameLeaderboardRoutes } from './routes/games/leaderboard.js'
+import { gameHistoryRoutes } from './routes/games/history.js'
+import { minesRoutes } from './routes/games/mines.js'
+import { diceRoutes } from './routes/games/dice.js'
 
 export function buildServer() {
   const app = Fastify({ logger: process.env.NODE_ENV !== 'test' })
@@ -49,6 +53,11 @@ export function buildServer() {
   app.register(providerDebitRoutes)
   app.register(providerCreditRoutes)
   app.register(providerRollbackRoutes)
+
+  app.register(gameLeaderboardRoutes)
+  app.register(gameHistoryRoutes)
+  app.register(minesRoutes)
+  app.register(diceRoutes)
 
   app.setErrorHandler((error, _req, reply) => {
     const statusCode = error.statusCode ?? 500
