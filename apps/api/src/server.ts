@@ -1,8 +1,14 @@
 import Fastify from 'fastify'
 import cookie from '@fastify/cookie'
 import cors from '@fastify/cors'
-import jwt from '@fastify/jwt'
 import { healthRoutes } from './routes/health.js'
+import { registerRoutes } from './routes/auth/register.js'
+import { verifyOtpRoutes } from './routes/auth/verify-otp.js'
+import { loginRoutes } from './routes/auth/login.js'
+import { refreshRoutes } from './routes/auth/refresh.js'
+import { logoutRoutes } from './routes/auth/logout.js'
+import { adminAuthRoutes } from './routes/admin/auth.js'
+import { playerMeRoutes } from './routes/player/me.js'
 import { walletBalanceRoutes } from './routes/wallet/balance.js'
 import { walletDepositRoutes } from './routes/wallet/deposit.js'
 import { walletWithdrawRoutes } from './routes/wallet/withdraw.js'
@@ -18,26 +24,27 @@ import { providerRollbackRoutes } from './routes/provider/rollback.js'
 export function buildServer() {
   const app = Fastify({ logger: process.env.NODE_ENV !== 'test' })
 
-  // JWT secret: read from env directly (not env.ts) so tests can call buildServer() without full env
-  const jwtSecret = process.env.JWT_SECRET ?? 'dev-secret-minimum-32-characters-long'
-
-  app.register(cors, { origin: true })
+  app.register(cors, { origin: process.env.CORS_ORIGIN ?? true, credentials: true })
   app.register(cookie)
-  app.register(jwt, { secret: jwtSecret })
-  app.register(healthRoutes)
 
-  // Wallet routes (player-authenticated)
+  app.register(healthRoutes)
+  app.register(registerRoutes)
+  app.register(verifyOtpRoutes)
+  app.register(loginRoutes)
+  app.register(refreshRoutes)
+  app.register(logoutRoutes)
+  app.register(adminAuthRoutes)
+  app.register(playerMeRoutes)
+
   app.register(walletBalanceRoutes)
   app.register(walletDepositRoutes)
   app.register(walletWithdrawRoutes)
 
-  // Payment webhooks (no auth — providers call these)
   app.register(mpesaWebhookRoutes)
   app.register(mtnWebhookRoutes)
   app.register(airtelWebhookRoutes)
   app.register(stubWebhookRoutes)
 
-  // Provider wallet API (HMAC-authenticated)
   app.register(providerBalanceRoutes)
   app.register(providerDebitRoutes)
   app.register(providerCreditRoutes)

@@ -7,6 +7,10 @@ const schema = z.object({
   REDIS_URL:          z.string().min(1),
   JWT_SECRET:         z.string().min(32),
   JWT_REFRESH_SECRET: z.string().min(32),
+  ADMIN_JWT_SECRET:   z.string().min(32),
+  SMS_ENABLED:        z.enum(['true', 'false']).default('false').transform(v => v === 'true'),
+  AT_API_KEY:         z.string().default(''),
+  AT_USERNAME:        z.string().default('sandbox'),
 })
 
 const parsed = schema.safeParse(process.env)

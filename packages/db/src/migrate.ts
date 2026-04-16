@@ -28,6 +28,7 @@ export async function runMigrations(): Promise<void> {
     throw new Error('DATABASE_URL environment variable is required')
   }
   const pool = new Pool(parseDbUrl(process.env.DATABASE_URL))
+
   const client = await pool.connect()
   let inTransaction = false
   try {

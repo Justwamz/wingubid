@@ -9,6 +9,7 @@ export default defineConfig({
       REDIS_URL: 'redis://localhost:6379',
       JWT_SECRET: 'test-secret-minimum-32-characters-long',
       JWT_REFRESH_SECRET: 'test-refresh-secret-minimum-32-chars',
+      ADMIN_JWT_SECRET: 'test-admin-secret-minimum-32-chars!!',
       DATABASE_SSL: 'false',
     },
   },

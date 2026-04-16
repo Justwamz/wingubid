@@ -1,13 +1,14 @@
 import type { FastifyRequest, FastifyReply } from 'fastify'
-import { verifyPlayerAccessToken } from '../lib/jwt.js'
+import { verifyAdminAccessToken } from '../lib/jwt.js'
 
 declare module 'fastify' {
   interface FastifyRequest {
-    playerId: string
+    adminId: string
+    adminRole: string
   }
 }
 
-export async function authenticate(req: FastifyRequest, reply: FastifyReply): Promise<void> {
+export async function authenticateAdmin(req: FastifyRequest, reply: FastifyReply): Promise<void> {
   const header = req.headers.authorization
   if (!header?.startsWith('Bearer ')) {
     reply.status(401).send({ error: { code: 'UNAUTHORIZED', message: 'Missing token' } })
@@ -15,8 +16,9 @@ export async function authenticate(req: FastifyRequest, reply: FastifyReply): Pr
   }
 
   try {
-    const payload = verifyPlayerAccessToken(header.slice(7))
-    req.playerId = payload.sub
+    const payload = verifyAdminAccessToken(header.slice(7))
+    req.adminId = payload.sub
+    req.adminRole = payload.role
   } catch {
     reply.status(401).send({ error: { code: 'UNAUTHORIZED', message: 'Invalid token' } })
   }
