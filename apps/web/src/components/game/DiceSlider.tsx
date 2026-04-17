@@ -1,37 +1,24 @@
 'use client'
 interface Props {
-  target: number
-  direction: 'over' | 'under'
-  onChange: (target: number) => void
-  result: number | null
+  value: number
+  onChange: (value: number) => void
+  // Legacy props retained for backward compat (ignored by new layout)
+  target?: number
+  direction?: 'over' | 'under'
+  result?: number | null
 }
 
-export function DiceSlider({ target, direction, onChange, result }: Props) {
-  const winZoneLeft = direction === 'under' ? 0 : target
-  const winZoneWidth = direction === 'under' ? target : 100 - target
-
+export function DiceSlider({ value, onChange }: Props) {
   return (
     <div className="space-y-2">
-      <div className="relative h-8 rounded-full overflow-hidden bg-game-bg border border-game-border">
-        <div
-          className="absolute inset-y-0 bg-warning-coral opacity-60"
-          style={{ left: 0, width: `${direction === 'under' ? 100 - target : target}%` }}
-        />
-        <div
-          className="absolute inset-y-0 bg-accent-cyan opacity-60"
-          style={{ left: `${winZoneLeft}%`, width: `${winZoneWidth}%` }}
-        />
-        {result !== null && (
-          <div
-            className="absolute inset-y-0 w-1 bg-white"
-            style={{ left: `${result}%` }}
-          />
-        )}
+      <div className="flex justify-between text-xs text-gray-400">
+        <span>1</span>
+        <span className="text-white font-semibold">{value}</span>
+        <span>99</span>
       </div>
-
       <input
-        type="range" min="1" max="98"
-        value={target} onChange={e => onChange(Number(e.target.value))}
+        type="range" min="1" max="99"
+        value={value} onChange={e => onChange(Number(e.target.value))}
         className="w-full accent-accent-cyan"
       />
     </div>
