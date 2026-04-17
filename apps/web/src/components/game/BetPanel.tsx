@@ -5,12 +5,14 @@ import type { RoundStatus, MyBet } from '@/hooks/useCrashGame'
 interface Props {
   status: RoundStatus
   myBet: MyBet | null
-  multiplier: number
+  multiplier?: number
+  waitingEndsAt?: string | null
+  error?: string | null
   onPlaceBet: (grossStake: number, autoCashoutAt?: number) => void
   onCashout: () => void
 }
 
-export function BetPanel({ status, myBet, multiplier, onPlaceBet, onCashout }: Props) {
+export function BetPanel({ status, myBet, multiplier = 1, waitingEndsAt, error, onPlaceBet, onCashout }: Props) {
   const [stake, setStake] = useState('')
   const [autoCashout, setAutoCashout] = useState('')
   const [showAuto, setShowAuto] = useState(false)
