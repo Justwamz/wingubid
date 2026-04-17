@@ -2,6 +2,7 @@
 import { useState } from 'react'
 import { useMinesGame } from '@/hooks/useMinesGame'
 import { MinesGrid } from '@/components/game/MinesGrid'
+import { MinesHistory } from '@/components/game/MinesHistory'
 
 export default function MinesPage() {
   const { game, loading, error, startGame, revealTile, cashout } = useMinesGame()
@@ -98,6 +99,8 @@ export default function MinesPage() {
       )}
 
       {error && <p className="text-warning-coral text-sm text-center">{error}</p>}
+
+      <MinesHistory />
     </div>
   )
 }
