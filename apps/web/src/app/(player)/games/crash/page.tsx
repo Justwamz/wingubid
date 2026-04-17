@@ -39,7 +39,7 @@ export default function CrashPage() {
         data-testid="crash-chart"
         className="relative bg-game-card border border-game-border rounded-xl overflow-hidden h-48"
       >
-        <CrashChart points={chartPoints} status={status} />
+        <CrashChart points={chartPoints} status={status === 'idle' ? 'waiting' : status} />
         <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
           <span className={`text-3xl font-extrabold tracking-tight drop-shadow ${multiplierColor}`}>
             {multiplierLabel}

@@ -6,7 +6,7 @@ interface Props {
   status: RoundStatus
   myBet: MyBet | null
   multiplier?: number
-  waitingEndsAt?: string | null
+  waitingEndsAt?: number | null
   error?: string | null
   onPlaceBet: (grossStake: number, autoCashoutAt?: number) => void
   onCashout: () => void
