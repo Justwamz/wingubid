@@ -17,7 +17,7 @@ export function DiceFace({ value, size = 64, won = false }: DiceFaceProps) {
   const pips = PIP_POSITIONS[value] ?? []
   const pipColor = won ? '#00F2FE' : '#80508B'
   const borderColor = won ? '#00F2FE' : '#3a3530'
-  const r = size * 0.1
+  const r = 6.4  // 10% of the fixed 64-unit viewBox, so pips scale consistently
 
   return (
     <svg

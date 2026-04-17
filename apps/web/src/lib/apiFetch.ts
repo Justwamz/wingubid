@@ -16,7 +16,7 @@ export async function apiFetch<T>(
     },
   })
 
-  const json = await res.json()
-  if (!res.ok) throw new Error(json?.error?.message ?? 'Request failed')
+  const json = await res.json().catch(() => null)
+  if (!res.ok) throw new Error((json as { error?: { message?: string } } | null)?.error?.message ?? 'Request failed')
   return json as T
 }

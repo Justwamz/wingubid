@@ -17,8 +17,6 @@ vi.mock('@/hooks/useCrashGame', () => ({
   }),
 }))
 
-vi.mock('@/lib/apiFetch', () => ({ apiFetch: vi.fn() }))
-
 import CrashPage from '../page'
 
 describe('CrashPage', () => {
