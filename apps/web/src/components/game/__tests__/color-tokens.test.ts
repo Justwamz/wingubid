@@ -6,9 +6,9 @@ const config = resolveConfig(tailwindConfig as Parameters<typeof resolveConfig>[
 
 describe('color tokens', () => {
   it('game-bg is dark violet', () => {
-    expect((config.theme.colors as Record<string, string>)['game-bg']).toBe('#1a1025')
+    expect((config.theme.colors as unknown as Record<string, string>)['game-bg']).toBe('#1a1025')
   })
   it('game-card is charcoal', () => {
-    expect((config.theme.colors as Record<string, string>)['game-card']).toBe('#272422')
+    expect((config.theme.colors as unknown as Record<string, string>)['game-card']).toBe('#272422')
   })
 })
