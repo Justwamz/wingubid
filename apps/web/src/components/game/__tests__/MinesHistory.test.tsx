@@ -17,6 +17,14 @@ describe('MinesHistory', () => {
     })
   })
 
+  it('shows error state on fetch failure', async () => {
+    mockFetch.mockRejectedValue(new Error('Network error'))
+    render(<MinesHistory />)
+    await waitFor(() => {
+      expect(screen.getByText(/could not load history/i)).toBeTruthy()
+    })
+  })
+
   it('renders rows for mines games', async () => {
     mockFetch.mockResolvedValue([
       {

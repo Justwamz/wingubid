@@ -16,11 +16,12 @@ interface BetRecord {
 export function MinesHistory() {
   const [records, setRecords] = useState<BetRecord[]>([])
   const [loading, setLoading] = useState(true)
+  const [error, setError] = useState(false)
 
   useEffect(() => {
     apiFetch<BetRecord[]>('/player/bets')
       .then(all => setRecords(all.filter(b => b.gameType === 'mines').slice(0, 5)))
-      .catch(() => setRecords([]))
+      .catch(() => setError(true))
       .finally(() => setLoading(false))
   }, [])
 
@@ -28,6 +29,14 @@ export function MinesHistory() {
     return (
       <div className="bg-game-card border border-game-border rounded-xl p-4">
         <p className="text-gray-500 text-sm text-center">Loading history...</p>
+      </div>
+    )
+  }
+
+  if (error) {
+    return (
+      <div className="bg-game-card border border-game-border rounded-xl p-4">
+        <p className="text-warning-coral text-sm text-center">Could not load history.</p>
       </div>
     )
   }
@@ -46,10 +55,10 @@ export function MinesHistory() {
       <table className="w-full text-sm">
         <thead>
           <tr className="text-gray-500 text-xs">
-            <th className="text-left py-1">Result</th>
-            <th className="text-right py-1">Stake</th>
-            <th className="text-right py-1">Multiplier</th>
-            <th className="text-right py-1">Winnings</th>
+            <th scope="col" className="text-left py-1">Result</th>
+            <th scope="col" className="text-right py-1">Stake</th>
+            <th scope="col" className="text-right py-1">Multiplier</th>
+            <th scope="col" className="text-right py-1">Winnings</th>
           </tr>
         </thead>
         <tbody>
@@ -58,6 +67,8 @@ export function MinesHistory() {
               <td className="py-1.5">
                 {r.status === 'won' ? (
                   <span className="text-accent-cyan font-bold">WIN</span>
+                ) : r.status === 'pending' ? (
+                  <span className="text-gray-400 font-bold">PENDING</span>
                 ) : (
                   <span className="text-warning-coral font-bold">LOSS</span>
                 )}
@@ -66,7 +77,7 @@ export function MinesHistory() {
               <td className="text-right text-gray-300">
                 {r.cashoutMultiplier != null ? `${r.cashoutMultiplier.toFixed(2)}×` : '—'}
               </td>
-              <td className={`text-right font-semibold ${r.status === 'won' ? 'text-accent-cyan' : 'text-warning-coral'}`}>
+              <td className={`text-right font-semibold ${r.status === 'won' ? 'text-accent-cyan' : r.status === 'pending' ? 'text-gray-400' : 'text-warning-coral'}`}>
                 {r.winnings != null ? r.winnings : '—'}
               </td>
             </tr>
