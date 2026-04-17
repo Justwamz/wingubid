@@ -1,6 +1,6 @@
 'use client'
 
-import React from 'react'
+import React, { useId } from 'react'
 
 interface CrashChartProps {
   points: number[]
@@ -22,9 +22,10 @@ function toX(index: number, total: number): number {
 }
 
 export function CrashChart({ points, status }: CrashChartProps) {
+  const uid = useId().replace(/:/g, '')
   const maxValue = points.length > 0 ? Math.max(...points, 2) : 2
   const stroke = status === 'crashed' ? '#FF4E50' : '#00F2FE'
-  const fillId = `chart-fill-${status}`
+  const fillId = `chart-fill-${uid}`
 
   const polyPoints = points
     .map((v, i) => `${toX(i, points.length)},${toY(v, maxValue)}`)
