@@ -8,6 +8,7 @@ import { loginRoutes } from './routes/auth/login.js'
 import { refreshRoutes } from './routes/auth/refresh.js'
 import { logoutRoutes } from './routes/auth/logout.js'
 import { adminAuthRoutes } from './routes/admin/auth.js'
+import { adminStatsRoutes } from './routes/admin/stats.js'
 import { playerMeRoutes } from './routes/player/me.js'
 import { walletBalanceRoutes } from './routes/wallet/balance.js'
 import { walletDepositRoutes } from './routes/wallet/deposit.js'
@@ -38,6 +39,7 @@ export function buildServer() {
   app.register(refreshRoutes)
   app.register(logoutRoutes)
   app.register(adminAuthRoutes)
+  app.register(adminStatsRoutes)
   app.register(playerMeRoutes)
 
   app.register(walletBalanceRoutes)

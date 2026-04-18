@@ -25,7 +25,7 @@ export function verifyPlayerAccessToken(token: string): PlayerAccessPayload {
 }
 
 export function signAdminAccessToken(adminId: string, role: string): string {
-  return jwt.sign({ sub: adminId, role, type: 'admin_access' }, env.ADMIN_JWT_SECRET, { expiresIn: '15m' })
+  return jwt.sign({ sub: adminId, role, type: 'admin_access' }, env.ADMIN_JWT_SECRET, { expiresIn: '4h' })
 }
 
 export function verifyAdminAccessToken(token: string): AdminAccessPayload {
