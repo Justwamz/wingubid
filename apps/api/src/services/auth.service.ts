@@ -4,6 +4,7 @@ import { hashPassword, verifyPassword } from '../lib/hash.js'
 import { signPlayerAccessToken } from '../lib/jwt.js'
 import { generateOtp, verifyOtp } from './otp.service.js'
 import { sendSms } from './sms.service.js'
+import { env } from '../env.js'
 
 export class AppError extends Error {
   constructor(
@@ -31,9 +32,12 @@ const CURRENCY_BY_COUNTRY: Record<string, string> = {
   RW: 'RWF',
 }
 
-export async function registerPlayer(input: RegisterInput): Promise<void> {
+export async function registerPlayer(
+  input: RegisterInput,
+): Promise<{ accessToken: string; refreshToken: string } | null> {
   const client = await pool.connect()
   let committed = false
+  let playerId: string
   try {
     await client.query('BEGIN')
 
@@ -49,12 +53,12 @@ export async function registerPlayer(input: RegisterInput): Promise<void> {
     const currency = CURRENCY_BY_COUNTRY[input.country] ?? input.currency
 
     const { rows } = await client.query<{ id: string }>(
-      `INSERT INTO players (phone, name, country, currency, date_of_birth, password_hash)
-       VALUES ($1, $2, $3, $4, $5, $6)
+      `INSERT INTO players (phone, name, country, currency, date_of_birth, password_hash${env.SMS_ENABLED ? '' : ', phone_verified_at'})
+       VALUES ($1, $2, $3, $4, $5, $6${env.SMS_ENABLED ? '' : ', NOW()'})
        RETURNING id`,
       [input.phone, input.name, input.country, currency, input.date_of_birth, passwordHash],
     )
-    const playerId = rows[0].id
+    playerId = rows[0].id
 
     await client.query(
       `INSERT INTO wallets (player_id, currency) VALUES ($1, $2)`,
@@ -72,8 +76,13 @@ export async function registerPlayer(input: RegisterInput): Promise<void> {
     client.release()
   }
 
+  if (!env.SMS_ENABLED) {
+    return issueTokens(playerId)
+  }
+
   const code = await generateOtp(input.phone, 'registration')
   await sendSms(input.phone, `Your verification code is ${code}. Valid for 10 minutes.`)
+  return null
 }
 
 export async function verifyPlayerOtp(

@@ -26,7 +26,17 @@ export async function registerRoutes(app: FastifyInstance) {
     const currencyMap: Record<string, string> = { KE: 'KES', UG: 'UGX', TZ: 'TZS', RW: 'RWF' }
 
     try {
-      await registerPlayer({ ...parsed.data, currency: currencyMap[country] })
+      const tokens = await registerPlayer({ ...parsed.data, currency: currencyMap[country] })
+      if (tokens) {
+        reply.setCookie('refresh_token', tokens.refreshToken, {
+          httpOnly: true,
+          secure: process.env.NODE_ENV === 'production',
+          sameSite: 'strict',
+          path: '/auth/refresh',
+          maxAge: 7 * 24 * 60 * 60,
+        })
+        return reply.status(201).send({ access_token: tokens.accessToken })
+      }
       return reply.status(201).send({ message: `OTP sent to ${parsed.data.phone}` })
     } catch (err) {
       if (err instanceof AppError) {

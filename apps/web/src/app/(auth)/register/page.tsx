@@ -21,13 +21,18 @@ export default function RegisterPage() {
     e.preventDefault()
     setError('')
     setLoading(true)
-    const { error: err } = await apiFetch('/auth/register', {
+    const { data, error: err } = await apiFetch<{ access_token?: string; message?: string }>('/auth/register', {
       method: 'POST',
       body: JSON.stringify(form),
     })
     setLoading(false)
     if (err) { setError(err.message); return }
-    router.push(`/verify?phone=${encodeURIComponent(form.phone)}`)
+    if (data?.access_token) {
+      localStorage.setItem('access_token', data.access_token)
+      router.push('/lobby')
+    } else {
+      router.push(`/verify?phone=${encodeURIComponent(form.phone)}`)
+    }
   }
 
   return (
