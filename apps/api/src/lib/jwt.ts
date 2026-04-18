@@ -17,7 +17,7 @@ export interface AdminAccessPayload {
 }
 
 export function signPlayerAccessToken(playerId: string): string {
-  return jwt.sign({ sub: playerId, type: 'player_access' }, env.JWT_SECRET, { expiresIn: '15m' })
+  return jwt.sign({ sub: playerId, type: 'player_access' }, env.JWT_SECRET, { expiresIn: '24h' })
 }
 
 export function verifyPlayerAccessToken(token: string): PlayerAccessPayload {
