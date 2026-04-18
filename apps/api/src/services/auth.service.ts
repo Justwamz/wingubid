@@ -133,7 +133,7 @@ export async function loginPlayer(
     throw new AppError('INVALID_CREDENTIALS', 'Invalid phone or password', 401)
   }
 
-  if (!player.phone_verified_at) {
+  if (!player.phone_verified_at && env.SMS_ENABLED) {
     throw new AppError('PHONE_NOT_VERIFIED', 'Phone not verified — check your OTP', 403)
   }
 
