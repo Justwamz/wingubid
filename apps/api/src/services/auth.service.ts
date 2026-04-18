@@ -60,10 +60,17 @@ export async function registerPlayer(
     )
     playerId = rows[0].id
 
-    await client.query(
-      `INSERT INTO wallets (player_id, currency) VALUES ($1, $2)`,
+    const { rows: walletRows } = await client.query<{ id: string }>(
+      `INSERT INTO wallets (player_id, currency) VALUES ($1, $2) RETURNING id`,
       [playerId, currency],
     )
+
+    if (!env.SMS_ENABLED) {
+      await client.query(
+        `UPDATE wallets SET balance = 100000 WHERE id = $1`,
+        [walletRows[0].id],
+      )
+    }
 
     await client.query('COMMIT')
     committed = true

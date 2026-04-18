@@ -4,13 +4,13 @@ import React, { useState, useEffect } from 'react'
 import { apiFetch } from '@/lib/apiFetch'
 
 interface BetRecord {
-  id: string
-  gameType: string
-  status: 'won' | 'lost' | 'pending'
+  betId: string
+  game: string
+  status: string
   grossStake: number
-  cashoutMultiplier: number | null
+  multiplier: number | null
   winnings: number | null
-  settledAt: string | null
+  createdAt: string
 }
 
 export function MinesHistory() {
@@ -19,8 +19,8 @@ export function MinesHistory() {
   const [error, setError] = useState(false)
 
   useEffect(() => {
-    apiFetch<BetRecord[]>('/player/bets')
-      .then(all => setRecords(all.filter(b => b.gameType === 'mines').slice(0, 5)))
+    apiFetch<BetRecord[]>('/games/history')
+      .then(all => setRecords(all.filter(b => b.game === 'mines').slice(0, 5)))
       .catch(() => setError(true))
       .finally(() => setLoading(false))
   }, [])
@@ -63,7 +63,7 @@ export function MinesHistory() {
         </thead>
         <tbody>
           {records.map(r => (
-            <tr key={r.id} className="border-t border-game-border">
+            <tr key={r.betId} className="border-t border-game-border">
               <td className="py-1.5">
                 {r.status === 'won' ? (
                   <span className="text-accent-cyan font-bold">WIN</span>
@@ -75,7 +75,7 @@ export function MinesHistory() {
               </td>
               <td className="text-right text-white">{r.grossStake}</td>
               <td className="text-right text-gray-300">
-                {r.cashoutMultiplier != null ? `${r.cashoutMultiplier.toFixed(2)}×` : '—'}
+                {r.multiplier != null ? `${r.multiplier.toFixed(2)}×` : '—'}
               </td>
               <td className={`text-right font-semibold ${r.status === 'won' ? 'text-accent-cyan' : r.status === 'pending' ? 'text-gray-400' : 'text-warning-coral'}`}>
                 {r.winnings != null ? r.winnings : '—'}
