@@ -23,7 +23,7 @@ export default function LoginPage() {
     setLoading(false)
     if (err) { setError(err.message); return }
     saveToken(data!.access_token)
-    router.push('/dashboard')
+    router.push('/games')
   }
 
   return (

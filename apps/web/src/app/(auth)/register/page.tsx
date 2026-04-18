@@ -29,7 +29,7 @@ export default function RegisterPage() {
     if (err) { setError(err.message); return }
     if (data?.access_token) {
       localStorage.setItem('access_token', data.access_token)
-      router.push('/lobby')
+      router.push('/games')
     } else {
       router.push(`/verify?phone=${encodeURIComponent(form.phone)}`)
     }
