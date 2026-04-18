@@ -15,6 +15,12 @@ const config: Config = {
       fontFamily: {
         mono: ['ui-monospace', 'SFMono-Regular', 'monospace'],
       },
+      keyframes: {
+        marquee: { '0%': { transform: 'translateX(0)' }, '100%': { transform: 'translateX(-50%)' } },
+      },
+      animation: {
+        marquee: 'marquee 25s linear infinite',
+      },
     },
   },
   plugins: [],
