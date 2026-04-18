@@ -1,33 +1,109 @@
 'use client'
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { useRouter, usePathname } from 'next/navigation'
 import Link from 'next/link'
-import { isAuthenticated } from '@/lib/auth'
+import { isAuthenticated, clearToken } from '@/lib/auth'
+import { apiFetch } from '@/lib/api'
+
+interface PlayerProfile {
+  name: string
+  currency: string
+  wallet: { balance: number }
+}
 
 export default function PlayerLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter()
   const pathname = usePathname()
+  const [profile, setProfile] = useState<PlayerProfile | null>(null)
+
   useEffect(() => {
-    if (!isAuthenticated()) router.replace('/login')
+    if (!isAuthenticated()) { router.replace('/login'); return }
+    apiFetch<PlayerProfile>('/player/me').then(({ data }) => data && setProfile(data))
   }, [router])
+
+  function handleLogout() {
+    apiFetch('/auth/logout', { method: 'POST' })
+    clearToken()
+    router.push('/login')
+  }
+
+  const navLinks = [
+    { href: '/games', label: 'Games', icon: '🎮', match: (p: string) => p.startsWith('/games') },
+    { href: '/dashboard', label: 'Profile', icon: '👤', match: (p: string) => p === '/dashboard' },
+  ]
+
   return (
-    <div className="flex flex-col min-h-screen">
-      <div className="flex-1 pb-16">{children}</div>
-      <nav className="fixed bottom-0 left-0 right-0 bg-game-card border-t border-game-border flex">
-        <Link
-          href="/games"
-          className={`flex-1 flex flex-col items-center py-3 text-xs font-mono gap-1 ${pathname.startsWith('/games') ? 'text-accent-cyan' : 'text-gray-400'}`}
+    <div className="min-h-screen bg-game-bg text-white flex flex-col">
+      {/* Top header */}
+      <header className="sticky top-0 z-40 bg-game-card border-b border-game-border">
+        <div className="max-w-7xl mx-auto px-4 h-14 flex items-center justify-between gap-4">
+          {/* Logo */}
+          <Link href="/games" className="flex items-center gap-2 flex-shrink-0">
+            <span className="text-accent-cyan font-mono font-extrabold text-xl tracking-tight">WINGU</span>
+            <span className="text-accent-violet font-mono font-extrabold text-xl tracking-tight">BET</span>
+          </Link>
+
+          {/* Desktop nav */}
+          <nav className="hidden md:flex items-center gap-1">
+            {navLinks.map(l => (
+              <Link
+                key={l.href}
+                href={l.href}
+                className={`px-4 py-2 rounded-lg text-sm font-semibold transition-colors ${
+                  l.match(pathname) ? 'bg-accent-cyan/10 text-accent-cyan' : 'text-gray-400 hover:text-white hover:bg-white/5'
+                }`}
+              >
+                {l.label}
+              </Link>
+            ))}
+          </nav>
+
+          {/* Balance + logout */}
+          <div className="flex items-center gap-3">
+            {profile && (
+              <div className="flex items-center gap-2 bg-game-bg border border-game-border rounded-lg px-3 py-1.5">
+                <span className="text-gray-400 text-xs hidden sm:block">{profile.currency}</span>
+                <span className="text-accent-cyan font-mono font-bold text-sm">
+                  {(profile.wallet.balance / 100).toLocaleString('en-KE', { minimumFractionDigits: 2 })}
+                </span>
+              </div>
+            )}
+            <button
+              onClick={handleLogout}
+              className="hidden md:block text-xs text-gray-500 hover:text-white transition-colors px-2 py-1.5"
+            >
+              Logout
+            </button>
+          </div>
+        </div>
+      </header>
+
+      {/* Page content */}
+      <main className="flex-1 pb-16 md:pb-0">
+        {children}
+      </main>
+
+      {/* Mobile bottom nav */}
+      <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-game-card border-t border-game-border flex z-40">
+        {navLinks.map(l => (
+          <Link
+            key={l.href}
+            href={l.href}
+            className={`flex-1 flex flex-col items-center py-2.5 text-xs font-mono gap-1 transition-colors ${
+              l.match(pathname) ? 'text-accent-cyan' : 'text-gray-500'
+            }`}
+          >
+            <span className="text-lg leading-none">{l.icon}</span>
+            {l.label.toUpperCase()}
+          </Link>
+        ))}
+        <button
+          onClick={handleLogout}
+          className="flex-1 flex flex-col items-center py-2.5 text-xs font-mono gap-1 text-gray-500"
         >
-          <span className="text-xl">🎮</span>
-          GAMES
-        </Link>
-        <Link
-          href="/dashboard"
-          className={`flex-1 flex flex-col items-center py-3 text-xs font-mono gap-1 ${pathname === '/dashboard' ? 'text-accent-cyan' : 'text-gray-400'}`}
-        >
-          <span className="text-xl">👤</span>
-          PROFILE
-        </Link>
+          <span className="text-lg leading-none">🚪</span>
+          LOGOUT
+        </button>
       </nav>
     </div>
   )
