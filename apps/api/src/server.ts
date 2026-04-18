@@ -29,7 +29,11 @@ import { diceRoutes } from './routes/games/dice.js'
 export function buildServer() {
   const app = Fastify({ logger: process.env.NODE_ENV !== 'test' })
 
-  app.register(cors, { origin: process.env.CORS_ORIGIN ?? true, credentials: true })
+  const allowedOrigins = (process.env.CORS_ORIGIN ?? '').split(',').map(o => o.trim()).filter(Boolean)
+  app.register(cors, {
+    origin: allowedOrigins.length > 0 ? allowedOrigins : true,
+    credentials: true,
+  })
   app.register(cookie)
 
   app.register(healthRoutes)
