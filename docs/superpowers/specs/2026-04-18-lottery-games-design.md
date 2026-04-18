@@ -207,17 +207,20 @@ No changes needed. Lottery bets and scratch cards flow through the existing `tra
 
 ### Overview
 
-Two distinct banner placements with different audiences:
+Two distinct banner placements, both admin-configurable from the same Promotions section:
 
-1. **Landing page** (`/`) — Static registration promo targeting new (unauthenticated) visitors. Not admin-configurable — hardcoded into the landing page hero section. Content: "Register & get KES 10,000 demo balance to play instantly."
+1. **Landing page** (`/`) — Targets unauthenticated visitors. Used for registration promos, sign-up bonuses. CTA typically points to `/register`.
 
-2. **Games lobby** (`/games`) — Admin-configurable banner targeting **logged-in players**. Used for deposit bonuses, jackpot announcements, weekly promotions. Never used for registration CTAs (player is already logged in). Optional — if no banner is active, the game grid renders at the top.
+2. **Games lobby** (`/games`) — Targets logged-in players. Used for deposit bonuses, jackpot announcements, weekly promos. Never for registration CTAs.
+
+Each placement has at most one active banner at a time. Both are managed from the admin "Promotions" panel.
 
 ### Database Schema
 
 ```sql
 CREATE TABLE banners (
   id          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  placement   VARCHAR(10)  NOT NULL CHECK (placement IN ('landing', 'lobby')),
   headline    VARCHAR(80)  NOT NULL,
   subtext     VARCHAR(160) NOT NULL DEFAULT '',
   cta_text    VARCHAR(40)  NOT NULL DEFAULT '',
@@ -228,9 +231,10 @@ CREATE TABLE banners (
   created_at  TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   updated_at  TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
+CREATE INDEX idx_banners_placement_active ON banners(placement, active);
 ```
 
-Only one banner active at a time. Activating one deactivates all others.
+At most one active banner per placement. Activating a banner deactivates all other banners with the same placement.
 
 ### Image Dimensions
 
@@ -240,16 +244,30 @@ Banner images display at **1200×300px** (4:1 ratio). Admin UI shows this spec c
 - If no image provided, gradient background is used instead
 - Image is stored as a URL (external link or uploaded to a CDN — for demo, admin pastes a URL directly; file upload is out of scope)
 
-### First Demo Banner (seeded in migration)
+### Demo Banners (seeded in migration)
 
 ```sql
-INSERT INTO banners (headline, subtext, cta_text, cta_url, gradient, active)
+-- Landing page banner
+INSERT INTO banners (placement, headline, subtext, cta_text, cta_url, gradient, active)
 VALUES (
+  'landing',
+  '🎉 Register Free — Start with KES 10,000',
+  'No deposit needed. Create your account and play Crash, Mines, Dice, Lotto and Scratch instantly.',
+  'Create Free Account',
+  '/register',
+  'from-cyan-900/60 to-violet-900/40',
+  true
+);
+
+-- Games lobby banner
+INSERT INTO banners (placement, headline, subtext, cta_text, cta_url, gradient, active)
+VALUES (
+  'lobby',
   '💰 Deposit & Play — Double Your First Top-Up',
   'Add KES 500 or more and we match it. Play Crash, Mines, Dice, Lotto and Scratch.',
   'Top Up Now',
   '/wallet/deposit',
-  'from-cyan-900/60 to-violet-900/40',
+  'from-violet-900/60 to-cyan-900/40',
   true
 );
 ```
@@ -257,40 +275,42 @@ VALUES (
 ### API Routes
 
 ```
-GET  /games/banner                  Public (auth required) — active banner or null
-GET  /admin/banners                 Admin — list all banners
-POST /admin/banners                 Admin — create { headline, subtext, ctaText, ctaUrl, imageUrl, gradient }
+GET  /banners/landing               Public, no auth — active landing banner or null
+GET  /banners/lobby                 Player JWT required — active lobby banner or null
+GET  /admin/banners                 Admin — list all banners (both placements)
+POST /admin/banners                 Admin — create { placement, headline, subtext, ctaText, ctaUrl, imageUrl, gradient }
 PUT  /admin/banners/:id             Admin — update fields
-PUT  /admin/banners/:id/activate    Admin — set active (deactivates others)
+PUT  /admin/banners/:id/activate    Admin — set active for its placement (deactivates others in same placement)
 DELETE /admin/banners/:id           Admin — delete
 ```
 
-`GET /games/banner` requires player JWT (banner is only shown to logged-in players).
 Admin routes protected by `authenticateAdmin` middleware.
 
 ### Admin Dashboard UI
 
-New **"Promotions"** tab on the admin dashboard:
-- Table: headline, active badge, CTA, created date, Activate / Delete actions
+New **"Promotions"** tab on the admin dashboard with two sub-sections: **Landing** and **Lobby**.
+
+Each sub-section shows:
+- Table: headline, active badge, CTA text, created date, Activate / Delete actions
 - **+ New Banner** form with fields:
-  - Headline (max 80 chars, character counter)
-  - Subtext (max 160 chars)
+  - Placement (pre-selected by sub-section: `landing` or `lobby`)
+  - Headline (max 80 chars, live character counter)
+  - Subtext (max 160 chars, live character counter)
   - CTA button text (max 40 chars)
-  - CTA URL (default: `/wallet/deposit`)
-  - Image URL — labelled **"Banner image URL (1200×300px recommended, max 500KB)"**
-  - Gradient preset picker (5 colour options shown as swatches) — used when no image
-- **Activate** button per row — goes live immediately
-- Live preview of banner as it will appear to players
+  - CTA URL (landing default: `/register`, lobby default: `/wallet/deposit`)
+  - Image URL — labelled **"Banner image URL · Recommended size: 1200 × 300 px · Ratio 4:1 · Max 500 KB · PNG or JPG"**
+  - Gradient preset picker (5 colour swatches) — used as fallback when no image URL provided
+- **Activate** button per row — goes live immediately for that placement
+- Live preview rendered below the form showing exactly how the banner will look
 
 ### Games Lobby UI (`/games`)
 
-- Fetches `GET /games/banner` on load
-- If banner returned: full-width card above game grid — image (if set) fills background, overlaid with headline, subtext, and CTA button
-- If null: game grid starts at the top, no gap
+- Fetches `GET /banners/lobby` on load (player JWT sent automatically)
+- If banner returned: full-width card above game grid — image fills background if set, otherwise gradient; overlaid with headline, subtext, CTA button
+- If null: game grid starts at top, no gap
 
-### Landing Page Registration Promo
+### Landing Page UI (`/`)
 
-Existing landing page (`/`) gains a dedicated **"Registration Bonus"** section between the hero and the games grid:
-- Static content: headline "Register free. Start with KES 10,000." + subtext + "Create Account →" CTA
-- Styled with the site gradient, consistent with existing landing page design
-- Visible only to unauthenticated visitors (page already redirects authenticated users to `/games`)
+- Fetches `GET /banners/landing` on load (no auth needed)
+- If banner returned: renders full-width promo section between the hero and the games grid
+- If null: section is omitted entirely — existing hero flows straight into games grid
