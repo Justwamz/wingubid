@@ -32,6 +32,7 @@ export default function PlayerLayout({ children }: { children: React.ReactNode }
 
   const navLinks = [
     { href: '/games', label: 'Games', icon: '🎮', match: (p: string) => p.startsWith('/games') },
+    { href: '/wallet/deposit', label: 'Deposit', icon: '💳', match: (p: string) => p.startsWith('/wallet') },
     { href: '/dashboard', label: 'Profile', icon: '👤', match: (p: string) => p === '/dashboard' },
   ]
 
@@ -64,11 +65,19 @@ export default function PlayerLayout({ children }: { children: React.ReactNode }
           {/* Balance + logout */}
           <div className="flex items-center gap-3">
             {profile && (
-              <div className="flex items-center gap-2 bg-game-bg border border-game-border rounded-lg px-3 py-1.5">
-                <span className="text-gray-400 text-xs hidden sm:block">{profile.currency}</span>
-                <span className="text-accent-cyan font-mono font-bold text-sm">
-                  {(profile.wallet.balance / 100).toLocaleString('en-KE', { minimumFractionDigits: 2 })}
-                </span>
+              <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2 bg-game-bg border border-game-border rounded-lg px-3 py-1.5">
+                  <span className="text-gray-400 text-xs hidden sm:block">{profile.currency}</span>
+                  <span className="text-accent-cyan font-mono font-bold text-sm">
+                    {(profile.wallet.balance / 100).toLocaleString('en-KE', { minimumFractionDigits: 2 })}
+                  </span>
+                </div>
+                <Link
+                  href="/wallet/deposit"
+                  className="px-3 py-1.5 rounded-lg bg-accent-cyan text-black font-bold text-xs hover:brightness-110 transition-all whitespace-nowrap"
+                >
+                  + Top Up
+                </Link>
               </div>
             )}
             <button
