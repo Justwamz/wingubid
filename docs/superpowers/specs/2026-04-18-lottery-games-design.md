@@ -207,50 +207,90 @@ No changes needed. Lottery bets and scratch cards flow through the existing `tra
 
 ### Overview
 
-A single active banner displayed full-width at the top of the `/games` lobby. The operator edits it from the admin dashboard without a code deploy. The banner is optional — if none is active the lobby renders without it.
+Two distinct banner placements with different audiences:
+
+1. **Landing page** (`/`) — Static registration promo targeting new (unauthenticated) visitors. Not admin-configurable — hardcoded into the landing page hero section. Content: "Register & get KES 10,000 demo balance to play instantly."
+
+2. **Games lobby** (`/games`) — Admin-configurable banner targeting **logged-in players**. Used for deposit bonuses, jackpot announcements, weekly promotions. Never used for registration CTAs (player is already logged in). Optional — if no banner is active, the game grid renders at the top.
 
 ### Database Schema
 
 ```sql
 CREATE TABLE banners (
   id          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  headline    VARCHAR(100) NOT NULL,
-  subtext     VARCHAR(200) NOT NULL DEFAULT '',
-  cta_text    VARCHAR(50)  NOT NULL DEFAULT '',
+  headline    VARCHAR(80)  NOT NULL,
+  subtext     VARCHAR(160) NOT NULL DEFAULT '',
+  cta_text    VARCHAR(40)  NOT NULL DEFAULT '',
   cta_url     VARCHAR(255) NOT NULL DEFAULT '/wallet/deposit',
-  gradient    VARCHAR(100) NOT NULL DEFAULT 'from-cyan-900/40 to-violet-900/30',
+  image_url   VARCHAR(500) NOT NULL DEFAULT '',
+  gradient    VARCHAR(100) NOT NULL DEFAULT 'from-cyan-900/60 to-violet-900/40',
   active      BOOLEAN NOT NULL DEFAULT false,
   created_at  TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   updated_at  TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 ```
 
-Only one banner is active at a time. Setting a banner active deactivates all others (`UPDATE banners SET active = false` before activating the new one).
+Only one banner active at a time. Activating one deactivates all others.
+
+### Image Dimensions
+
+Banner images display at **1200×300px** (4:1 ratio). Admin UI shows this spec clearly:
+- Recommended: 1200×300px PNG or JPG
+- Max file size: 500KB
+- If no image provided, gradient background is used instead
+- Image is stored as a URL (external link or uploaded to a CDN — for demo, admin pastes a URL directly; file upload is out of scope)
+
+### First Demo Banner (seeded in migration)
+
+```sql
+INSERT INTO banners (headline, subtext, cta_text, cta_url, gradient, active)
+VALUES (
+  '💰 Deposit & Play — Double Your First Top-Up',
+  'Add KES 500 or more and we match it. Play Crash, Mines, Dice, Lotto and Scratch.',
+  'Top Up Now',
+  '/wallet/deposit',
+  'from-cyan-900/60 to-violet-900/40',
+  true
+);
+```
 
 ### API Routes
 
 ```
-GET  /games/banner           Public — returns active banner or null (no auth required)
-GET  /admin/banners          Admin — list all banners
-POST /admin/banners          Admin — create a banner { headline, subtext, ctaText, ctaUrl, gradient }
-PUT  /admin/banners/:id      Admin — update banner fields
-PUT  /admin/banners/:id/activate  Admin — set as active (deactivates others)
-DELETE /admin/banners/:id    Admin — delete a banner
+GET  /games/banner                  Public (auth required) — active banner or null
+GET  /admin/banners                 Admin — list all banners
+POST /admin/banners                 Admin — create { headline, subtext, ctaText, ctaUrl, imageUrl, gradient }
+PUT  /admin/banners/:id             Admin — update fields
+PUT  /admin/banners/:id/activate    Admin — set active (deactivates others)
+DELETE /admin/banners/:id           Admin — delete
 ```
 
+`GET /games/banner` requires player JWT (banner is only shown to logged-in players).
 Admin routes protected by `authenticateAdmin` middleware.
 
 ### Admin Dashboard UI
 
-New **"Promotions"** section on the admin dashboard:
-- Table listing all banners (headline, active status, created date)
-- **+ New Banner** form: headline, subtext, CTA text, CTA URL, gradient picker (5 presets)
-- **Activate** button per row — makes that banner live immediately
-- **Delete** button per row
+New **"Promotions"** tab on the admin dashboard:
+- Table: headline, active badge, CTA, created date, Activate / Delete actions
+- **+ New Banner** form with fields:
+  - Headline (max 80 chars, character counter)
+  - Subtext (max 160 chars)
+  - CTA button text (max 40 chars)
+  - CTA URL (default: `/wallet/deposit`)
+  - Image URL — labelled **"Banner image URL (1200×300px recommended, max 500KB)"**
+  - Gradient preset picker (5 colour options shown as swatches) — used when no image
+- **Activate** button per row — goes live immediately
+- Live preview of banner as it will appear to players
 
 ### Games Lobby UI (`/games`)
 
-- Fetches `GET /games/banner` on page load (no auth token needed — public endpoint)
-- If banner returned: renders full-width gradient card above the game grid with headline, subtext, and CTA button
-- If null: renders nothing — game grid starts at the top
-- Banner is not shown on individual game pages, only the lobby
+- Fetches `GET /games/banner` on load
+- If banner returned: full-width card above game grid — image (if set) fills background, overlaid with headline, subtext, and CTA button
+- If null: game grid starts at the top, no gap
+
+### Landing Page Registration Promo
+
+Existing landing page (`/`) gains a dedicated **"Registration Bonus"** section between the hero and the games grid:
+- Static content: headline "Register free. Start with KES 10,000." + subtext + "Create Account →" CTA
+- Styled with the site gradient, consistent with existing landing page design
+- Visible only to unauthenticated visitors (page already redirects authenticated users to `/games`)
