@@ -1,8 +1,8 @@
-# Lottery Games Design
+# Lottery Games + Promotions Banner Design
 
 ## Goal
 
-Add two lottery game types to the Wingu Bet platform: a **scheduled draw lottery** (Pick 3, three draw tiers) and an **instant scratch card** game. Both integrate with the existing wallet, transaction, and authentication systems.
+Add two lottery game types to the Wingu Bet platform: a **scheduled draw lottery** (Pick 3, three draw tiers) and an **instant scratch card** game. Also add an **admin-configurable promotions banner** displayed at the top of the games lobby. All features integrate with the existing wallet, transaction, and authentication systems.
 
 ## Architecture
 
@@ -200,3 +200,57 @@ Both games added to existing grid:
 ## Admin Stats
 
 No changes needed. Lottery bets and scratch cards flow through the existing `transactions` table (`bet_placed` / `bet_won`), so `/admin/stats` automatically includes lottery revenue in `houseRevenue`, `totalBetVolume`, and `totalPaidOut`.
+
+---
+
+## Promotions Banner
+
+### Overview
+
+A single active banner displayed full-width at the top of the `/games` lobby. The operator edits it from the admin dashboard without a code deploy. The banner is optional — if none is active the lobby renders without it.
+
+### Database Schema
+
+```sql
+CREATE TABLE banners (
+  id          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  headline    VARCHAR(100) NOT NULL,
+  subtext     VARCHAR(200) NOT NULL DEFAULT '',
+  cta_text    VARCHAR(50)  NOT NULL DEFAULT '',
+  cta_url     VARCHAR(255) NOT NULL DEFAULT '/wallet/deposit',
+  gradient    VARCHAR(100) NOT NULL DEFAULT 'from-cyan-900/40 to-violet-900/30',
+  active      BOOLEAN NOT NULL DEFAULT false,
+  created_at  TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at  TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+```
+
+Only one banner is active at a time. Setting a banner active deactivates all others (`UPDATE banners SET active = false` before activating the new one).
+
+### API Routes
+
+```
+GET  /games/banner           Public — returns active banner or null (no auth required)
+GET  /admin/banners          Admin — list all banners
+POST /admin/banners          Admin — create a banner { headline, subtext, ctaText, ctaUrl, gradient }
+PUT  /admin/banners/:id      Admin — update banner fields
+PUT  /admin/banners/:id/activate  Admin — set as active (deactivates others)
+DELETE /admin/banners/:id    Admin — delete a banner
+```
+
+Admin routes protected by `authenticateAdmin` middleware.
+
+### Admin Dashboard UI
+
+New **"Promotions"** section on the admin dashboard:
+- Table listing all banners (headline, active status, created date)
+- **+ New Banner** form: headline, subtext, CTA text, CTA URL, gradient picker (5 presets)
+- **Activate** button per row — makes that banner live immediately
+- **Delete** button per row
+
+### Games Lobby UI (`/games`)
+
+- Fetches `GET /games/banner` on page load (no auth token needed — public endpoint)
+- If banner returned: renders full-width gradient card above the game grid with headline, subtext, and CTA button
+- If null: renders nothing — game grid starts at the top
+- Banner is not shown on individual game pages, only the lobby
