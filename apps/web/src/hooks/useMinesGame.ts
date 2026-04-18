@@ -3,6 +3,7 @@ import { useState, useCallback } from 'react'
 import { apiFetch } from '@/lib/api'
 import { sounds } from '@/lib/sounds'
 import { haptics } from '@/lib/haptics'
+import { refreshBalance } from '@/lib/auth'
 
 interface GameState {
   gameId: string
@@ -44,6 +45,7 @@ export function useMinesGame() {
     } else {
       sounds.mineHit(); haptics.lose()
       setGame(g => g ? { ...g, minePositions: data!.minePositions!, status: 'lost' } : g)
+      refreshBalance()
     }
   }, [game])
 
@@ -55,6 +57,7 @@ export function useMinesGame() {
     if (err) { setError(err.message); return }
     sounds.cashout(); haptics.win()
     setGame(g => g ? { ...g, minePositions: data!.minePositions, status: 'won' } : g)
+    refreshBalance()
   }, [game])
 
   return { game, loading, error, startGame, revealTile, cashout }

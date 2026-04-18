@@ -5,6 +5,7 @@ import { DiceSlider } from '@/components/game/DiceSlider'
 import { DiceFace } from '@/components/game/DiceFace'
 import { HowToPlay } from '@/components/game/HowToPlay'
 import { apiFetch } from '@/lib/apiFetch'
+import { refreshBalance } from '@/lib/auth'
 
 type Direction = 'over' | 'under'
 
@@ -49,6 +50,7 @@ export default function DicePage() {
       })
       setResult(data)
       setHistory(prev => [data, ...prev].slice(0, 10))
+      refreshBalance()
     } catch (e: unknown) {
       setError(e instanceof Error ? e.message : 'Roll failed')
     } finally {

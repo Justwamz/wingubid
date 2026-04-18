@@ -1,7 +1,7 @@
 'use client'
 import { useEffect, useRef, useState, useCallback } from 'react'
 import { io, Socket } from 'socket.io-client'
-import { getToken } from '@/lib/auth'
+import { getToken, refreshBalance } from '@/lib/auth'
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3001'
 
@@ -55,9 +55,10 @@ export function useCrashGame() {
       setCrashPoint(data.crashPoint)
       setMyBet(null)
       setRecentCrashes(prev => [data.crashPoint, ...prev].slice(0, 20))
+      refreshBalance()
     })
     socket.on('bet:confirmed', (data: MyBet) => setMyBet(data))
-    socket.on('cashout:confirmed', () => setMyBet(null))
+    socket.on('cashout:confirmed', () => { setMyBet(null); refreshBalance() })
     socket.on('cashout:broadcast', (data: CashoutFeed) => {
       setFeed(data)
       setTimeout(() => setFeed(null), 3000)

@@ -10,6 +10,10 @@ export function clearToken() {
   localStorage.removeItem('access_token')
 }
 
+export function refreshBalance() {
+  if (typeof window !== 'undefined') window.dispatchEvent(new Event('balanceRefresh'))
+}
+
 export function isAuthenticated(): boolean {
   const token = getToken()
   if (!token) return false

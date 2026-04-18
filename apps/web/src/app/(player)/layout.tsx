@@ -18,7 +18,10 @@ export default function PlayerLayout({ children }: { children: React.ReactNode }
 
   useEffect(() => {
     if (!isAuthenticated()) { router.replace('/login'); return }
-    apiFetch<PlayerProfile>('/player/me').then(({ data }) => data && setProfile(data))
+    const fetchProfile = () => apiFetch<PlayerProfile>('/player/me').then(({ data }) => data && setProfile(data))
+    fetchProfile()
+    window.addEventListener('balanceRefresh', fetchProfile)
+    return () => window.removeEventListener('balanceRefresh', fetchProfile)
   }, [router])
 
   function handleLogout() {
