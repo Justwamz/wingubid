@@ -5,6 +5,7 @@
   "scripts": {
     "dev": "next dev -p 3000",
     "build": "next build",
+    "postbuild": "cp -r .next/static .next/standalone/apps/web/.next/static && (cp -r public .next/standalone/apps/web/public 2>/dev/null || true)",
     "start": "next start -p 3000",
     "test": "vitest"
   },
