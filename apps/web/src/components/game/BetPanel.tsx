@@ -24,7 +24,7 @@ export function BetPanel({ status, myBet, multiplier = 1, waitingEndsAt, error, 
     const amount = parseInt(stake)
     if (!amount || amount <= 0) return
     const auto = parseFloat(autoCashout) || undefined
-    onPlaceBet(amount, auto)
+    onPlaceBet(amount * 100, auto)
   }
 
   return (

@@ -46,7 +46,7 @@ export default function DicePage() {
     try {
       const data = await apiFetch<RollResult>('/games/dice/roll', {
         method: 'POST',
-        body: JSON.stringify({ grossStake: Math.floor(stake), target, direction }),
+        body: JSON.stringify({ grossStake: Math.floor(stake * 100), target, direction }),
       })
       setResult(data)
       setHistory(prev => [data, ...prev].slice(0, 10))

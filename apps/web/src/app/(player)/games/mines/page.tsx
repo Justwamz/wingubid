@@ -71,7 +71,7 @@ export default function MinesPage() {
                 />
               </div>
               <button
-                onClick={() => startGame(parseInt(stake), gridSize, mineCount)}
+                onClick={() => startGame(parseInt(stake) * 100, gridSize, mineCount)}
                 disabled={loading || !stake}
                 className="w-full py-3.5 rounded-xl font-bold text-base disabled:opacity-40 transition-all"
                 style={{ background: 'linear-gradient(135deg, #80508B, #a06090)', color: '#fff' }}
