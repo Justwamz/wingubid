@@ -1,5 +1,5 @@
 'use client'
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useRouter, usePathname } from 'next/navigation'
 import Link from 'next/link'
 import { isAuthenticated, clearToken } from '@/lib/auth'
@@ -15,10 +15,24 @@ export default function PlayerLayout({ children }: { children: React.ReactNode }
   const router = useRouter()
   const pathname = usePathname()
   const [profile, setProfile] = useState<PlayerProfile | null>(null)
+  const [balanceFlash, setBalanceFlash] = useState(false)
+  const prevBalance = useRef<number | null>(null)
+
+  useEffect(() => {
+    if (profile === null) return
+    const current = profile.wallet.balance
+    if (prevBalance.current !== null && prevBalance.current !== current) {
+      setBalanceFlash(true)
+      const t = setTimeout(() => setBalanceFlash(false), 700)
+      prevBalance.current = current
+      return () => clearTimeout(t)
+    }
+    prevBalance.current = current
+  }, [profile])
 
   useEffect(() => {
     if (!isAuthenticated()) { router.replace('/login'); return }
-    const fetchProfile = () => apiFetch<PlayerProfile>('/player/me').then(({ data }) => data && setProfile(data))
+    const fetchProfile = () => apiFetch<PlayerProfile>('/player/me', { cache: 'no-store' }).then(({ data }) => data && setProfile(data))
     fetchProfile()
     window.addEventListener('balanceRefresh', fetchProfile)
     return () => window.removeEventListener('balanceRefresh', fetchProfile)
@@ -68,7 +82,7 @@ export default function PlayerLayout({ children }: { children: React.ReactNode }
               <div className="flex items-center gap-2">
                 <div className="flex items-center gap-2 bg-game-bg border border-game-border rounded-lg px-3 py-1.5">
                   <span className="text-gray-400 text-xs hidden sm:block">{profile.currency}</span>
-                  <span className="text-accent-cyan font-mono font-bold text-sm">
+                  <span className={`font-mono font-bold text-sm transition-colors duration-300 ${balanceFlash ? 'text-yellow-300' : 'text-accent-cyan'}`}>
                     {(profile.wallet.balance / 100).toLocaleString('en-KE', { minimumFractionDigits: 2 })}
                   </span>
                 </div>

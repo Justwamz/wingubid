@@ -31,6 +31,7 @@ export function useMinesGame() {
     setGame({ gameId: data!.gameId, gridSize: data!.gridSize, mineCount: data!.mineCount,
       serverSeedHash: data!.serverSeedHash, revealedTiles: [], multiplier: 1 - 0.05,
       minePositions: null, status: 'active' })
+    refreshBalance()
   }, [])
 
   const revealTile = useCallback(async (tileIndex: number) => {
