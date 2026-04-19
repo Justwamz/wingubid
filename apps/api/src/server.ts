@@ -30,6 +30,7 @@ import { lotteryRoutes } from './routes/games/lottery.js'
 import { bannerPublicRoutes } from './routes/banners/public.js'
 import { adminBannerRoutes } from './routes/admin/banners.js'
 import { adminPlayersRoutes } from './routes/admin/players.js'
+import { adminTransactionsRoutes } from './routes/admin/transactions.js'
 
 export function buildServer() {
   const app = Fastify({ logger: process.env.NODE_ENV !== 'test' })
@@ -74,6 +75,7 @@ export function buildServer() {
   app.register(bannerPublicRoutes)
   app.register(adminBannerRoutes)
   app.register(adminPlayersRoutes)
+  app.register(adminTransactionsRoutes)
 
   app.setErrorHandler((error, _req, reply) => {
     const statusCode = error.statusCode ?? 500
