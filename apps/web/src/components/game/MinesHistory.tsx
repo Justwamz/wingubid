@@ -73,12 +73,12 @@ export function MinesHistory() {
                   <span className="text-warning-coral font-bold">LOSS</span>
                 )}
               </td>
-              <td className="text-right text-white">{r.grossStake}</td>
+              <td className="text-right text-white">{(r.grossStake / 100).toFixed(0)}</td>
               <td className="text-right text-gray-300">
                 {r.multiplier != null ? `${r.multiplier.toFixed(2)}×` : '—'}
               </td>
               <td className={`text-right font-semibold ${r.status === 'won' ? 'text-accent-cyan' : r.status === 'pending' ? 'text-gray-400' : 'text-warning-coral'}`}>
-                {r.winnings != null ? r.winnings : '—'}
+                {r.winnings != null ? (r.winnings / 100).toFixed(0) : '—'}
               </td>
             </tr>
           ))}
