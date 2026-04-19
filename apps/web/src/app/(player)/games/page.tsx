@@ -144,9 +144,10 @@ export default function GamesLobby() {
     <div className="max-w-7xl mx-auto px-4 py-6">
       {/* Lobby banner */}
       {banner && (
-        <div className={`relative w-full rounded-xl overflow-hidden mb-6 bg-gradient-to-r ${banner.gradient} min-h-[120px]`}>
+        <div className="relative w-full rounded-xl overflow-hidden mb-6 bg-[#0a1628] min-h-[120px]">
+          <div className={`absolute inset-0 bg-gradient-to-r ${banner.gradient}`} />
           {banner.imageUrl && (
-            <img src={banner.imageUrl} className="absolute inset-0 w-full h-full object-cover opacity-60" alt="" />
+            <img src={banner.imageUrl} className="absolute inset-0 w-full h-full object-cover opacity-40" alt="" />
           )}
           <div className="relative z-10 p-6">
             <h2 className="text-2xl font-bold text-white">{banner.headline}</h2>
