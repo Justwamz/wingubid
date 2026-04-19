@@ -14,7 +14,7 @@ export async function refreshRoutes(app: FastifyInstance) {
       reply.setCookie('refresh_token', newRefreshToken, {
         httpOnly: true,
         secure: process.env.NODE_ENV === 'production',
-        sameSite: 'strict',
+        sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
         path: '/auth/refresh',
         maxAge: 7 * 24 * 60 * 60,
       })
