@@ -10,6 +10,15 @@ interface LeaderboardEntry {
   playerName: string; game: string; multiplier: number; winnings: number; currency: string
 }
 
+interface Banner {
+  headline: string
+  subtext?: string
+  ctaText?: string
+  ctaUrl?: string
+  imageUrl?: string
+  gradient: string
+}
+
 const GAMES = [
   {
     name: 'CRASH',
@@ -100,11 +109,14 @@ const FEATURES = [
 export default function LandingPage() {
   const router = useRouter()
   const [wins, setWins] = useState<LeaderboardEntry[]>([])
+  const [banner, setBanner] = useState<Banner | null>(null)
 
   useEffect(() => {
     if (isAuthenticated()) { router.replace('/games'); return }
     fetch(`${API_URL}/games/leaderboard`)
       .then(r => r.ok ? r.json() : []).then(setWins).catch(() => {})
+    fetch(`${API_URL}/banners/landing`)
+      .then(r => r.ok ? r.json() : null).then((d: Banner | null) => d ? setBanner(d) : null).catch(() => {})
   }, [router])
 
   return (
@@ -186,6 +198,26 @@ export default function LandingPage() {
           </div>
         )}
       </section>
+
+      {/* Promotion banner */}
+      {banner && (
+        <section className="max-w-7xl mx-auto px-4 pb-8">
+          <div className={`relative w-full rounded-xl overflow-hidden bg-gradient-to-r ${banner.gradient} min-h-[120px]`}>
+            {banner.imageUrl && (
+              <img src={banner.imageUrl} className="absolute inset-0 w-full h-full object-cover opacity-60" alt="" />
+            )}
+            <div className="relative z-10 p-6">
+              <h2 className="text-2xl font-bold text-white">{banner.headline}</h2>
+              {banner.subtext && <p className="text-gray-200 mt-1">{banner.subtext}</p>}
+              {banner.ctaText && banner.ctaUrl && (
+                <a href={banner.ctaUrl} className="inline-block mt-3 bg-white/20 hover:bg-white/30 text-white font-semibold px-4 py-2 rounded-lg transition-colors">
+                  {banner.ctaText}
+                </a>
+              )}
+            </div>
+          </div>
+        </section>
+      )}
 
       {/* Games */}
       <section className="max-w-7xl mx-auto px-4 py-24">

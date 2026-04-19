@@ -7,6 +7,15 @@ interface LeaderboardEntry {
   playerName: string; game: string; multiplier: number; winnings: number; currency: string
 }
 
+interface Banner {
+  headline: string
+  subtext?: string
+  ctaText?: string
+  ctaUrl?: string
+  imageUrl?: string
+  gradient: string
+}
+
 const GAMES = [
   {
     href: '/games/crash',
@@ -69,22 +78,88 @@ const GAMES = [
       </svg>
     ),
   },
+  {
+    href: '/games/lottery',
+    name: 'LOTTO',
+    tagline: 'Pick 3, draw every hour',
+    description: 'Choose three numbers and wait for the hourly draw. Match all three to win big. Simple to play, huge potential payouts every hour.',
+    gradient: 'from-yellow-500/20 to-orange-600/10',
+    border: 'border-yellow-500/30',
+    accent: '#F59E0B',
+    badge: 'HOURLY',
+    badgeColor: 'bg-yellow-500/20 text-yellow-300',
+    visual: (
+      <svg viewBox="0 0 80 50" className="w-20 h-12 opacity-80">
+        {[0,1,2].map(i => (
+          <circle key={i} cx={14 + i * 26} cy="25" r="12" fill="#272422" stroke="#F59E0B" strokeWidth="1.5"/>
+        ))}
+        <text x="14" y="29" fontSize="10" textAnchor="middle" fill="#F59E0B" fontWeight="bold">7</text>
+        <text x="40" y="29" fontSize="10" textAnchor="middle" fill="#F59E0B" fontWeight="bold">3</text>
+        <text x="66" y="29" fontSize="10" textAnchor="middle" fill="#F59E0B" fontWeight="bold">9</text>
+      </svg>
+    ),
+  },
+  {
+    href: '/games/scratch',
+    name: 'SCRATCH',
+    tagline: 'Instant win scratch cards',
+    description: 'Scratch to reveal your prize instantly. No waiting, no strategy required — pure instant-win excitement with every card.',
+    gradient: 'from-pink-500/20 to-rose-600/10',
+    border: 'border-pink-500/30',
+    accent: '#F43F5E',
+    badge: 'INSTANT',
+    badgeColor: 'bg-pink-500/20 text-pink-300',
+    visual: (
+      <svg viewBox="0 0 80 50" className="w-20 h-12 opacity-80">
+        <rect x="5" y="8" width="70" height="34" rx="5" fill="#272422" stroke="#F43F5E" strokeWidth="1.5"/>
+        <rect x="12" y="14" width="18" height="14" rx="3" fill="#F43F5E22" stroke="#F43F5E" strokeWidth="0.8"/>
+        <rect x="34" y="14" width="18" height="14" rx="3" fill="#F43F5E44" stroke="#F43F5E" strokeWidth="0.8"/>
+        <rect x="56" y="14" width="18" height="14" rx="3" fill="#F43F5E22" stroke="#F43F5E" strokeWidth="0.8"/>
+        <text x="21" y="25" fontSize="9" textAnchor="middle" fill="#F43F5E">★</text>
+        <text x="43" y="25" fontSize="9" textAnchor="middle" fill="#F43F5E">★</text>
+        <text x="65" y="25" fontSize="9" textAnchor="middle" fill="#F43F5E">★</text>
+      </svg>
+    ),
+  },
 ]
 
 export default function GamesLobby() {
   const [leaderboard, setLeaderboard] = useState<LeaderboardEntry[]>([])
   const [expanded, setExpanded] = useState<string | null>(null)
+  const [banner, setBanner] = useState<Banner | null>(null)
 
   useEffect(() => {
     const load = () => apiFetch<LeaderboardEntry[]>('/games/leaderboard')
       .then(({ data }) => data && setLeaderboard(data))
     load()
     const id = setInterval(load, 5000)
+
+    apiFetch<Banner>('/banners/lobby')
+      .then(({ data }) => data ? setBanner(data) : null)
+
     return () => clearInterval(id)
   }, [])
 
   return (
     <div className="max-w-7xl mx-auto px-4 py-6">
+      {/* Lobby banner */}
+      {banner && (
+        <div className={`relative w-full rounded-xl overflow-hidden mb-6 bg-gradient-to-r ${banner.gradient} min-h-[120px]`}>
+          {banner.imageUrl && (
+            <img src={banner.imageUrl} className="absolute inset-0 w-full h-full object-cover opacity-60" alt="" />
+          )}
+          <div className="relative z-10 p-6">
+            <h2 className="text-2xl font-bold text-white">{banner.headline}</h2>
+            {banner.subtext && <p className="text-gray-200 mt-1">{banner.subtext}</p>}
+            {banner.ctaText && banner.ctaUrl && (
+              <a href={banner.ctaUrl} className="inline-block mt-3 bg-white/20 hover:bg-white/30 text-white font-semibold px-4 py-2 rounded-lg transition-colors">
+                {banner.ctaText}
+              </a>
+            )}
+          </div>
+        </div>
+      )}
+
       <div className="flex flex-col lg:flex-row gap-6">
         {/* Game cards */}
         <div className="flex-1">
