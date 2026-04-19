@@ -57,7 +57,7 @@ export function useCrashGame() {
       setRecentCrashes(prev => [data.crashPoint, ...prev].slice(0, 20))
       refreshBalance()
     })
-    socket.on('bet:confirmed', (data: MyBet) => setMyBet(data))
+    socket.on('bet:confirmed', (data: MyBet) => { setMyBet(data); refreshBalance() })
     socket.on('cashout:confirmed', () => { setMyBet(null); refreshBalance() })
     socket.on('cashout:broadcast', (data: CashoutFeed) => {
       setFeed(data)
