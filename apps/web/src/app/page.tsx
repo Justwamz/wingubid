@@ -144,9 +144,10 @@ export default function LandingPage() {
 
       {/* Promotion banner */}
       {banner && (
-        <div className={`relative w-full overflow-hidden bg-gradient-to-r ${banner.gradient}`}>
+        <div className="relative w-full overflow-hidden bg-[#0a1628]">
+          <div className={`absolute inset-0 bg-gradient-to-r ${banner.gradient}`} />
           {banner.imageUrl && (
-            <img src={banner.imageUrl} className="absolute inset-0 w-full h-full object-cover opacity-60" alt="" />
+            <img src={banner.imageUrl} className="absolute inset-0 w-full h-full object-cover opacity-40" alt="" />
           )}
           <div className="relative z-10 max-w-7xl mx-auto px-4 py-5 flex items-center justify-between gap-4">
             <div>
