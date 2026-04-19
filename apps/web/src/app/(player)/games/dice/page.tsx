@@ -80,7 +80,7 @@ export default function DicePage() {
                 <div className="text-center">
                   <p className="text-5xl font-extrabold text-white tabular-nums">{result.roll}</p>
                   <p className={`text-lg font-bold mt-1 ${result.won ? 'text-accent-cyan' : 'text-warning-coral'}`}>
-                    {result.won ? `+${result.winnings} WON` : 'LOST'}
+                    {result.won ? `+KES ${(result.winnings / 100).toFixed(0)} WON` : 'LOST'}
                   </p>
                 </div>
               ) : (
@@ -149,7 +149,7 @@ export default function DicePage() {
                   <div key={i} className={`flex items-center justify-between px-3 py-2 rounded-lg ${r.won ? 'bg-cyan-500/5 border border-cyan-500/15' : 'bg-red-500/5 border border-red-500/15'}`}>
                     <span className={`font-mono font-bold text-lg ${r.won ? 'text-accent-cyan' : 'text-warning-coral'}`}>{r.roll}</span>
                     <span className={`text-sm font-semibold ${r.won ? 'text-accent-cyan' : 'text-warning-coral'}`}>
-                      {r.won ? `+${r.winnings}` : '—'}
+                      {r.won ? `+KES ${(r.winnings / 100).toFixed(0)}` : '—'}
                     </span>
                   </div>
                 ))}

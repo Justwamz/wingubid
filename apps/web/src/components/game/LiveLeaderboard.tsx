@@ -7,7 +7,7 @@ export function LiveLeaderboard({ feed }: { feed: CashoutFeed | null }) {
       <span className="text-gray-400">Player cashed out at </span>
       <span className="text-accent-cyan font-mono font-bold">{feed.multiplier.toFixed(2)}×</span>
       <span className="text-gray-400"> — KES </span>
-      <span className="text-white font-mono">{feed.winnings}</span>
+      <span className="text-white font-mono">{(feed.winnings / 100).toFixed(0)}</span>
     </div>
   )
 }
