@@ -5,6 +5,7 @@ import { startCron } from './lib/cron.js'
 import { Server } from 'socket.io'
 import { registerCrashSocket } from './game/crash-socket.js'
 import { startCrashLoop } from './game/crash-loop.js'
+import { startLotteryLoop } from './game/lottery-loop.js'
 
 async function main() {
   await runMigrations()
@@ -20,6 +21,7 @@ async function main() {
   })
   registerCrashSocket(io)
   startCrashLoop(io)
+  startLotteryLoop()
 }
 
 main().catch(err => {
