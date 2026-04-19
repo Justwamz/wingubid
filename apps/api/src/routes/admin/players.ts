@@ -54,8 +54,9 @@ export async function adminPlayersRoutes(app: FastifyInstance) {
       [passwordHash, id],
     )
 
-    console.log(
-      `[SMS STUB] To: ${rows[0].phone} | Msg: Your WinguBet temporary password is ${tempPassword}. Please change it after logging in.`,
+    req.log.info(
+      { phone: rows[0].phone },
+      `[SMS STUB] temp password reset for player ${id}`,
     )
 
     return reply.send({ tempPassword })
