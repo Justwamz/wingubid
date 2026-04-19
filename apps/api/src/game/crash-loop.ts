@@ -33,6 +33,21 @@ export function startCrashLoop(io: Server): void {
   }, 100)
 }
 
+export function sendCurrentStateTo(socket: { emit: (ev: string, data: unknown) => void }): void {
+  if (!currentRound) return
+  if (currentRound.status === 'waiting') {
+    socket.emit('round:waiting', { waitingEndsAt: currentRound.waitingEndsAt })
+  } else if (currentRound.status === 'running') {
+    socket.emit('round:started', {
+      roundId: currentRound.roundId,
+      roundNumber: currentRound.roundNumber,
+      serverSeedHash: currentRound.serverSeedHash,
+      clientSeed: currentRound.clientSeed,
+    })
+    socket.emit('round:tick', { multiplier: currentRound.multiplier })
+  }
+}
+
 export function stopCrashLoop(): void {
   if (intervalId) clearInterval(intervalId)
   intervalId = null
@@ -64,7 +79,7 @@ async function tick(io: Server): Promise<void> {
   tickRunning = true
   try {
     if (!currentRound) {
-      await initRound()
+      await initRound(io)
       return
     }
 
@@ -105,7 +120,7 @@ async function tick(io: Server): Promise<void> {
   }
 }
 
-async function initRound(): Promise<void> {
+async function initRound(io: Server): Promise<void> {
   const redis = getRedis()
   const existing = await redis.get(ROUND_KEY)
   if (existing) {
@@ -118,10 +133,10 @@ async function initRound(): Promise<void> {
       return
     }
   }
-  await createNewRound()
+  await createNewRound(io)
 }
 
-async function createNewRound(): Promise<void> {
+async function createNewRound(io?: Server): Promise<void> {
   const serverSeed = randomBytes(32).toString('hex')
   const serverSeedHash = createHash('sha256').update(serverSeed).digest('hex')
   const clientSeed = randomBytes(16).toString('hex')
@@ -143,6 +158,7 @@ async function createNewRound(): Promise<void> {
     multiplier: 1.00, waitingEndsAt: Date.now() + WAITING_MS, startedAt: 0, bets: {},
   }
   await getRedis().set(ROUND_KEY, JSON.stringify(currentRound))
+  io?.to('crash').emit('round:waiting', { waitingEndsAt: currentRound.waitingEndsAt })
 }
 
 async function transitionToRunning(io: Server): Promise<void> {
@@ -170,5 +186,5 @@ async function transitionToCrashed(io: Server): Promise<void> {
   await getRedis().del(ROUND_KEY)
   io.to('crash').emit('round:crashed', { crashPoint, serverSeed, roundId })
   currentRound = null
-  setTimeout(() => createNewRound(), POST_CRASH_MS)
+  setTimeout(() => createNewRound(io), POST_CRASH_MS)
 }

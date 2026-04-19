@@ -1,7 +1,7 @@
 import type { Server, Socket } from 'socket.io'
 import { verifyPlayerAccessToken } from '../lib/jwt.js'
 import { placeBet, cashout } from '../services/crash.service.js'
-import { addBetToRound, removeBetFromRound, getCurrentRound } from './crash-loop.js'
+import { addBetToRound, removeBetFromRound, getCurrentRound, sendCurrentStateTo } from './crash-loop.js'
 
 export function registerCrashSocket(io: Server): void {
   io.on('connection', (socket: Socket) => {
@@ -17,6 +17,7 @@ export function registerCrashSocket(io: Server): void {
     }
 
     socket.join('crash')
+    sendCurrentStateTo(socket)
     handleCrashSocket(io, socket)
   })
 }

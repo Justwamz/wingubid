@@ -33,7 +33,6 @@ export function useCrashGame() {
   useEffect(() => {
     const socket = io(API_URL, {
       auth: { token: getToken() },
-      transports: ['websocket'],
     })
     socketRef.current = socket
 
