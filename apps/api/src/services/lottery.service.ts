@@ -1,0 +1,189 @@
+import { randomBytes } from 'crypto'
+import { pool } from '@betting/db'
+import { debitForBet, creditWinnings } from './wallet.service.js'
+import { AppError } from '../lib/errors.js'
+
+export const TICKET_PRICES: Record<string, number> = {
+  hourly: 2000,   // KES 20
+  daily:  10000,  // KES 100
+  weekly: 50000,  // KES 500
+}
+
+const PRIZE_MULTIPLIERS: Record<string, Record<number, number>> = {
+  hourly: { 3: 100, 2: 5,  1: 1, 0: 0 },
+  daily:  { 3: 300, 2: 8,  1: 1, 0: 0 },
+  weekly: { 3: 1000, 2: 15, 1: 1, 0: 0 },
+}
+
+export function draw3Numbers(): number[] {
+  const numbers = new Set<number>()
+  while (numbers.size < 3) {
+    const bytes = randomBytes(4)
+    const val = bytes.readUInt32BE(0)
+    // Reject values above floor(2^32/36)*36 to avoid modulo bias
+    const max = Math.floor(0xffffffff / 36) * 36
+    if (val <= max) numbers.add((val % 36) + 1)
+  }
+  return [...numbers].sort((a, b) => a - b)
+}
+
+export function countMatches(winningNumbers: number[], pickedNumbers: number[]): number {
+  return pickedNumbers.filter(n => winningNumbers.includes(n)).length
+}
+
+export function calculateLotteryPrize(
+  drawType: string,
+  matchedCount: number,
+  ticketPrice: number,
+): number {
+  const mult = PRIZE_MULTIPLIERS[drawType]?.[matchedCount] ?? 0
+  return ticketPrice * mult
+}
+
+export async function buyTicket(
+  playerId: string,
+  drawType: string,
+  pickedNumbers: number[],
+): Promise<{ ticketId: string; drawId: string; scheduledAt: string; ticketPrice: number }> {
+  if (!['hourly', 'daily', 'weekly'].includes(drawType)) {
+    throw new AppError('INVALID_DRAW_TYPE', 'Invalid draw type', 400)
+  }
+  if (pickedNumbers.length !== 3) {
+    throw new AppError('INVALID_NUMBERS', 'Must pick exactly 3 numbers', 400)
+  }
+  if (pickedNumbers.some(n => n < 1 || n > 36 || !Number.isInteger(n))) {
+    throw new AppError('INVALID_NUMBERS', 'Numbers must be integers between 1 and 36', 400)
+  }
+  if (new Set(pickedNumbers).size !== 3) {
+    throw new AppError('INVALID_NUMBERS', 'Numbers must be unique', 400)
+  }
+
+  const { rows: drawRows } = await pool.query<{ id: string; scheduled_at: string; ticket_price: string }>(
+    `SELECT id, scheduled_at, ticket_price FROM lottery_draws
+     WHERE draw_type = $1 AND status = 'pending' AND scheduled_at > NOW()
+     ORDER BY scheduled_at ASC LIMIT 1`,
+    [drawType],
+  )
+
+  if (drawRows.length === 0) {
+    throw new AppError('DRAW_NOT_FOUND', 'No upcoming draw available for this type', 404)
+  }
+
+  const draw = drawRows[0]
+  const ticketPrice = Number(draw.ticket_price)
+
+  const client = await pool.connect()
+  try {
+    await client.query('BEGIN')
+    const { walletId } = await debitForBet(client, playerId, ticketPrice, ticketPrice, {
+      game: 'lottery', drawType, drawId: draw.id,
+    })
+
+    const { rows } = await client.query<{ id: string }>(
+      `INSERT INTO lottery_tickets (player_id, wallet_id, draw_id, picked_numbers, ticket_price)
+       VALUES ($1, $2, $3, $4, $5) RETURNING id`,
+      [playerId, walletId, draw.id, pickedNumbers, ticketPrice],
+    )
+
+    await client.query('COMMIT')
+    return { ticketId: rows[0].id, drawId: draw.id, scheduledAt: draw.scheduled_at, ticketPrice }
+  } catch (err) {
+    await client.query('ROLLBACK')
+    throw err
+  } finally {
+    client.release()
+  }
+}
+
+export async function settleTickets(drawId: string, drawType: string, winningNumbers: number[]): Promise<void> {
+  const { rows: tickets } = await pool.query<{
+    id: string; player_id: string; wallet_id: string; picked_numbers: number[]; ticket_price: string
+  }>(
+    `SELECT id, player_id, wallet_id, picked_numbers, ticket_price
+     FROM lottery_tickets WHERE draw_id = $1 AND status = 'pending'`,
+    [drawId],
+  )
+
+  for (const ticket of tickets) {
+    const ticketPrice = Number(ticket.ticket_price)
+    const matched = countMatches(winningNumbers, ticket.picked_numbers)
+    const prizeCents = calculateLotteryPrize(drawType, matched, ticketPrice)
+    const status = prizeCents > 0 ? 'won' : 'lost'
+
+    const client = await pool.connect()
+    try {
+      await client.query('BEGIN')
+      await client.query(
+        `UPDATE lottery_tickets SET matched_count = $1, prize_cents = $2, status = $3 WHERE id = $4`,
+        [matched, prizeCents, status, ticket.id],
+      )
+      if (prizeCents > 0) {
+        await creditWinnings(client, ticket.player_id, prizeCents, {
+          game: 'lottery', drawId, ticketId: ticket.id, matched,
+        })
+      }
+      await client.query('COMMIT')
+    } catch (err) {
+      await client.query('ROLLBACK')
+      console.error('[lottery] settle ticket error', ticket.id, err)
+    } finally {
+      client.release()
+    }
+  }
+}
+
+export async function getUpcomingDraws(): Promise<{
+  id: string; drawType: string; ticketPrice: number; scheduledAt: string; jackpot: number
+}[]> {
+  const { rows } = await pool.query<{
+    id: string; draw_type: string; ticket_price: string; scheduled_at: string
+  }>(
+    `SELECT DISTINCT ON (draw_type) id, draw_type, ticket_price, scheduled_at
+     FROM lottery_draws WHERE status = 'pending' AND scheduled_at > NOW()
+     ORDER BY draw_type, scheduled_at ASC`,
+  )
+  return rows.map(r => {
+    const ticketPrice = Number(r.ticket_price)
+    const mult = PRIZE_MULTIPLIERS[r.draw_type]?.[3] ?? 0
+    return {
+      id: r.id,
+      drawType: r.draw_type,
+      ticketPrice,
+      scheduledAt: r.scheduled_at,
+      jackpot: ticketPrice * mult,
+    }
+  })
+}
+
+export async function getPlayerTickets(playerId: string): Promise<{
+  id: string; drawType: string; pickedNumbers: number[]; ticketPrice: number
+  matchedCount: number | null; prizeCents: number; status: string
+  scheduledAt: string; winningNumbers: number[] | null; createdAt: string
+}[]> {
+  const { rows } = await pool.query<{
+    id: string; draw_type: string; picked_numbers: number[]; ticket_price: string
+    matched_count: number | null; prize_cents: string; status: string
+    scheduled_at: string; winning_numbers: number[] | null; created_at: string
+  }>(
+    `SELECT t.id, d.draw_type, t.picked_numbers, t.ticket_price,
+            t.matched_count, t.prize_cents, t.status,
+            d.scheduled_at, d.winning_numbers, t.created_at
+     FROM lottery_tickets t
+     JOIN lottery_draws d ON d.id = t.draw_id
+     WHERE t.player_id = $1
+     ORDER BY t.created_at DESC LIMIT 50`,
+    [playerId],
+  )
+  return rows.map(r => ({
+    id: r.id,
+    drawType: r.draw_type,
+    pickedNumbers: r.picked_numbers,
+    ticketPrice: Number(r.ticket_price),
+    matchedCount: r.matched_count,
+    prizeCents: Number(r.prize_cents),
+    status: r.status,
+    scheduledAt: r.scheduled_at,
+    winningNumbers: r.winning_numbers,
+    createdAt: r.created_at,
+  }))
+}
