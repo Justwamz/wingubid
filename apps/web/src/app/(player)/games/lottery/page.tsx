@@ -3,6 +3,13 @@
 import React, { useState, useEffect, useCallback } from 'react'
 import { apiFetch } from '@/lib/apiFetch'
 import { refreshBalance } from '@/lib/auth'
+import { HowToPlay } from '@/components/game/HowToPlay'
+
+const HOW_TO_PLAY = [
+  { icon: '🎯', text: 'Pick a draw tier — Hourly (KES 20), Daily (KES 100) or Weekly (KES 500). Each has bigger jackpots.' },
+  { icon: '🔢', text: 'Choose exactly 3 numbers from 1–36 and buy your ticket before the countdown reaches zero.' },
+  { icon: '🏆', text: 'Match 3 numbers to win the jackpot. Match 2 for a bonus, match 1 to break even. Results appear in My Tickets.' },
+]
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -359,6 +366,8 @@ export default function LotteryPage() {
         <h1 className="text-2xl font-extrabold font-mono text-amber-400">LOTTERY</h1>
         <span className="text-xs px-2 py-1 rounded-full bg-amber-500/10 text-amber-400 border border-amber-500/20 font-mono">DRAW</span>
       </div>
+
+      <HowToPlay steps={HOW_TO_PLAY} />
 
       {/* Draw tier cards */}
       {drawsError ? (

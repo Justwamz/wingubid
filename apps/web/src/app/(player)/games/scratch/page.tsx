@@ -3,6 +3,13 @@
 import React, { useState, useEffect } from 'react'
 import { apiFetch } from '@/lib/apiFetch'
 import { refreshBalance } from '@/lib/auth'
+import { HowToPlay } from '@/components/game/HowToPlay'
+
+const HOW_TO_PLAY = [
+  { icon: '💰', text: 'Choose your stake — KES 20, 50, 100 or 200.' },
+  { icon: '🃏', text: 'Hit Buy & Scratch. A 3×3 grid of hidden tiles is generated instantly on the server.' },
+  { icon: '🏆', text: 'Match 3 or more of the same symbol to win. The rarer the symbol, the bigger the prize!' },
+]
 
 // Symbol index → emoji
 const SYMBOLS = ['💎', '🌟', '🍀', '🔥', '💰', '❌'] as const
@@ -233,6 +240,8 @@ export default function ScratchPage() {
           INSTANT
         </span>
       </div>
+
+      <HowToPlay steps={HOW_TO_PLAY} />
 
       {/* How to play */}
       <div className="bg-game-card border border-game-border rounded-2xl p-4">
