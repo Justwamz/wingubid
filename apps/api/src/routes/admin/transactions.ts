@@ -12,7 +12,7 @@ export async function adminTransactionsRoutes(app: FastifyInstance) {
               p.name AS player_name
        FROM transactions t
        JOIN players p ON p.id = t.player_id
-       WHERE t.type != 'demo_topup'
+       WHERE t.type <> 'demo_topup'
        ORDER BY t.created_at DESC
        LIMIT 200`,
     )
