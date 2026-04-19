@@ -116,7 +116,7 @@ export default function LandingPage() {
     fetch(`${API_URL}/games/leaderboard`)
       .then(r => r.ok ? r.json() : []).then(setWins).catch(() => {})
     fetch(`${API_URL}/banners/landing`)
-      .then(r => r.ok ? r.json() : null).then((d: Banner | null) => d ? setBanner(d) : null).catch(() => {})
+      .then(r => r.ok ? r.json() : null).then((d: { banner: Banner } | null) => d?.banner ? setBanner(d.banner) : null).catch(() => {})
   }, [router])
 
   return (

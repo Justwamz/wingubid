@@ -134,8 +134,8 @@ export default function GamesLobby() {
     load()
     const id = setInterval(load, 5000)
 
-    apiFetch<Banner>('/banners/lobby')
-      .then(({ data }) => data ? setBanner(data) : null)
+    apiFetch<{ banner: Banner | null }>('/banners/lobby')
+      .then(({ data }) => data?.banner ? setBanner(data.banner) : null)
 
     return () => clearInterval(id)
   }, [])
