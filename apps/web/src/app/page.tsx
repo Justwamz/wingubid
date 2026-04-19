@@ -142,6 +142,26 @@ export default function LandingPage() {
         </div>
       </nav>
 
+      {/* Promotion banner */}
+      {banner && (
+        <div className={`relative w-full overflow-hidden bg-gradient-to-r ${banner.gradient}`}>
+          {banner.imageUrl && (
+            <img src={banner.imageUrl} className="absolute inset-0 w-full h-full object-cover opacity-60" alt="" />
+          )}
+          <div className="relative z-10 max-w-7xl mx-auto px-4 py-5 flex items-center justify-between gap-4">
+            <div>
+              <p className="text-lg font-bold text-white leading-tight">{banner.headline}</p>
+              {banner.subtext && <p className="text-sm text-white/80 mt-0.5">{banner.subtext}</p>}
+            </div>
+            {banner.ctaText && banner.ctaUrl && (
+              <a href={banner.ctaUrl} className="shrink-0 bg-white text-gray-900 font-bold text-sm px-5 py-2.5 rounded-lg hover:bg-white/90 transition-colors">
+                {banner.ctaText}
+              </a>
+            )}
+          </div>
+        </div>
+      )}
+
       {/* Hero */}
       <section className="relative overflow-hidden">
         <div className="absolute inset-0 pointer-events-none select-none">
@@ -198,26 +218,6 @@ export default function LandingPage() {
           </div>
         )}
       </section>
-
-      {/* Promotion banner */}
-      {banner && (
-        <section className="max-w-7xl mx-auto px-4 pb-8">
-          <div className={`relative w-full rounded-xl overflow-hidden bg-gradient-to-r ${banner.gradient} min-h-[120px]`}>
-            {banner.imageUrl && (
-              <img src={banner.imageUrl} className="absolute inset-0 w-full h-full object-cover opacity-60" alt="" />
-            )}
-            <div className="relative z-10 p-6">
-              <h2 className="text-2xl font-bold text-white">{banner.headline}</h2>
-              {banner.subtext && <p className="text-gray-200 mt-1">{banner.subtext}</p>}
-              {banner.ctaText && banner.ctaUrl && (
-                <a href={banner.ctaUrl} className="inline-block mt-3 bg-white/20 hover:bg-white/30 text-white font-semibold px-4 py-2 rounded-lg transition-colors">
-                  {banner.ctaText}
-                </a>
-              )}
-            </div>
-          </div>
-        </section>
-      )}
 
       {/* Games */}
       <section className="max-w-7xl mx-auto px-4 py-24">
