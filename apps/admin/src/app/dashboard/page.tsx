@@ -3,6 +3,8 @@ import { useEffect, useState, useCallback } from 'react'
 import { isAuthenticated, clearToken } from '@/lib/auth'
 import { useRouter } from 'next/navigation'
 import { apiFetch } from '@/lib/api'
+import { UsersTab } from '@/components/UsersTab'
+import { TransactionsTab } from '@/components/TransactionsTab'
 
 // ---------------------------------------------------------------------------
 // Types
@@ -394,7 +396,7 @@ function BannerSection({
 
 export default function AdminDashboardPage() {
   const router = useRouter()
-  const [tab, setTab] = useState<'stats' | 'promotions'>('stats')
+  const [tab, setTab] = useState<'stats' | 'promotions' | 'users' | 'transactions'>('stats')
   const [stats, setStats] = useState<Stats | null>(null)
   const [loading, setLoading] = useState(true)
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null)
@@ -505,7 +507,7 @@ export default function AdminDashboardPage() {
 
       {/* Tab bar */}
       <div className="flex gap-1 mb-6 border-b border-gray-800">
-        {(['stats', 'promotions'] as const).map(t => (
+        {(['stats', 'promotions', 'users', 'transactions'] as const).map(t => (
           <button
             key={t}
             onClick={() => setTab(t)}
@@ -630,6 +632,8 @@ export default function AdminDashboardPage() {
           />
         </div>
       )}
+      {tab === 'users' && <UsersTab />}
+      {tab === 'transactions' && <TransactionsTab />}
     </main>
   )
 }
