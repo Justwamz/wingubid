@@ -1,5 +1,5 @@
 'use client'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import type { RoundStatus, MyBet } from '@/hooks/useCrashGame'
 
 interface Props {
@@ -8,17 +8,33 @@ interface Props {
   multiplier?: number
   waitingEndsAt?: number | null
   error?: string | null
+  connected?: boolean
   onPlaceBet: (grossStake: number, autoCashoutAt?: number) => void
   onCashout: () => void
 }
 
-export function BetPanel({ status, myBet, multiplier = 1, waitingEndsAt, error, onPlaceBet, onCashout }: Props) {
+export function BetPanel({ status, myBet, multiplier = 1, waitingEndsAt, error, connected, onPlaceBet, onCashout }: Props) {
   const [stake, setStake] = useState('')
   const [autoCashout, setAutoCashout] = useState('')
   const [showAuto, setShowAuto] = useState(false)
+  const [secondsLeft, setSecondsLeft] = useState<number | null>(null)
 
   const canBet = status === 'waiting' && !myBet
   const canCashout = status === 'running' && !!myBet
+
+  useEffect(() => {
+    if (status !== 'waiting' || !waitingEndsAt) {
+      setSecondsLeft(null)
+      return
+    }
+    function update() {
+      const remaining = Math.max(0, Math.ceil((waitingEndsAt! - Date.now()) / 1000))
+      setSecondsLeft(remaining)
+    }
+    update()
+    const id = setInterval(update, 500)
+    return () => clearInterval(id)
+  }, [status, waitingEndsAt])
 
   function handleSubmit() {
     const amount = parseInt(stake)
@@ -29,6 +45,10 @@ export function BetPanel({ status, myBet, multiplier = 1, waitingEndsAt, error, 
 
   return (
     <div className="bg-game-card border border-game-border rounded-xl p-4 space-y-3">
+      {(!connected || status === 'idle') && (
+        <div className="text-xs text-gray-500 text-center py-1 animate-pulse">Connecting to game…</div>
+      )}
+
       <div className="flex gap-2">
         <input
           type="number"
@@ -71,6 +91,14 @@ export function BetPanel({ status, myBet, multiplier = 1, waitingEndsAt, error, 
         />
       )}
 
+      {status === 'waiting' && secondsLeft !== null && (
+        <p className="text-xs text-center text-accent-cyan">Betting closes in {secondsLeft}s</p>
+      )}
+
+      {status === 'running' && !myBet && (
+        <p className="text-xs text-center text-yellow-400">Round in progress — wait for the next round to bet</p>
+      )}
+
       {canCashout ? (
         <button
           onClick={onCashout}
@@ -91,6 +119,8 @@ export function BetPanel({ status, myBet, multiplier = 1, waitingEndsAt, error, 
           Place Bet
         </button>
       )}
+
+      {error && <p className="text-xs text-red-400 text-center">{error}</p>}
     </div>
   )
 }

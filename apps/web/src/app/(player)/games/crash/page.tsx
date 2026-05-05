@@ -15,7 +15,7 @@ const HOW_TO_PLAY = [
 ]
 
 export default function CrashPage() {
-  const { status, multiplier, myBet, crashPoint, waitingEndsAt, recentCrashes, feed, error, placeBet, cashout } =
+  const { status, multiplier, myBet, crashPoint, waitingEndsAt, recentCrashes, feed, error, connected, cashoutResult, placeBet, cashout } =
     useCrashGame()
 
   const [chartPoints, setChartPoints] = useState<number[]>([])
@@ -43,6 +43,14 @@ export default function CrashPage() {
 
       <HowToPlay steps={HOW_TO_PLAY} />
 
+      {cashoutResult && (
+        <div className="w-full bg-green-900/60 border border-green-500/40 rounded-xl px-4 py-3 text-center">
+          <p className="text-green-400 font-bold text-lg">
+            Cashed out at {cashoutResult.multiplier.toFixed(2)}× — KES {(cashoutResult.winnings / 100).toFixed(2)}
+          </p>
+        </div>
+      )}
+
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
         {/* Chart + bet panel */}
         <div className="lg:col-span-2 space-y-4">
@@ -61,6 +69,8 @@ export default function CrashPage() {
           <BetPanel
             status={status}
             myBet={myBet}
+            multiplier={multiplier}
+            connected={connected}
             waitingEndsAt={waitingEndsAt}
             error={error}
             onPlaceBet={placeBet}

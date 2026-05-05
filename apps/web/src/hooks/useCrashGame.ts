@@ -29,18 +29,25 @@ export function useCrashGame() {
   const [recentCrashes, setRecentCrashes] = useState<number[]>([])
   const [feed, setFeed] = useState<CashoutFeed | null>(null)
   const [error, setError] = useState<string | null>(null)
+  const [connected, setConnected] = useState(false)
+  const [cashoutResult, setCashoutResult] = useState<{ multiplier: number; winnings: number } | null>(null)
 
   useEffect(() => {
     const socket = io(API_URL, {
-      auth: { token: getToken() },
+      auth: (cb: (o: { token: string | null }) => void) => cb({ token: getToken() }),
     })
     socketRef.current = socket
+
+    socket.on('connect', () => setConnected(true))
+    socket.on('disconnect', () => setConnected(false))
 
     socket.on('round:waiting', (data: { waitingEndsAt: number }) => {
       setStatus('waiting')
       setWaitingEndsAt(data.waitingEndsAt)
       setMultiplier(1.00)
       setCrashPoint(null)
+      setError(null)
+      setCashoutResult(null)
     })
     socket.on('round:started', () => {
       setStatus('running')
@@ -57,7 +64,11 @@ export function useCrashGame() {
       refreshBalance()
     })
     socket.on('bet:confirmed', (data: MyBet) => { setMyBet(data); refreshBalance() })
-    socket.on('cashout:confirmed', () => { setMyBet(null); refreshBalance() })
+    socket.on('cashout:confirmed', (data: { multiplier: number; winnings: number }) => {
+      setMyBet(null)
+      setCashoutResult(data)
+      refreshBalance()
+    })
     socket.on('cashout:broadcast', (data: CashoutFeed) => {
       setFeed(data)
       setTimeout(() => setFeed(null), 3000)
@@ -76,5 +87,5 @@ export function useCrashGame() {
     socketRef.current?.emit('bet:cashout')
   }, [])
 
-  return { status, multiplier, myBet, crashPoint, waitingEndsAt, recentCrashes, feed, error, placeBet, cashout }
+  return { status, multiplier, myBet, crashPoint, waitingEndsAt, recentCrashes, feed, error, connected, cashoutResult, placeBet, cashout }
 }
