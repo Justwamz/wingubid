@@ -228,7 +228,7 @@ export default function GamesLobby() {
                   </div>
                   <div className="text-right flex-shrink-0">
                     <p className="text-accent-cyan font-mono font-bold text-sm">{e.multiplier.toFixed(2)}×</p>
-                    <p className="text-gray-300 text-xs font-mono">{e.currency} {e.winnings}</p>
+                    <p className="text-gray-300 text-xs font-mono">{e.currency} {(e.winnings / 100).toLocaleString('en-KE', { minimumFractionDigits: 2 })}</p>
                   </div>
                 </div>
               ))}
