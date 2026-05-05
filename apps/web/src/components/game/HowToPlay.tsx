@@ -1,7 +1,8 @@
 'use client'
+import React from 'react'
 import { useState } from 'react'
 
-interface Step { icon: string; text: string }
+interface Step { icon: React.ReactNode; text: string }
 
 interface HowToPlayProps {
   steps: Step[]
@@ -25,7 +26,7 @@ export function HowToPlay({ steps }: HowToPlayProps) {
         <div className="px-4 pb-4 grid grid-cols-1 sm:grid-cols-3 gap-3 border-t border-game-border">
           {steps.map((s, i) => (
             <div key={i} className="flex items-start gap-2 pt-3">
-              <span className="text-xl leading-none flex-shrink-0">{s.icon}</span>
+              <span className="flex-shrink-0 text-accent-cyan">{s.icon}</span>
               <div>
                 <span className="text-xs text-gray-500 block mb-0.5">Step {i + 1}</span>
                 <p className="text-sm text-gray-300">{s.text}</p>

@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { isAuthenticated } from '@/lib/auth'
 import { useRouter } from 'next/navigation'
+import { Zap, Shield, Smartphone, Globe } from 'lucide-react'
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3001'
 
@@ -100,10 +101,10 @@ const GAMES = [
 ]
 
 const FEATURES = [
-  { icon: '⚡', title: 'Instant Payouts', body: 'Winnings hit your balance the moment you cash out. No delays, no holds.' },
-  { icon: '🔒', title: 'Provably Fair', body: 'Every outcome is cryptographically verifiable. You can audit any result.' },
-  { icon: '📱', title: 'Mobile First', body: 'Designed for your phone. No app download needed — just open and play.' },
-  { icon: '🇰🇪', title: 'KES Native', body: 'Play in Kenyan Shillings. No currency conversion, no hidden fees.' },
+  { icon: <Zap size={20} />, title: 'Instant Payouts', body: 'Winnings hit your balance the moment you cash out. No delays, no holds.' },
+  { icon: <Shield size={20} />, title: 'Provably Fair', body: 'Every outcome is cryptographically verifiable. You can audit any result.' },
+  { icon: <Smartphone size={20} />, title: 'Mobile First', body: 'Designed for your phone. No app download needed — just open and play.' },
+  { icon: <Globe size={20} />, title: 'KES Native', body: 'Play in Kenyan Shillings. No currency conversion, no hidden fees.' },
 ]
 
 export default function LandingPage() {

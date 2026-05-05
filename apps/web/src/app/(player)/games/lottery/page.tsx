@@ -4,11 +4,12 @@ import React, { useState, useEffect, useCallback } from 'react'
 import { apiFetch } from '@/lib/apiFetch'
 import { refreshBalance } from '@/lib/auth'
 import { HowToPlay } from '@/components/game/HowToPlay'
+import { Target, Hash, Trophy } from 'lucide-react'
 
 const HOW_TO_PLAY = [
-  { icon: '🎯', text: 'Pick a draw tier — Hourly (KES 20), Daily (KES 100) or Weekly (KES 500). Each has bigger jackpots.' },
-  { icon: '🔢', text: 'Choose exactly 3 numbers from 1–36 and buy your ticket before the countdown reaches zero.' },
-  { icon: '🏆', text: 'Match 3 numbers to win the jackpot. Match 2 for a bonus, match 1 to break even. Results appear in My Tickets.' },
+  { icon: <Target size={16} />, text: 'Pick a draw tier: Hourly (KES 20), Daily (KES 100) or Weekly (KES 500). Each has bigger jackpots.' },
+  { icon: <Hash size={16} />, text: 'Choose exactly 3 numbers from 1–36 and buy your ticket before the countdown reaches zero.' },
+  { icon: <Trophy size={16} />, text: 'Match 3 numbers to win the jackpot. Match 2 for a bonus, match 1 to break even. Results appear in My Tickets.' },
 ]
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -467,7 +468,7 @@ export default function LotteryPage() {
             ? 'Select a draw tier'
             : pickedNumbers.length < 3
             ? `Pick ${3 - pickedNumbers.length} more number${3 - pickedNumbers.length !== 1 ? 's' : ''}`
-            : `Buy Ticket — ${selectedDraw ? formatCents(selectedDraw.ticketPrice) : ''}`}
+            : `Buy Ticket · ${selectedDraw ? formatCents(selectedDraw.ticketPrice) : ''}`}
         </button>
       </div>
 

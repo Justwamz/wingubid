@@ -4,11 +4,12 @@ import React, { useState, useEffect } from 'react'
 import { apiFetch } from '@/lib/apiFetch'
 import { refreshBalance } from '@/lib/auth'
 import { HowToPlay } from '@/components/game/HowToPlay'
+import { DollarSign, Ticket, Trophy } from 'lucide-react'
 
 const HOW_TO_PLAY = [
-  { icon: '💰', text: 'Choose your stake — KES 20, 50, 100 or 200.' },
-  { icon: '🃏', text: 'Hit Buy & Scratch. A 3×3 grid of hidden tiles is generated instantly on the server.' },
-  { icon: '🏆', text: 'Match 3 or more of the same symbol to win. The rarer the symbol, the bigger the prize!' },
+  { icon: <DollarSign size={16} />, text: 'Choose your stake: KES 20, 50, 100 or 200.' },
+  { icon: <Ticket size={16} />, text: 'Hit Buy & Scratch. A 3×3 grid of hidden tiles is generated instantly on the server.' },
+  { icon: <Trophy size={16} />, text: 'Match 3 or more of the same symbol to win. The rarer the symbol, the bigger the prize!' },
 ]
 
 // Symbol index → emoji
@@ -249,9 +250,9 @@ export default function ScratchPage() {
           How to Play
         </p>
         <div className="space-y-1 text-sm text-gray-400">
-          <p>🎟️ Pick a stake and buy a card.</p>
-          <p>🔢 Match 3+ of the same symbol (not ❌) anywhere on the 3×3 grid to win.</p>
-          <p>💰 Higher stakes = bigger prizes.</p>
+          <p>Pick a stake and buy a card.</p>
+          <p>Match 3+ of the same symbol (not ❌) anywhere on the 3×3 grid to win.</p>
+          <p>Higher stakes = bigger prizes.</p>
         </div>
       </div>
 

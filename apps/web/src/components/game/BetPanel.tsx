@@ -1,6 +1,7 @@
 'use client'
 import { useState, useEffect } from 'react'
 import type { RoundStatus, MyBet } from '@/hooks/useCrashGame'
+import { CheckCircle2 } from 'lucide-react'
 
 interface Props {
   status: RoundStatus
@@ -96,7 +97,7 @@ export function BetPanel({ status, myBet, multiplier = 1, waitingEndsAt, error, 
       )}
 
       {status === 'running' && !myBet && (
-        <p className="text-xs text-center text-yellow-400">Round in progress — wait for the next round to bet</p>
+        <p className="text-xs text-center text-yellow-400">Round in progress · wait for the next round to bet</p>
       )}
 
       {canCashout ? (
@@ -108,7 +109,7 @@ export function BetPanel({ status, myBet, multiplier = 1, waitingEndsAt, error, 
         </button>
       ) : myBet ? (
         <button disabled className="w-full py-3 rounded-xl font-bold text-game-bg bg-gray-500 text-lg opacity-60">
-          Bet Placed ✓
+          Bet Placed<CheckCircle2 size={16} className="inline ml-1" />
         </button>
       ) : (
         <button

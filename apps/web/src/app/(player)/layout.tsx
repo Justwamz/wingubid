@@ -1,9 +1,10 @@
 'use client'
-import { useEffect, useRef, useState } from 'react'
+import React, { useEffect, useRef, useState } from 'react'
 import { useRouter, usePathname } from 'next/navigation'
 import Link from 'next/link'
 import { isAuthenticated, clearToken } from '@/lib/auth'
 import { apiFetch } from '@/lib/api'
+import { Gamepad2, CreditCard, User, LogOut } from 'lucide-react'
 
 interface PlayerProfile {
   name: string
@@ -44,10 +45,10 @@ export default function PlayerLayout({ children }: { children: React.ReactNode }
     router.push('/login')
   }
 
-  const navLinks = [
-    { href: '/games', label: 'Games', icon: '🎮', match: (p: string) => p.startsWith('/games') },
-    { href: '/wallet/deposit', label: 'Deposit', icon: '💳', match: (p: string) => p.startsWith('/wallet') },
-    { href: '/dashboard', label: 'Profile', icon: '👤', match: (p: string) => p === '/dashboard' },
+  const navLinks: { href: string; label: string; icon: React.ReactNode; match: (p: string) => boolean }[] = [
+    { href: '/games', label: 'Games', icon: <Gamepad2 size={18} />, match: (p: string) => p.startsWith('/games') },
+    { href: '/wallet/deposit', label: 'Deposit', icon: <CreditCard size={18} />, match: (p: string) => p.startsWith('/wallet') },
+    { href: '/dashboard', label: 'Profile', icon: <User size={18} />, match: (p: string) => p === '/dashboard' },
   ]
 
   return (
@@ -119,7 +120,7 @@ export default function PlayerLayout({ children }: { children: React.ReactNode }
               l.match(pathname) ? 'text-accent-cyan' : 'text-gray-500'
             }`}
           >
-            <span className="text-lg leading-none">{l.icon}</span>
+            {l.icon}
             {l.label.toUpperCase()}
           </Link>
         ))}
@@ -127,7 +128,7 @@ export default function PlayerLayout({ children }: { children: React.ReactNode }
           onClick={handleLogout}
           className="flex-1 flex flex-col items-center py-2.5 text-xs font-mono gap-1 text-gray-500"
         >
-          <span className="text-lg leading-none">🚪</span>
+          <LogOut size={18} />
           LOGOUT
         </button>
       </nav>

@@ -4,11 +4,12 @@ import { useMinesGame } from '@/hooks/useMinesGame'
 import { MinesGrid } from '@/components/game/MinesGrid'
 import { MinesHistory } from '@/components/game/MinesHistory'
 import { HowToPlay } from '@/components/game/HowToPlay'
+import { Gem, Search, DollarSign } from 'lucide-react'
 
 const HOW_TO_PLAY = [
-  { icon: '💎', text: 'Choose your grid size, number of mines, and stake. More mines = bigger multiplier.' },
-  { icon: '🔍', text: 'Click tiles to reveal gems. Each safe tile increases your multiplier.' },
-  { icon: '💰', text: 'Cash out any time to keep your winnings. Hit a mine and lose your stake.' },
+  { icon: <Gem size={16} />, text: 'Choose your grid size, number of mines, and stake. More mines = bigger multiplier.' },
+  { icon: <Search size={16} />, text: 'Click tiles to reveal gems. Each safe tile increases your multiplier.' },
+  { icon: <DollarSign size={16} />, text: 'Cash out any time to keep your winnings. Hit a mine and lose your stake.' },
 ]
 
 export default function MinesPage() {
@@ -104,7 +105,7 @@ export default function MinesPage() {
                   className="w-full py-3.5 rounded-xl font-bold text-base"
                   style={{ background: 'linear-gradient(135deg, #00F2FE, #00C896)', color: '#0a0a0a' }}
                 >
-                  Cash Out — KES {Math.floor(parseInt(stake || '0') * game.multiplier)} 💰
+                  Cash Out · KES {Math.floor(parseInt(stake || '0') * game.multiplier)}
                 </button>
               )}
 

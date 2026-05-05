@@ -4,6 +4,7 @@ import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { apiFetch } from '@/lib/api'
 import { refreshBalance } from '@/lib/auth'
+import { CheckCircle2 } from 'lucide-react'
 
 const PRESET_AMOUNTS = [500, 1000, 2000, 5000, 10000]
 
@@ -42,7 +43,7 @@ export default function DepositPage() {
     return (
       <div className="max-w-lg mx-auto px-4 py-16 flex flex-col items-center gap-6 text-center">
         <div className="w-20 h-20 rounded-full bg-green-500/10 border border-green-500/30 flex items-center justify-center">
-          <span className="text-4xl">✓</span>
+          <CheckCircle2 size={48} className="text-green-400" />
         </div>
         <div>
           <p className="text-gray-400 text-sm">Added to your account</p>

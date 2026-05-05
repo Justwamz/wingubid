@@ -7,11 +7,12 @@ import { RoundHistory } from '@/components/game/RoundHistory'
 import { LiveLeaderboard } from '@/components/game/LiveLeaderboard'
 import { CrashChart } from '@/components/game/CrashChart'
 import { HowToPlay } from '@/components/game/HowToPlay'
+import { DollarSign, TrendingUp, Rocket } from 'lucide-react'
 
 const HOW_TO_PLAY = [
-  { icon: '💰', text: 'Enter your stake and place your bet before the round starts.' },
-  { icon: '📈', text: 'Watch the multiplier rise. The longer it climbs, the more you win.' },
-  { icon: '🚀', text: 'Cash out before it crashes to lock in your winnings. Wait too long — you lose.' },
+  { icon: <DollarSign size={16} />, text: 'Enter your stake and place your bet before the round starts.' },
+  { icon: <TrendingUp size={16} />, text: 'Watch the multiplier rise. The longer it climbs, the more you win.' },
+  { icon: <Rocket size={16} />, text: 'Cash out before it crashes to lock in your winnings. Wait too long — you lose.' },
 ]
 
 export default function CrashPage() {
@@ -46,7 +47,7 @@ export default function CrashPage() {
       {cashoutResult && (
         <div className="w-full bg-green-900/60 border border-green-500/40 rounded-xl px-4 py-3 text-center">
           <p className="text-green-400 font-bold text-lg">
-            Cashed out at {cashoutResult.multiplier.toFixed(2)}× — KES {(cashoutResult.winnings / 100).toFixed(2)}
+            Cashed out at {cashoutResult.multiplier.toFixed(2)}× · KES {(cashoutResult.winnings / 100).toFixed(2)}
           </p>
         </div>
       )}

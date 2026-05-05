@@ -6,6 +6,7 @@ import { DiceFace } from '@/components/game/DiceFace'
 import { HowToPlay } from '@/components/game/HowToPlay'
 import { apiFetch } from '@/lib/apiFetch'
 import { refreshBalance } from '@/lib/auth'
+import { Target, ArrowUp, Dice6 } from 'lucide-react'
 
 type Direction = 'over' | 'under'
 
@@ -21,9 +22,9 @@ function rollToFace(roll: number): 1 | 2 | 3 | 4 | 5 | 6 {
 }
 
 const HOW_TO_PLAY = [
-  { icon: '🎯', text: 'Set your target number using the slider.' },
-  { icon: '⬆️', text: 'Choose HIGH (roll above target) or LOW (roll below). Tighter range = bigger multiplier.' },
-  { icon: '🎲', text: 'Enter your stake and roll. Win instantly if the result matches your prediction.' },
+  { icon: <Target size={16} />, text: 'Set your target number using the slider.' },
+  { icon: <ArrowUp size={16} />, text: 'Choose HIGH (roll above target) or LOW (roll below). Tighter range = bigger multiplier.' },
+  { icon: <Dice6 size={16} />, text: 'Enter your stake and roll. Win instantly if the result matches your prediction.' },
 ]
 
 export default function DicePage() {
@@ -134,7 +135,7 @@ export default function DicePage() {
               className="w-full py-3.5 rounded-xl font-bold text-base disabled:opacity-40 transition-all"
               style={{ background: 'linear-gradient(135deg, #00C896, #00F2FE)', color: '#0a0a0a' }}
             >
-              {rolling ? 'ROLLING...' : 'ROLL DICE 🎲'}
+              {rolling ? 'ROLLING...' : 'ROLL DICE'}
             </button>
           </div>
         </div>
