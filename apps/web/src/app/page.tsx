@@ -3,7 +3,7 @@ import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { isAuthenticated } from '@/lib/auth'
 import { useRouter } from 'next/navigation'
-import { Zap, Shield, Smartphone, Globe } from 'lucide-react'
+import { Zap, Shield, Smartphone, Globe, Trophy } from 'lucide-react'
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3001'
 
@@ -174,7 +174,7 @@ export default function LandingPage() {
         <div className="relative max-w-7xl mx-auto px-4 pt-24 pb-16 text-center">
           <div className="inline-flex items-center gap-2 bg-white/5 border border-white/10 rounded-full px-4 py-1.5 text-xs text-gray-400 mb-8">
             <span className="w-2 h-2 rounded-full bg-green-400 animate-pulse inline-block"/>
-            Live now — players winning in real time
+            Live now · players winning in real time
           </div>
 
           <h1 className="text-5xl md:text-7xl font-extrabold tracking-tight leading-tight mb-6">
@@ -209,7 +209,7 @@ export default function LandingPage() {
             <div className="flex gap-10 animate-marquee whitespace-nowrap">
               {[...wins, ...wins, ...wins].map((w, i) => (
                 <span key={i} className="inline-flex items-center gap-2 text-sm flex-shrink-0">
-                  <span className="text-gray-500">🏆</span>
+                  <Trophy size={14} className="text-gray-500" />
                   <span className="text-gray-300 font-semibold">{w.playerName}</span>
                   <span className="text-gray-600 text-xs uppercase font-mono">{w.game}</span>
                   <span className="text-[#00F2FE] font-mono font-bold">{w.multiplier.toFixed(2)}×</span>

@@ -77,7 +77,7 @@ export default function MinesPage() {
                 className="w-full py-3.5 rounded-xl font-bold text-base disabled:opacity-40 transition-all"
                 style={{ background: 'linear-gradient(135deg, #80508B, #a06090)', color: '#fff' }}
               >
-                {loading ? 'Starting…' : 'Start Game 💎'}
+                {loading ? 'Starting…' : <><Gem size={16} className="inline mr-1.5" />Start Game</>}
               </button>
             </div>
           )}
@@ -116,7 +116,7 @@ export default function MinesPage() {
                       ? 'text-accent-cyan border-cyan-500/20 bg-cyan-500/5'
                       : 'text-warning-coral border-red-500/20 bg-red-500/5'
                   }`}>
-                    {game.status === 'won' ? '💎 You won!' : '💥 Mine hit!'}
+                    {game.status === 'won' ? <><Gem size={20} className="inline mr-1.5" />You won!</> : 'Mine hit!'}
                   </div>
                   <button
                     onClick={() => window.location.reload()}

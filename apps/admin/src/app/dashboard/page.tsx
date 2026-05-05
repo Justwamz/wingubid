@@ -231,7 +231,7 @@ function BannerSection({
                         </span>
                       )}
                     </td>
-                    <td className="px-5 py-3 text-gray-400">{b.ctaText || '—'}</td>
+                    <td className="px-5 py-3 text-gray-400">{b.ctaText || <span className="text-gray-600 italic text-xs">none</span>}</td>
                     <td className="px-5 py-3 text-gray-500 text-xs">
                       {new Date(b.createdAt).toLocaleDateString()}
                     </td>
@@ -572,7 +572,7 @@ export default function AdminDashboardPage() {
                           {b.winnings !== null ? (
                             <span className={b.winnings > 0 ? 'text-green-400' : 'text-gray-500'}>{kes(b.winnings)}</span>
                           ) : (
-                            <span className="text-gray-600">—</span>
+                            <span className="text-gray-600 italic text-xs">pending</span>
                           )}
                         </td>
                         <td className={`px-5 py-3 capitalize font-semibold text-xs ${STATUS_COLORS[b.status] ?? 'text-gray-400'}`}>
