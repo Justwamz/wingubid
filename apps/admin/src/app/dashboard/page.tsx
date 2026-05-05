@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import { apiFetch } from '@/lib/api'
 import { UsersTab } from '@/components/UsersTab'
 import { TransactionsTab } from '@/components/TransactionsTab'
+import { Users, Dice6, BarChart3, ArrowDownCircle, Landmark, DollarSign, Wallet, RefreshCw } from 'lucide-react'
 
 // ---------------------------------------------------------------------------
 // Types
@@ -464,13 +465,13 @@ export default function AdminDashboardPage() {
   }
 
   const statCards = stats ? [
-    { label: 'Total Players', value: stats.totalPlayers.toLocaleString(), color: 'text-blue-400', icon: '👥' },
-    { label: 'Total Bets', value: stats.totalBets.toLocaleString(), color: 'text-purple-400', icon: '🎲' },
-    { label: 'Bet Volume', value: kes(stats.totalBetVolume), color: 'text-cyan-400', icon: '📊' },
-    { label: 'Paid Out', value: kes(stats.totalPaidOut), color: 'text-orange-400', icon: '💸' },
-    { label: 'House Revenue', value: kes(stats.houseRevenue), color: stats.houseRevenue >= 0 ? 'text-green-400' : 'text-red-400', icon: '🏦' },
-    { label: 'Deposits (real)', value: kes(stats.totalDeposits), color: 'text-emerald-400', icon: '💰' },
-    { label: 'Balance Held', value: kes(stats.totalHeldBalance), color: 'text-yellow-400', icon: '🏧' },
+    { label: 'Total Players', value: stats.totalPlayers.toLocaleString(), color: 'text-blue-400', icon: <Users size={16} /> },
+    { label: 'Total Bets', value: stats.totalBets.toLocaleString(), color: 'text-purple-400', icon: <Dice6 size={16} /> },
+    { label: 'Bet Volume', value: kes(stats.totalBetVolume), color: 'text-cyan-400', icon: <BarChart3 size={16} /> },
+    { label: 'Paid Out', value: kes(stats.totalPaidOut), color: 'text-orange-400', icon: <ArrowDownCircle size={16} /> },
+    { label: 'House Revenue', value: kes(stats.houseRevenue), color: stats.houseRevenue >= 0 ? 'text-green-400' : 'text-red-400', icon: <Landmark size={16} /> },
+    { label: 'Deposits (real)', value: kes(stats.totalDeposits), color: 'text-emerald-400', icon: <DollarSign size={16} /> },
+    { label: 'Balance Held', value: kes(stats.totalHeldBalance), color: 'text-yellow-400', icon: <Wallet size={16} /> },
   ] : []
 
   return (
@@ -494,7 +495,7 @@ export default function AdminDashboardPage() {
             onClick={fetchStats}
             className="rounded-lg bg-gray-800 px-3 py-1.5 text-xs hover:bg-gray-700 transition-colors"
           >
-            ↻ Refresh
+            <RefreshCw size={12} className="inline mr-1" /> Refresh
           </button>
           <button
             onClick={handleLogout}
@@ -605,7 +606,7 @@ export default function AdminDashboardPage() {
               disabled={bannersLoading}
               className="rounded-lg bg-gray-800 px-3 py-1.5 text-xs hover:bg-gray-700 disabled:opacity-50 transition-colors"
             >
-              {bannersLoading ? 'Loading…' : '↻ Refresh'}
+              {bannersLoading ? 'Loading…' : <><RefreshCw size={12} className="inline mr-1" /> Refresh</>}
             </button>
           </div>
 
