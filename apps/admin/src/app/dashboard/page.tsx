@@ -480,7 +480,7 @@ export default function AdminDashboardPage() {
       <div className="flex items-center justify-between mb-8">
         <div>
           <div className="flex items-center gap-3">
-            <img src="/wingubet-logo.jpeg" alt="WinguBet" className="h-10 w-auto" />
+            <img src="/wingubet-logo.jpeg" alt="WinguBet" className="h-14 w-auto" style={{ mixBlendMode: 'screen' }} />
             <span className="text-gray-400 font-normal text-base">Admin</span>
           </div>
           {lastUpdated && (

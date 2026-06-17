@@ -174,7 +174,7 @@ export default function LandingPage() {
       {/* Navbar */}
       <nav className="sticky top-0 z-50 border-b border-white/5 bg-[#0d0d14]/90 backdrop-blur-md">
         <div className="max-w-7xl mx-auto px-4 h-16 flex items-center justify-between">
-          <img src="/wingubet-logo.jpeg" alt="WinguBet" className="h-10 w-auto" />
+          <img src="/wingubet-logo.jpeg" alt="WinguBet" className="h-14 w-auto" style={{ mixBlendMode: 'screen' }} />
           <div className="flex items-center gap-3">
             <Link href="/login" className="px-4 py-2 text-sm font-semibold text-gray-300 hover:text-white transition-colors">
               Log in
@@ -351,7 +351,7 @@ export default function LandingPage() {
       {/* Footer */}
       <footer className="border-t border-white/5">
         <div className="max-w-7xl mx-auto px-4 py-8 flex flex-col md:flex-row items-center justify-between gap-4">
-          <img src="/wingubet-logo.jpeg" alt="WinguBet" className="h-8 w-auto" />
+          <img src="/wingubet-logo.jpeg" alt="WinguBet" className="h-10 w-auto" style={{ mixBlendMode: 'screen' }} />
           <p className="text-xs text-gray-600 text-center">
             18+ only · Please gamble responsibly · This is a demonstration platform
           </p>

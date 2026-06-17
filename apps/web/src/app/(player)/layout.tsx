@@ -58,7 +58,7 @@ export default function PlayerLayout({ children }: { children: React.ReactNode }
         <div className="max-w-7xl mx-auto px-4 h-14 flex items-center justify-between gap-4">
           {/* Logo */}
           <Link href="/games" className="flex-shrink-0">
-            <img src="/wingubet-logo.jpeg" alt="WinguBet" className="h-9 w-auto" />
+            <img src="/wingubet-logo.jpeg" alt="WinguBet" className="h-12 w-auto" style={{ mixBlendMode: 'screen' }} />
           </Link>
 
           {/* Desktop nav */}
