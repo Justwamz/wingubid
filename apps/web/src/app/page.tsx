@@ -98,6 +98,54 @@ const GAMES = [
       </svg>
     ),
   },
+  {
+    name: 'LOTTERY',
+    tagline: 'Pick 3 numbers, win the jackpot',
+    description: 'Choose 3 numbers from 1–36 and enter hourly, daily, or weekly draws. Match all three to hit the jackpot. Tickets from KES 20.',
+    accent: '#F59E0B',
+    gradient: 'from-yellow-900/40 to-orange-900/20',
+    border: 'border-yellow-500/20',
+    maxMultiplier: '500×',
+    href: '/register',
+    visual: (
+      <svg viewBox="0 0 120 70" className="w-full h-full opacity-70">
+        {[7, 14, 23].map((n, i) => (
+          <g key={i}>
+            <circle cx={20 + i * 40} cy={28} r={14} fill="#1a1025" stroke="#F59E0B" strokeWidth="1.5"/>
+            <text x={20 + i * 40} y={33} fontSize="11" fontWeight="bold" textAnchor="middle" fill="#F59E0B">{n}</text>
+          </g>
+        ))}
+        <rect x="10" y="50" width="100" height="14" rx="4" fill="#F59E0B15" stroke="#F59E0B30" strokeWidth="1"/>
+        <text x="60" y="61" fontSize="7" textAnchor="middle" fill="#F59E0B" opacity="0.7">HOURLY · DAILY · WEEKLY</text>
+      </svg>
+    ),
+  },
+  {
+    name: 'SCRATCH',
+    tagline: 'Match 3 symbols, instant win',
+    description: 'Buy a scratch card and reveal a 3×3 grid. Match three identical symbols to win — the rarer the symbol, the bigger the payout. Results are instant.',
+    accent: '#EC4899',
+    gradient: 'from-pink-900/40 to-rose-900/20',
+    border: 'border-pink-500/20',
+    maxMultiplier: '50×',
+    href: '/register',
+    visual: (
+      <svg viewBox="0 0 120 70" className="w-full h-full opacity-70">
+        {[0,1,2,3,4,5,6,7,8].map(i => {
+          const col = i % 3, row = Math.floor(i / 3)
+          const x = 8 + col * 36, y = 4 + row * 22
+          const symbols = ['💎','💎','🌟','🍀','💎','🔥','💰','🌟','❌']
+          const isMatch = i === 0 || i === 1 || i === 4
+          return (
+            <g key={i}>
+              <rect x={x} y={y} width="28" height="18" rx="3" fill={isMatch ? '#EC489915' : '#1a1025'} stroke={isMatch ? '#EC4899' : '#3a3530'} strokeWidth="1"/>
+              <text x={x+14} y={y+13} fontSize="9" textAnchor="middle" fill="white">{symbols[i]}</text>
+            </g>
+          )
+        })}
+      </svg>
+    ),
+  },
 ]
 
 const FEATURES = [
@@ -183,7 +231,7 @@ export default function LandingPage() {
           </h1>
 
           <p className="text-gray-400 text-lg md:text-xl max-w-2xl mx-auto mb-10 leading-relaxed">
-            Three high-octane games. Instant KES payouts. Outcomes you can verify.
+            Five high-octane games. Instant KES payouts. Outcomes you can verify.
             No download required — just register and play.
           </p>
 
@@ -221,10 +269,10 @@ export default function LandingPage() {
       {/* Games */}
       <section className="max-w-7xl mx-auto px-4 py-24">
         <div className="text-center mb-14">
-          <h2 className="text-3xl md:text-4xl font-extrabold mb-3">Three games. Endless action.</h2>
+          <h2 className="text-3xl md:text-4xl font-extrabold mb-3">Five games. Endless action.</h2>
           <p className="text-gray-500 text-lg">Pick your game and start winning in seconds.</p>
         </div>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
           {GAMES.map(g => (
             <div key={g.name} className={`bg-gradient-to-br ${g.gradient} border ${g.border} rounded-2xl p-6 flex flex-col gap-5 hover:border-opacity-50 transition-all`}>
               <div className="h-32 w-full">{g.visual}</div>
@@ -274,7 +322,7 @@ export default function LandingPage() {
           <div className="grid grid-cols-1 md:grid-cols-3 gap-12">
             {[
               { n: '01', title: 'Create your account', body: 'Sign up with your phone number. Quick, simple, free.' },
-              { n: '02', title: 'Pick a game', body: 'Choose Crash, Mines, or Dice. Each round takes under a minute.' },
+              { n: '02', title: 'Pick a game', body: 'Choose from Crash, Mines, Dice, Lottery, or Scratch. Each round takes under a minute.' },
               { n: '03', title: 'Win and cash out', body: 'Winnings hit your balance instantly. Play again or withdraw.' },
             ].map(s => (
               <div key={s.n} className="flex flex-col items-center gap-3">
