@@ -57,9 +57,8 @@ export default function PlayerLayout({ children }: { children: React.ReactNode }
       <header className="sticky top-0 z-40 bg-game-card border-b border-game-border">
         <div className="max-w-7xl mx-auto px-4 h-14 flex items-center justify-between gap-4">
           {/* Logo */}
-          <Link href="/games" className="flex items-center gap-2 flex-shrink-0">
-            <span className="text-accent-cyan font-mono font-extrabold text-xl tracking-tight">WINGU</span>
-            <span className="text-accent-violet font-mono font-extrabold text-xl tracking-tight">BET</span>
+          <Link href="/games" className="flex-shrink-0">
+            <img src="/wingubet-logo.jpeg" alt="WinguBet" className="h-9 w-auto" />
           </Link>
 
           {/* Desktop nav */}

@@ -479,11 +479,10 @@ export default function AdminDashboardPage() {
       {/* Header */}
       <div className="flex items-center justify-between mb-8">
         <div>
-          <h1 className="text-2xl font-bold">
-            <span className="text-cyan-400">WINGU</span>
-            <span className="text-violet-400">BET</span>
-            <span className="text-gray-400 font-normal text-base ml-3">Admin</span>
-          </h1>
+          <div className="flex items-center gap-3">
+            <img src="/wingubet-logo.jpeg" alt="WinguBet" className="h-10 w-auto" />
+            <span className="text-gray-400 font-normal text-base">Admin</span>
+          </div>
           {lastUpdated && (
             <p className="text-xs text-gray-600 mt-1">
               Last updated: {lastUpdated.toLocaleTimeString()} · auto-refreshes every 30s
