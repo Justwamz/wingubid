@@ -1,15 +1,11 @@
 'use client'
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useRef, useCallback } from 'react'
 import Link from 'next/link'
 import { isAuthenticated } from '@/lib/auth'
 import { useRouter } from 'next/navigation'
-import { Zap, Shield, Smartphone, Globe, Trophy } from 'lucide-react'
+import { Menu, X, HelpCircle } from 'lucide-react'
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3001'
-
-interface LeaderboardEntry {
-  playerName: string; game: string; multiplier: number; winnings: number; currency: string
-}
 
 interface Banner {
   headline: string
@@ -20,347 +16,430 @@ interface Banner {
   gradient: string
 }
 
-const GAMES = [
+const SECONDARY_NAV = [
+  { label: 'CASINO',   href: '/register', hot: false },
+  { label: 'AVIATOR',  href: '/register', hot: true  },
+  { label: 'JETX',     href: '/register', hot: false },
+  { label: 'LOTTO',    href: '/register', hot: true  },
+  { label: 'SCRATCH',  href: '/register', hot: true  },
+  { label: 'DICE',     href: '/register', hot: false },
+  { label: 'MINES',    href: '/register', hot: false },
+]
+
+const CAROUSEL_SLIDES = [
   {
-    name: 'CRASH',
-    tagline: 'Cash out before it crashes',
-    description: 'Watch the multiplier climb and bail at the right moment. The longer you hold, the bigger the payout — but one second too late and you lose it all.',
-    accent: '#00F2FE',
-    gradient: 'from-cyan-900/40 to-blue-900/20',
-    border: 'border-cyan-500/20',
-    maxMultiplier: '100×',
-    href: '/register',
-    visual: (
-      <svg viewBox="0 0 120 70" className="w-full h-full opacity-70">
-        <defs>
-          <linearGradient id="lp-crash-fill" x1="0" y1="1" x2="1" y2="0">
-            <stop offset="0%" stopColor="#00F2FE" stopOpacity="0.05"/>
-            <stop offset="100%" stopColor="#00F2FE" stopOpacity="0.25"/>
-          </linearGradient>
-        </defs>
-        <polygon points="0,68 0,54 18,46 35,35 55,20 78,10 100,5 120,2 120,68" fill="url(#lp-crash-fill)"/>
-        <polyline points="0,54 18,46 35,35 55,20 78,10 100,5 120,2" fill="none" stroke="#00F2FE" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/>
-        <circle cx="120" cy="2" r="4" fill="#00F2FE"/>
-        <text x="6" y="50" fontSize="7" fill="#00F2FE" opacity="0.5">1×</text>
-        <text x="6" y="32" fontSize="7" fill="#00F2FE" opacity="0.5">3×</text>
-        <text x="6" y="14" fontSize="7" fill="#00F2FE" opacity="0.5">10×</text>
-      </svg>
-    ),
+    id: 'betbuilder',
+    bgColor: '#1a0800',
+    gradient: 'from-orange-950/90 via-amber-900/70 to-yellow-900/40',
+    headline: 'JENGA BET NA\nBET BUILDER',
+    subtext: 'Build your perfect bet today',
+    ctaText: 'Play Now',
+    ctaHref: '/register',
   },
   {
-    name: 'MINES',
-    tagline: 'Reveal gems, avoid mines',
-    description: 'Navigate a hidden minefield. Each gem you uncover multiplies your stake. Walk away rich — or blow it all on a single wrong click.',
-    accent: '#80508B',
-    gradient: 'from-violet-900/40 to-purple-900/20',
-    border: 'border-violet-500/20',
-    maxMultiplier: '24×',
-    href: '/register',
-    visual: (
-      <svg viewBox="0 0 120 70" className="w-full h-full opacity-70">
-        {[0,1,2,3,4,5,6,7,8].map(i => {
-          const col = i % 3, row = Math.floor(i / 3)
-          const x = 10 + col * 36, y = 4 + row * 22
-          const isGem = i === 1 || i === 5 || i === 7
-          const isMine = i === 4
-          return (
-            <g key={i}>
-              <rect x={x} y={y} width="28" height="18" rx="3" fill={isGem ? '#80508B33' : isMine ? '#FF4E5033' : '#1a1025'} stroke={isGem ? '#80508B' : isMine ? '#FF4E50' : '#3a3530'} strokeWidth="1"/>
-              {isGem && <text x={x+14} y={y+13} fontSize="9" textAnchor="middle" fill="#b080bb">💎</text>}
-              {isMine && <text x={x+14} y={y+13} fontSize="9" textAnchor="middle" fill="#ff7070">💣</text>}
-            </g>
-          )
-        })}
-      </svg>
-    ),
+    id: 'crash',
+    bgColor: '#001828',
+    gradient: 'from-cyan-950/90 via-blue-900/70 to-violet-900/40',
+    headline: 'CRASH YOUR WAY\nTO THE TOP',
+    subtext: 'Cash out before the crash — every second counts',
+    ctaText: 'Play Crash',
+    ctaHref: '/register',
   },
   {
-    name: 'DICE',
-    tagline: 'Roll over or under your target',
-    description: 'Set your target, choose over or under, and roll. Narrow the range for bigger multipliers. Simple, fast, and entirely in your control.',
-    accent: '#00C896',
-    gradient: 'from-emerald-900/40 to-teal-900/20',
-    border: 'border-emerald-500/20',
-    maxMultiplier: '99×',
-    href: '/register',
-    visual: (
-      <svg viewBox="0 0 120 70" className="w-full h-full opacity-70">
-        <rect x="10" y="8" width="42" height="42" rx="8" fill="#1a1025" stroke="#00C896" strokeWidth="1.5"/>
-        <circle cx="22" cy="20" r="3.5" fill="#00C896"/>
-        <circle cx="40" cy="20" r="3.5" fill="#00C896"/>
-        <circle cx="31" cy="29" r="3.5" fill="#00C896"/>
-        <circle cx="22" cy="38" r="3.5" fill="#00C896"/>
-        <circle cx="40" cy="38" r="3.5" fill="#00C896"/>
-        <rect x="68" y="20" width="42" height="42" rx="8" fill="#1a1025" stroke="#00C896" strokeWidth="1.5"/>
-        <circle cx="89" cy="41" r="4.5" fill="#00C896"/>
-        <text x="31" y="65" fontSize="7" fill="#00C896" opacity="0.5" textAnchor="middle">UNDER 50</text>
-        <text x="89" y="18" fontSize="7" fill="#00C896" opacity="0.5" textAnchor="middle">OVER 50</text>
-      </svg>
-    ),
+    id: 'lotto',
+    bgColor: '#1a1000',
+    gradient: 'from-yellow-950/90 via-amber-900/70 to-orange-900/40',
+    headline: 'HOURLY JACKPOTS\nWAITING FOR YOU',
+    subtext: 'Pick 3 numbers. Draw every hour.',
+    ctaText: 'Play Lotto',
+    ctaHref: '/register',
   },
   {
-    name: 'LOTTERY',
-    tagline: 'Pick 3 numbers, win the jackpot',
-    description: 'Choose 3 numbers from 1–36 and enter hourly, daily, or weekly draws. Match all three to hit the jackpot. Tickets from KES 20.',
-    accent: '#F59E0B',
-    gradient: 'from-yellow-900/40 to-orange-900/20',
-    border: 'border-yellow-500/20',
-    maxMultiplier: '500×',
-    href: '/register',
-    visual: (
-      <svg viewBox="0 0 120 70" className="w-full h-full opacity-70">
-        {[7, 14, 23].map((n, i) => (
-          <g key={i}>
-            <circle cx={20 + i * 40} cy={28} r={14} fill="#1a1025" stroke="#F59E0B" strokeWidth="1.5"/>
-            <text x={20 + i * 40} y={33} fontSize="11" fontWeight="bold" textAnchor="middle" fill="#F59E0B">{n}</text>
-          </g>
-        ))}
-        <rect x="10" y="50" width="100" height="14" rx="4" fill="#F59E0B15" stroke="#F59E0B30" strokeWidth="1"/>
-        <text x="60" y="61" fontSize="7" textAnchor="middle" fill="#F59E0B" opacity="0.7">HOURLY · DAILY · WEEKLY</text>
-      </svg>
-    ),
+    id: 'scratch',
+    bgColor: '#1a0020',
+    gradient: 'from-pink-950/90 via-rose-900/70 to-purple-900/40',
+    headline: 'SCRATCH & WIN\nINSTANT PRIZES',
+    subtext: 'Match 3 symbols. Win instantly.',
+    ctaText: 'Play Scratch',
+    ctaHref: '/register',
   },
+]
+
+const QUICK_GAMES = [
   {
+    type: 'INSTANT',
+    typeColor: '#EC4899',
+    typeBg: 'rgba(236,72,153,0.15)',
     name: 'SCRATCH',
-    tagline: 'Match 3 symbols, instant win',
-    description: 'Buy a scratch card and reveal a 3×3 grid. Match three identical symbols to win — the rarer the symbol, the bigger the payout. Results are instant.',
-    accent: '#EC4899',
-    gradient: 'from-pink-900/40 to-rose-900/20',
-    border: 'border-pink-500/20',
-    maxMultiplier: '50×',
-    href: '/register',
-    visual: (
-      <svg viewBox="0 0 120 70" className="w-full h-full opacity-70">
-        {[0,1,2,3,4,5,6,7,8].map(i => {
-          const col = i % 3, row = Math.floor(i / 3)
-          const x = 8 + col * 36, y = 4 + row * 22
-          const symbols = ['💎','💎','🌟','🍀','💎','🔥','💰','🌟','❌']
-          const isMatch = i === 0 || i === 1 || i === 4
-          return (
-            <g key={i}>
-              <rect x={x} y={y} width="28" height="18" rx="3" fill={isMatch ? '#EC489915' : '#1a1025'} stroke={isMatch ? '#EC4899' : '#3a3530'} strokeWidth="1"/>
-              <text x={x+14} y={y+13} fontSize="9" textAnchor="middle" fill="white">{symbols[i]}</text>
-            </g>
-          )
-        })}
+    description: 'Instant win scratch cards',
+    href: '/games/scratch',
+    accentColor: '#EC4899',
+    cardBg: 'linear-gradient(160deg,#1a0830,#2d1040)',
+    border: '1px solid rgba(236,72,153,0.25)',
+    icon: (
+      <svg viewBox="0 0 28 28" width="28" height="28" fill="none">
+        <rect x="1" y="5" width="26" height="18" rx="3" stroke="#EC4899" strokeWidth="1.5"/>
+        <rect x="4" y="9"  width="7" height="5" rx="1" fill="rgba(236,72,153,0.25)" stroke="#EC4899" strokeWidth="1"/>
+        <rect x="14" y="9" width="7" height="5" rx="1" fill="rgba(236,72,153,0.25)" stroke="#EC4899" strokeWidth="1"/>
+        <rect x="9"  y="16" width="10" height="5" rx="1" fill="#EC4899" stroke="#EC4899" strokeWidth="1"/>
+      </svg>
+    ),
+  },
+  {
+    type: 'INSTANT',
+    typeColor: '#00C896',
+    typeBg: 'rgba(0,200,150,0.15)',
+    name: 'DICE',
+    description: 'Roll over or under your target',
+    href: '/games/dice',
+    accentColor: '#00C896',
+    cardBg: 'linear-gradient(160deg,#041a12,#082a1e)',
+    border: '1px solid rgba(0,200,150,0.25)',
+    icon: (
+      <svg viewBox="0 0 28 28" width="28" height="28" fill="none">
+        <rect x="1" y="7" width="14" height="14" rx="3" fill="#041a12" stroke="#00C896" strokeWidth="1.5"/>
+        <circle cx="5"  cy="11" r="1.3" fill="#00C896"/>
+        <circle cx="11" cy="11" r="1.3" fill="#00C896"/>
+        <circle cx="8"  cy="14" r="1.3" fill="#00C896"/>
+        <circle cx="5"  cy="17" r="1.3" fill="#00C896"/>
+        <circle cx="11" cy="17" r="1.3" fill="#00C896"/>
+        <rect x="16" y="13" width="11" height="11" rx="3" fill="#041a12" stroke="#00C896" strokeWidth="1.5"/>
+        <circle cx="21.5" cy="18.5" r="1.8" fill="#00C896"/>
+      </svg>
+    ),
+  },
+  {
+    type: 'HOURLY',
+    typeColor: '#F59E0B',
+    typeBg: 'rgba(245,158,11,0.15)',
+    name: 'LOTTO',
+    description: 'Pick 3, draw every hour',
+    href: '/games/lottery',
+    accentColor: '#F59E0B',
+    cardBg: 'linear-gradient(160deg,#1a1000,#2a1a00)',
+    border: '1px solid rgba(245,158,11,0.25)',
+    icon: (
+      <svg viewBox="0 0 28 28" width="28" height="28" fill="none">
+        <circle cx="6"  cy="14" r="5" stroke="#F59E0B" strokeWidth="1.5" fill="rgba(245,158,11,0.1)"/>
+        <text x="6"  y="17.5" fontSize="6" fontWeight="bold" textAnchor="middle" fill="#F59E0B">7</text>
+        <circle cx="14" cy="14" r="5" stroke="#F59E0B" strokeWidth="1.5" fill="rgba(245,158,11,0.25)"/>
+        <text x="14" y="17.5" fontSize="6" fontWeight="bold" textAnchor="middle" fill="#F59E0B">9</text>
+        <circle cx="22" cy="14" r="5" stroke="#F59E0B" strokeWidth="1.5" fill="rgba(245,158,11,0.1)"/>
+        <text x="22" y="17.5" fontSize="6" fontWeight="bold" textAnchor="middle" fill="#F59E0B">3</text>
       </svg>
     ),
   },
 ]
 
-const FEATURES = [
-  { icon: <Zap size={20} />, title: 'Instant Payouts', body: 'Winnings hit your balance the moment you cash out. No delays, no holds.' },
-  { icon: <Shield size={20} />, title: 'Provably Fair', body: 'Every outcome is cryptographically verifiable. You can audit any result.' },
-  { icon: <Smartphone size={20} />, title: 'Mobile First', body: 'Designed for your phone. No app download needed — just open and play.' },
-  { icon: <Globe size={20} />, title: 'KES Native', body: 'Play in Kenyan Shillings. No currency conversion, no hidden fees.' },
+// Crash games — Aviator / Aviatrix / JetX are placeholder UI; Crash is live
+const CRASH_GAMES = [
+  {
+    name: 'Aviator',
+    active: false,
+    href: '/register',
+    artwork: '',
+    placeholderBg: 'linear-gradient(135deg,#b34700 0%,#ff9500 50%,#ffd000 100%)',
+    placeholderLabel: 'AVIATOR',
+    labelColor: '#fff',
+  },
+  {
+    name: 'Aviatrix',
+    active: false,
+    href: '/register',
+    artwork: '',
+    placeholderBg: 'linear-gradient(135deg,#1a0840 0%,#3d1a80 50%,#2a0e60 100%)',
+    placeholderLabel: 'AVIATRIX',
+    labelColor: '#fff',
+  },
+  {
+    name: 'JetX',
+    active: false,
+    href: '/register',
+    artwork: '',
+    placeholderBg: 'linear-gradient(135deg,#050d2a 0%,#0d1f5c 50%,#1a3a80 100%)',
+    placeholderLabel: 'JETX',
+    labelColor: '#fff',
+  },
+  {
+    name: 'Crash',
+    active: true,
+    href: '/games/crash',
+    artwork: '',
+    placeholderBg: 'linear-gradient(135deg,#4a0000 0%,#cc2200 50%,#ff6600 100%)',
+    placeholderLabel: 'CRASH',
+    labelColor: '#fff',
+  },
+]
+
+// Casino games — B-Ball Blitz / Sun of Egypt 4 are placeholder UI; rest are live
+const CASINO_GAMES = [
+  {
+    name: 'B-Ball Blitz',
+    active: false,
+    href: '/register',
+    artwork: '',
+    placeholderBg: 'linear-gradient(135deg,#060f2a 0%,#0d2460 50%,#1a3a80 100%)',
+    placeholderLabel: 'B-BALL BLITZ',
+    labelColor: '#fff',
+  },
+  {
+    name: 'Sun of Egypt 4',
+    active: false,
+    href: '/register',
+    artwork: '',
+    placeholderBg: 'linear-gradient(135deg,#2a1400 0%,#7a3a00 50%,#c47a00 100%)',
+    placeholderLabel: 'SUN OF EGYPT 4',
+    labelColor: '#fff',
+  },
+  {
+    name: 'Mines',
+    active: true,
+    href: '/games/mines',
+    artwork: '',
+    placeholderBg: 'linear-gradient(135deg,#1a0840 0%,#3d1a80 60%,#2d1060 100%)',
+    placeholderLabel: 'MINES',
+    labelColor: '#d4b8ff',
+  },
+  {
+    name: 'Dice',
+    active: true,
+    href: '/games/dice',
+    artwork: '',
+    placeholderBg: 'linear-gradient(135deg,#041a12 0%,#0a3d28 60%,#0d4a30 100%)',
+    placeholderLabel: 'DICE',
+    labelColor: '#7fffd4',
+  },
+  {
+    name: 'Lotto',
+    active: true,
+    href: '/games/lottery',
+    artwork: '',
+    placeholderBg: 'linear-gradient(135deg,#1a1000 0%,#4a3000 60%,#6a4400 100%)',
+    placeholderLabel: 'LOTTO',
+    labelColor: '#ffd966',
+  },
+  {
+    name: 'Scratch',
+    active: true,
+    href: '/games/scratch',
+    artwork: '',
+    placeholderBg: 'linear-gradient(135deg,#1a0830 0%,#4d1060 60%,#3d0a50 100%)',
+    placeholderLabel: 'SCRATCH',
+    labelColor: '#ff9de2',
+  },
 ]
 
 export default function LandingPage() {
   const router = useRouter()
-  const [wins, setWins] = useState<LeaderboardEntry[]>([])
+  const [menuOpen, setMenuOpen] = useState(false)
+  const [slideIdx, setSlideIdx] = useState(0)
   const [banner, setBanner] = useState<Banner | null>(null)
+  const timerRef = useRef<ReturnType<typeof setInterval> | null>(null)
 
   useEffect(() => {
     if (isAuthenticated()) { router.replace('/games'); return }
-    fetch(`${API_URL}/games/leaderboard`)
-      .then(r => r.ok ? r.json() : []).then(setWins).catch(() => {})
     fetch(`${API_URL}/banners/landing`)
-      .then(r => r.ok ? r.json() : null).then((d: { banner: Banner } | null) => d?.banner ? setBanner(d.banner) : null).catch(() => {})
+      .then(r => r.ok ? r.json() : null)
+      .then((d: { banner: Banner } | null) => { if (d?.banner) setBanner(d.banner) })
+      .catch(() => {})
   }, [router])
 
+  const startTimer = useCallback(() => {
+    if (timerRef.current) clearInterval(timerRef.current)
+    timerRef.current = setInterval(() => setSlideIdx(i => (i + 1) % CAROUSEL_SLIDES.length), 4500)
+  }, [])
+
+  useEffect(() => { startTimer(); return () => { if (timerRef.current) clearInterval(timerRef.current) } }, [startTimer])
+
+  const goTo = (i: number) => { setSlideIdx(i); startTimer() }
+
+  const raw = CAROUSEL_SLIDES[slideIdx]
+  const current = slideIdx === 0 && banner
+    ? { ...raw, headline: banner.headline, subtext: banner.subtext ?? raw.subtext, ctaText: banner.ctaText ?? raw.ctaText, ctaHref: banner.ctaUrl ?? raw.ctaHref, imageUrl: banner.imageUrl }
+    : { ...raw, imageUrl: undefined }
+
   return (
-    <div className="min-h-screen bg-[#0d0d14] text-white overflow-x-hidden">
+    <div className="min-h-screen text-white overflow-x-hidden" style={{ background: '#160B2E' }}>
 
-      {/* Navbar */}
-      <nav className="sticky top-0 z-50 border-b border-white/5 bg-[#0d0d14]/90 backdrop-blur-md">
-        <div className="max-w-7xl mx-auto px-4 h-20 flex items-center justify-between">
-          <img src="/wingubet-logo.png" alt="WinguBet" style={{ height: '72px', width: 'auto' }} />
-          <div className="flex items-center gap-3">
-            <Link href="/login" className="px-4 py-2 text-sm font-semibold text-gray-300 hover:text-white transition-colors">
-              Log in
+      {/* ── Main Nav ── */}
+      <nav className="sticky top-0 z-50" style={{ background: '#160B2E', borderBottom: '1px solid rgba(255,255,255,0.07)' }}>
+        <div className="relative flex items-center justify-between px-4 h-16 max-w-7xl mx-auto">
+          <button onClick={() => setMenuOpen(o => !o)} className="p-2 rounded-lg text-white/70 hover:text-white hover:bg-white/5 transition-colors" aria-label="Menu">
+            {menuOpen ? <X size={22} /> : <Menu size={22} />}
+          </button>
+
+          <Link href="/" className="absolute left-1/2 -translate-x-1/2">
+            <img src="/wingubet-logo.png" alt="WinguBet" style={{ height: '60px', width: 'auto' }} />
+          </Link>
+
+          <div className="flex items-center gap-2">
+            <Link href="/login" className="px-3 py-1.5 text-sm font-bold border border-white/30 rounded text-white hover:bg-white/10 transition-colors tracking-wide">
+              LOGIN
             </Link>
-            <Link href="/register"
-              className="px-4 py-2 text-sm font-bold rounded-lg text-[#0d0d14] transition-opacity hover:opacity-90"
-              style={{ background: 'linear-gradient(135deg, #00F2FE, #00C896)' }}>
-              Play Now
-            </Link>
-          </div>
-        </div>
-      </nav>
-
-      {/* Promotion banner */}
-      {banner && (
-        <div className="relative w-full overflow-hidden bg-[#0a1628]">
-          <div className={`absolute inset-0 bg-gradient-to-r ${banner.gradient}`} />
-          {banner.imageUrl && (
-            <img src={banner.imageUrl} className="absolute inset-0 w-full h-full object-cover opacity-40" alt="" />
-          )}
-          <div className="relative z-10 max-w-7xl mx-auto px-4 py-5 flex items-center justify-between gap-4">
-            <div>
-              <p className="text-lg font-bold text-white leading-tight">{banner.headline}</p>
-              {banner.subtext && <p className="text-sm text-white/80 mt-0.5">{banner.subtext}</p>}
-            </div>
-            {banner.ctaText && banner.ctaUrl && (
-              <a href={banner.ctaUrl} className="shrink-0 bg-white text-gray-900 font-bold text-sm px-5 py-2.5 rounded-lg hover:bg-white/90 transition-colors">
-                {banner.ctaText}
-              </a>
-            )}
-          </div>
-        </div>
-      )}
-
-      {/* Hero */}
-      <section className="relative overflow-hidden">
-        <div className="absolute inset-0 pointer-events-none select-none">
-          <div className="absolute top-10 left-1/4 w-[500px] h-[500px] bg-cyan-500/5 rounded-full blur-3xl"/>
-          <div className="absolute bottom-0 right-1/3 w-[400px] h-[400px] bg-violet-500/5 rounded-full blur-3xl"/>
-        </div>
-
-        <div className="relative max-w-7xl mx-auto px-4 pt-24 pb-16 text-center">
-          <div className="inline-flex items-center gap-2 bg-white/5 border border-white/10 rounded-full px-4 py-1.5 text-xs text-gray-400 mb-8">
-            <span className="w-2 h-2 rounded-full bg-green-400 animate-pulse inline-block"/>
-            Live now · players winning in real time
-          </div>
-
-          <h1 className="text-5xl md:text-7xl font-extrabold tracking-tight leading-tight mb-6">
-            <span className="text-white">The future of</span>
-            <br/>
-            <span style={{ background: 'linear-gradient(120deg, #00F2FE 0%, #80508B 60%, #00C896 100%)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
-              online betting
-            </span>
-          </h1>
-
-          <p className="text-gray-400 text-lg md:text-xl max-w-2xl mx-auto mb-10 leading-relaxed">
-            Five high-octane games. Instant KES payouts. Outcomes you can verify.
-            No download required — just register and play.
-          </p>
-
-          <div className="flex flex-col sm:flex-row items-center justify-center gap-4 mb-16">
-            <Link href="/register"
-              className="w-full sm:w-auto px-8 py-4 text-base font-bold rounded-xl text-[#0d0d14] transition-transform hover:scale-105"
-              style={{ background: 'linear-gradient(135deg, #00F2FE, #00C896)' }}>
-              Create Free Account →
-            </Link>
-            <Link href="/login"
-              className="w-full sm:w-auto px-8 py-4 text-base font-semibold rounded-xl border border-white/15 text-gray-300 hover:border-white/30 hover:text-white transition-colors text-center">
-              Log in to play
+            <Link href="/register" className="px-3 py-1.5 text-sm font-bold rounded tracking-wide transition-opacity hover:opacity-90" style={{ background: '#00E5FF', color: '#050010' }}>
+              REGISTER
             </Link>
           </div>
         </div>
 
-        {/* Live wins ticker */}
-        {wins.length > 0 && (
-          <div className="border-t border-b border-white/5 bg-white/[0.02] py-3 overflow-hidden">
-            <div className="flex gap-10 animate-marquee whitespace-nowrap">
-              {[...wins, ...wins, ...wins].map((w, i) => (
-                <span key={i} className="inline-flex items-center gap-2 text-sm flex-shrink-0">
-                  <Trophy size={14} className="text-gray-500" />
-                  <span className="text-gray-300 font-semibold">{w.playerName}</span>
-                  <span className="text-gray-600 text-xs uppercase font-mono">{w.game}</span>
-                  <span className="text-[#00F2FE] font-mono font-bold">{w.multiplier.toFixed(2)}×</span>
-                  <span className="text-white font-semibold">{w.currency} {w.winnings}</span>
-                </span>
+        {/* Mobile slide-down menu */}
+        {menuOpen && (
+          <div className="border-t border-white/10" style={{ background: '#0F0720' }}>
+            <div className="px-4 py-3 grid grid-cols-2 gap-1">
+              {SECONDARY_NAV.map(item => (
+                <Link key={item.label} href={item.href} onClick={() => setMenuOpen(false)}
+                  className="py-2.5 px-3 rounded-lg text-sm font-bold text-white/80 hover:text-white hover:bg-white/5 transition-colors flex items-center gap-1.5">
+                  {item.label}{item.hot && <span className="text-orange-400">🔥</span>}
+                </Link>
               ))}
             </div>
           </div>
         )}
+      </nav>
+
+      {/* ── Secondary Nav (horizontal scroll, never collapses) ── */}
+      <div className="sticky top-16 z-40 border-b border-white/10" style={{ background: '#0F0720' }}>
+        <div className="flex overflow-x-auto scrollbar-hide">
+          {SECONDARY_NAV.map((item, i) => (
+            <Link key={item.label} href={item.href}
+              className="flex-shrink-0 px-4 py-3 text-xs font-extrabold tracking-widest whitespace-nowrap flex items-center gap-1 transition-colors border-b-2"
+              style={{
+                color: i === 0 ? '#fff' : 'rgba(255,255,255,0.5)',
+                borderBottomColor: i === 0 ? '#00E5FF' : 'transparent',
+              }}>
+              {item.label}{item.hot && <span style={{ color: '#FF7A00', fontSize: '11px' }}>🔥</span>}
+            </Link>
+          ))}
+        </div>
+      </div>
+
+      {/* ── Hero Carousel ── */}
+      <section className="relative overflow-hidden" style={{ height: '230px' }}>
+        <div className="absolute inset-0 transition-colors duration-700" style={{ background: current.bgColor }} />
+        <div className="absolute inset-0" style={{ background: `linear-gradient(135deg, ${current.bgColor} 0%, #2a1040 100%)` }} />
+        {current.imageUrl && (
+          <img src={current.imageUrl} className="absolute inset-0 w-full h-full object-cover opacity-40" alt="" />
+        )}
+        <div className="absolute inset-0" style={{ background: `linear-gradient(to right, rgba(0,0,0,0.6) 0%, transparent 70%)` }} />
+
+        <div className="relative z-10 h-full flex flex-col justify-center px-5 max-w-lg">
+          <h1 className="text-3xl md:text-4xl font-black leading-tight text-white mb-2" style={{ textShadow: '0 2px 12px rgba(0,0,0,0.7)', letterSpacing: '-0.01em' }}>
+            {current.headline.split('\n').map((line, i, arr) => (
+              <span key={i}>{line}{i < arr.length - 1 && <br />}</span>
+            ))}
+          </h1>
+          {current.subtext && <p className="text-white/60 text-sm mb-4">{current.subtext}</p>}
+          <Link href={current.ctaHref}
+            className="inline-block px-5 py-2 text-sm font-bold rounded-lg w-fit transition-opacity hover:opacity-90"
+            style={{ background: '#00E5FF', color: '#050010' }}>
+            {current.ctaText} →
+          </Link>
+        </div>
+
+        {/* Carousel dots */}
+        <div className="absolute bottom-3 left-1/2 -translate-x-1/2 flex items-center gap-2 z-20">
+          {CAROUSEL_SLIDES.map((_, i) => (
+            <button key={i} onClick={() => goTo(i)} aria-label={`Slide ${i + 1}`}
+              className="rounded-full transition-all duration-300"
+              style={{ width: i === slideIdx ? '18px' : '6px', height: '6px', background: i === slideIdx ? '#00E5FF' : 'rgba(255,255,255,0.3)' }} />
+          ))}
+        </div>
       </section>
 
-      {/* Games */}
-      <section className="max-w-7xl mx-auto px-4 py-24">
-        <div className="text-center mb-14">
-          <h2 className="text-3xl md:text-4xl font-extrabold mb-3">Five games. Endless action.</h2>
-          <p className="text-gray-500 text-lg">Pick your game and start winning in seconds.</p>
-        </div>
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-          {GAMES.map(g => (
-            <div key={g.name} className={`bg-gradient-to-br ${g.gradient} border ${g.border} rounded-2xl p-6 flex flex-col gap-5 hover:border-opacity-50 transition-all`}>
-              <div className="h-32 w-full">{g.visual}</div>
-              <div className="flex-1">
-                <div className="flex items-center justify-between mb-1">
-                  <h3 className="text-2xl font-extrabold font-mono" style={{ color: g.accent }}>{g.name}</h3>
-                  <span className="text-xs font-bold px-2 py-0.5 rounded-full text-gray-400" style={{ background: `${g.accent}15`, border: `1px solid ${g.accent}25` }}>
-                    up to {g.maxMultiplier}
-                  </span>
-                </div>
-                <p className="text-sm font-semibold text-gray-300 mb-2">{g.tagline}</p>
-                <p className="text-xs text-gray-500 leading-relaxed">{g.description}</p>
+      {/* ── Quick Game Cards ── */}
+      <section className="px-3 pt-4 pb-2 max-w-7xl mx-auto">
+        <div className="grid grid-cols-3 gap-2">
+          {QUICK_GAMES.map(g => (
+            <div key={g.name} className="rounded-xl p-3 flex flex-col gap-2" style={{ background: g.cardBg, border: g.border }}>
+              <div className="flex items-center justify-between">
+                <span className="text-[10px] font-extrabold px-1.5 py-0.5 rounded tracking-wide" style={{ background: g.typeBg, color: g.typeColor }}>{g.type}</span>
+                {g.icon}
               </div>
+              <div>
+                <p className="text-xs font-extrabold tracking-wide" style={{ color: g.accentColor }}>{g.name}</p>
+                <p className="text-[10px] text-gray-500 leading-snug mt-0.5">{g.description}</p>
+              </div>
+              <button className="text-[10px] text-gray-600 flex items-center gap-1 mt-auto">
+                <HelpCircle size={9} /> How to play
+              </button>
               <Link href={g.href}
-                className="block text-center py-3 rounded-xl text-sm font-bold transition-opacity hover:opacity-80"
-                style={{ background: `${g.accent}15`, border: `1px solid ${g.accent}30`, color: g.accent }}>
-                Play {g.name} →
+                className="block text-center py-1.5 rounded-lg text-[11px] font-bold tracking-wide transition-opacity hover:opacity-80"
+                style={{ background: `${g.accentColor}20`, border: `1px solid ${g.accentColor}40`, color: g.accentColor }}>
+                PLAY NOW →
               </Link>
             </div>
           ))}
         </div>
       </section>
 
-      {/* Features */}
-      <section className="border-t border-white/5 bg-white/[0.01]">
-        <div className="max-w-7xl mx-auto px-4 py-24">
-          <div className="text-center mb-14">
-            <h2 className="text-3xl md:text-4xl font-extrabold mb-3">Built different.</h2>
-            <p className="text-gray-500 text-lg">Everything a serious player needs.</p>
-          </div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-            {FEATURES.map(f => (
-              <div key={f.title} className="rounded-2xl p-6 border border-white/8 bg-white/[0.03] hover:bg-white/[0.05] transition-colors">
-                <span className="text-3xl mb-4 block">{f.icon}</span>
-                <h3 className="font-bold text-white text-lg mb-2">{f.title}</h3>
-                <p className="text-sm text-gray-500 leading-relaxed">{f.body}</p>
-              </div>
-            ))}
-          </div>
+      {/* ── Crash Games ── */}
+      <section className="px-3 pt-5 pb-2 max-w-7xl mx-auto">
+        <SectionHeader title="CRASH GAMES" />
+        <div className="grid grid-cols-2 gap-2 mt-3">
+          {CRASH_GAMES.map(g => <GameCard key={g.name} game={g} />)}
         </div>
       </section>
 
-      {/* How it works */}
-      <section className="border-t border-white/5">
-        <div className="max-w-4xl mx-auto px-4 py-24 text-center">
-          <h2 className="text-3xl md:text-4xl font-extrabold mb-16">Up and running in 60 seconds.</h2>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-12">
-            {[
-              { n: '01', title: 'Create your account', body: 'Sign up with your phone number. Quick, simple, free.' },
-              { n: '02', title: 'Pick a game', body: 'Choose from Crash, Mines, Dice, Lottery, or Scratch. Each round takes under a minute.' },
-              { n: '03', title: 'Win and cash out', body: 'Winnings hit your balance instantly. Play again or withdraw.' },
-            ].map(s => (
-              <div key={s.n} className="flex flex-col items-center gap-3">
-                <span className="text-5xl font-extrabold font-mono block mb-2" style={{ color: '#00F2FE', opacity: 0.25 }}>{s.n}</span>
-                <h3 className="font-bold text-xl text-white">{s.title}</h3>
-                <p className="text-gray-500 leading-relaxed">{s.body}</p>
-              </div>
-            ))}
-          </div>
+      {/* ── Casino ── */}
+      <section className="px-3 pt-5 pb-6 max-w-7xl mx-auto">
+        <SectionHeader title="CASINO" />
+        <div className="grid grid-cols-2 gap-2 mt-3">
+          {CASINO_GAMES.map(g => <GameCard key={g.name} game={g} />)}
         </div>
       </section>
 
-      {/* Bottom CTA */}
-      <section className="border-t border-white/5 bg-gradient-to-br from-cyan-900/10 to-violet-900/10">
-        <div className="max-w-3xl mx-auto px-4 py-24 text-center">
-          <h2 className="text-4xl md:text-5xl font-extrabold mb-4">Ready to play?</h2>
-          <p className="text-gray-400 text-lg mb-10">Create your free account and start with a demo balance.</p>
-          <Link href="/register"
-            className="inline-block px-10 py-4 text-base font-bold rounded-xl text-[#0d0d14] transition-transform hover:scale-105"
-            style={{ background: 'linear-gradient(135deg, #00F2FE, #00C896)' }}>
-            Create Free Account →
-          </Link>
-        </div>
-      </section>
-
-      {/* Footer */}
-      <footer className="border-t border-white/5">
-        <div className="max-w-7xl mx-auto px-4 py-8 flex flex-col md:flex-row items-center justify-between gap-4">
-          <img src="/wingubet-logo.png" alt="WinguBet" style={{ height: '56px', width: 'auto' }} />
-          <p className="text-xs text-gray-600 text-center">
-            18+ only · Please gamble responsibly · This is a demonstration platform
-          </p>
+      {/* ── Footer ── */}
+      <footer style={{ borderTop: '1px solid rgba(255,255,255,0.06)' }}>
+        <div className="max-w-7xl mx-auto px-4 py-6 flex flex-col md:flex-row items-center justify-between gap-4">
+          <img src="/wingubet-logo.png" alt="WinguBet" style={{ height: '44px', width: 'auto' }} />
+          <p className="text-xs text-gray-600 text-center">18+ only · Please gamble responsibly · Demonstration platform</p>
           <div className="flex gap-6 text-xs text-gray-600">
-            <Link href="/login" className="hover:text-gray-300 transition-colors">Log in</Link>
-            <Link href="/register" className="hover:text-gray-300 transition-colors">Register</Link>
+            <Link href="/login" className="hover:text-gray-400 transition-colors">Log in</Link>
+            <Link href="/register" className="hover:text-gray-400 transition-colors">Register</Link>
           </div>
         </div>
       </footer>
     </div>
   )
+}
+
+function SectionHeader({ title }: { title: string }) {
+  return (
+    <span className="inline-block px-4 py-1.5 text-sm font-extrabold rounded tracking-wider" style={{ background: '#D4900A', color: '#1a0800' }}>
+      {title}
+    </span>
+  )
+}
+
+interface GameEntry {
+  name: string
+  active: boolean
+  href: string
+  artwork: string
+  placeholderBg: string
+  placeholderLabel: string
+  labelColor: string
+}
+
+function GameCard({ game }: { game: GameEntry }) {
+  const inner = (
+    <div className="relative rounded-xl overflow-hidden group" style={{ aspectRatio: '16/9' }}>
+      {game.artwork ? (
+        <img src={game.artwork} alt={game.name} className="w-full h-full object-cover" />
+      ) : (
+        <div className="w-full h-full flex items-end p-3" style={{ background: game.placeholderBg }}>
+          <span className="font-black text-lg md:text-xl leading-tight" style={{ color: game.labelColor, textShadow: '0 2px 8px rgba(0,0,0,0.7)' }}>
+            {game.placeholderLabel}
+          </span>
+        </div>
+      )}
+      <div className="absolute inset-0 bg-black/0 group-hover:bg-black/15 transition-colors" />
+      {!game.active && (
+        <div className="absolute top-2 right-2 text-[9px] font-bold px-1.5 py-0.5 rounded" style={{ background: 'rgba(0,0,0,0.6)', color: 'rgba(255,255,255,0.6)' }}>
+          COMING SOON
+        </div>
+      )}
+    </div>
+  )
+  return game.active ? <Link href={game.href}>{inner}</Link> : <div>{inner}</div>
 }
