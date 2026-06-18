@@ -243,9 +243,9 @@ export default function LandingPage() {
 
       {/* ── Main Nav ── */}
       <nav className="sticky top-0 z-50 w-full" style={{ background: '#160B2E', borderBottom: '1px solid rgba(255,255,255,0.07)' }}>
-        <div className="max-w-7xl mx-auto px-3 h-20 flex items-center justify-between gap-3">
+        <div className="max-w-7xl mx-auto px-3 h-20 md:h-28 flex items-center justify-between gap-3">
           <Link href="/" className="flex-shrink-0">
-            <img src="/wingubet-logo.png" alt="WinguBet" style={{ height: '72px', width: 'auto' }} />
+            <img src="/wingubet-logo.png" alt="WinguBet" className="h-16 md:h-24 w-auto" />
           </Link>
           <div className="flex items-center gap-2 flex-shrink-0">
             <Link href="/login" className="px-3 py-1.5 text-xs font-bold border border-white/30 rounded text-white hover:bg-white/10 transition-colors tracking-wide">
@@ -259,7 +259,7 @@ export default function LandingPage() {
       </nav>
 
       {/* ── Secondary Nav (always horizontal scroll) ── */}
-      <div className="sticky top-20 z-40 border-b border-white/10" style={{ background: '#0F0720' }}>
+      <div className="sticky top-20 md:top-28 z-40 border-b border-white/10" style={{ background: '#0F0720' }}>
         <div className="max-w-7xl mx-auto flex overflow-x-auto scrollbar-hide">
           {SECONDARY_NAV.map((item, i) => (
             <Link key={item.label} href={item.href}
@@ -367,7 +367,7 @@ export default function LandingPage() {
       {/* ── Footer ── */}
       <footer style={{ borderTop: '1px solid rgba(255,255,255,0.06)' }}>
         <div className="max-w-7xl mx-auto px-4 py-6 flex flex-col md:flex-row items-center justify-between gap-4">
-          <img src="/wingubet-logo.png" alt="WinguBet" style={{ height: '64px', width: 'auto' }} />
+          <img src="/wingubet-logo.png" alt="WinguBet" className="h-14 md:h-24 w-auto" />
           <p className="text-xs text-gray-600 text-center">18+ only · Please gamble responsibly · Demonstration platform</p>
           <div className="flex gap-6 text-xs text-gray-600">
             <Link href="/login" className="hover:text-gray-400 transition-colors">Log in</Link>
