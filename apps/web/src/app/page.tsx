@@ -3,7 +3,6 @@ import { useEffect, useState, useRef, useCallback } from 'react'
 import Link from 'next/link'
 import { isAuthenticated } from '@/lib/auth'
 import { useRouter } from 'next/navigation'
-import { Menu, X } from 'lucide-react'
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3001'
 
@@ -214,7 +213,6 @@ const CASINO_GAMES = [
 
 export default function LandingPage() {
   const router = useRouter()
-  const [menuOpen, setMenuOpen] = useState(false)
   const [slideIdx, setSlideIdx] = useState(0)
   const [banner, setBanner] = useState<Banner | null>(null)
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null)
@@ -245,50 +243,25 @@ export default function LandingPage() {
     <div className="min-h-screen text-white overflow-x-hidden" style={{ background: '#160B2E' }}>
 
       {/* ── Main Nav ── */}
-      <nav className="sticky top-0 z-50" style={{ background: '#160B2E', borderBottom: '1px solid rgba(255,255,255,0.07)' }}>
-        <div className="flex items-center justify-between px-4 h-16 max-w-7xl mx-auto gap-3">
-          {/* Hamburger — mobile only */}
-          <button onClick={() => setMenuOpen(o => !o)} className="md:hidden flex-shrink-0 p-2 rounded-lg text-white/70 hover:text-white hover:bg-white/5 transition-colors" aria-label="Menu">
-            {menuOpen ? <X size={20} /> : <Menu size={20} />}
-          </button>
-
-          {/* Logo */}
+      <nav className="sticky top-0 z-50 w-full" style={{ background: '#160B2E', borderBottom: '1px solid rgba(255,255,255,0.07)' }}>
+        <div className="max-w-7xl mx-auto px-3 h-14 flex items-center justify-between gap-3">
           <Link href="/" className="flex-shrink-0">
-            <img src="/wingubet-logo.png" alt="WinguBet" style={{ height: '52px', width: 'auto' }} />
+            <img src="/wingubet-logo.png" alt="WinguBet" style={{ height: '48px', width: 'auto' }} />
           </Link>
-
-          {/* Spacer on desktop */}
-          <div className="hidden md:flex flex-1" />
-
-          {/* Auth buttons */}
           <div className="flex items-center gap-2 flex-shrink-0">
-            <Link href="/login" className="px-3 py-1.5 text-xs md:text-sm font-bold border border-white/30 rounded text-white hover:bg-white/10 transition-colors tracking-wide">
+            <Link href="/login" className="px-3 py-1.5 text-xs font-bold border border-white/30 rounded text-white hover:bg-white/10 transition-colors tracking-wide">
               LOGIN
             </Link>
-            <Link href="/register" className="px-3 py-1.5 text-xs md:text-sm font-bold rounded tracking-wide transition-opacity hover:opacity-90" style={{ background: '#00E5FF', color: '#050010' }}>
+            <Link href="/register" className="px-3 py-1.5 text-xs font-bold rounded tracking-wide transition-opacity hover:opacity-90" style={{ background: '#00E5FF', color: '#050010' }}>
               REGISTER
             </Link>
           </div>
         </div>
-
-        {/* Mobile slide-down menu */}
-        {menuOpen && (
-          <div className="md:hidden border-t border-white/10" style={{ background: '#0F0720' }}>
-            <div className="px-4 py-3 grid grid-cols-2 gap-1">
-              {SECONDARY_NAV.map(item => (
-                <Link key={item.label} href={item.href} onClick={() => setMenuOpen(false)}
-                  className="py-2.5 px-3 rounded-lg text-sm font-bold text-white/80 hover:text-white hover:bg-white/5 transition-colors flex items-center gap-1.5">
-                  {item.label}{item.hot && <span className="text-orange-400">🔥</span>}
-                </Link>
-              ))}
-            </div>
-          </div>
-        )}
       </nav>
 
-      {/* ── Secondary Nav (horizontal scroll, never collapses) ── */}
-      <div className="sticky top-16 z-40 border-b border-white/10" style={{ background: '#0F0720' }}>
-        <div className="flex overflow-x-auto scrollbar-hide">
+      {/* ── Secondary Nav (always horizontal scroll) ── */}
+      <div className="sticky top-14 z-40 border-b border-white/10" style={{ background: '#0F0720' }}>
+        <div className="max-w-7xl mx-auto flex overflow-x-auto scrollbar-hide">
           {SECONDARY_NAV.map((item, i) => (
             <Link key={item.label} href={item.href}
               className="flex-shrink-0 px-4 py-3 text-xs font-extrabold tracking-widest whitespace-nowrap flex items-center gap-1 transition-colors border-b-2"
@@ -302,8 +275,9 @@ export default function LandingPage() {
         </div>
       </div>
 
-      {/* ── Hero Carousel ── */}
-      <section className="relative overflow-hidden h-44 md:h-52">
+      {/* ── Hero Carousel — same width as game sections ── */}
+      <div className="max-w-7xl mx-auto px-3 pt-3">
+      <section className="relative overflow-hidden rounded-xl h-44 md:h-52">
         {/* Background */}
         <div className="absolute inset-0 transition-all duration-700" style={{ background: current.bg }} />
         {/* Decorative orbs */}
@@ -353,6 +327,7 @@ export default function LandingPage() {
           ))}
         </div>
       </section>
+      </div>
 
       {/* ── Quick Game Cards ── */}
       <section className="px-3 pt-4 pb-2 max-w-7xl mx-auto">
