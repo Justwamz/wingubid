@@ -3,7 +3,7 @@ import { useEffect, useState, useRef, useCallback } from 'react'
 import Link from 'next/link'
 import { isAuthenticated } from '@/lib/auth'
 import { useRouter } from 'next/navigation'
-import { Menu, X, HelpCircle } from 'lucide-react'
+import { Menu, X } from 'lucide-react'
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3001'
 
@@ -34,7 +34,7 @@ const CAROUSEL_SLIDES = [
     bg: 'linear-gradient(135deg, #3d1a00 0%, #7a3500 40%, #1a0800 100%)',
     orb1: 'rgba(255,149,0,0.25)',
     orb2: 'rgba(255,200,0,0.12)',
-    badge: '🏗️ BET BUILDER',
+    badge: 'BET BUILDER',
     headline: 'JENGA BET NA\nBET BUILDER',
     subtext: 'Build your perfect bet today',
     ctaText: 'Play Now',
@@ -46,7 +46,7 @@ const CAROUSEL_SLIDES = [
     bg: 'linear-gradient(135deg, #001828 0%, #003a5c 40%, #001020 100%)',
     orb1: 'rgba(0,229,255,0.2)',
     orb2: 'rgba(80,0,255,0.15)',
-    badge: '📈 CRASH GAME',
+    badge: 'CRASH GAME',
     headline: 'CRASH YOUR WAY\nTO THE TOP',
     subtext: 'Cash out before it crashes — every second counts',
     ctaText: 'Play Crash',
@@ -58,7 +58,7 @@ const CAROUSEL_SLIDES = [
     bg: 'linear-gradient(135deg, #2a1800 0%, #5a3800 40%, #1a1000 100%)',
     orb1: 'rgba(255,215,0,0.2)',
     orb2: 'rgba(255,100,0,0.12)',
-    badge: '🎰 JACKPOT',
+    badge: 'JACKPOT',
     headline: 'HOURLY JACKPOTS\nWAITING FOR YOU',
     subtext: 'Pick 3 numbers. Draws every hour.',
     ctaText: 'Play Lotto',
@@ -70,7 +70,7 @@ const CAROUSEL_SLIDES = [
     bg: 'linear-gradient(135deg, #2a0040 0%, #5a0070 40%, #1a0030 100%)',
     orb1: 'rgba(255,110,199,0.2)',
     orb2: 'rgba(100,0,255,0.15)',
-    badge: '🎟️ INSTANT WIN',
+    badge: 'INSTANT WIN',
     headline: 'SCRATCH & WIN\nINSTANT PRIZES',
     subtext: 'Match 3 symbols. Instant payout.',
     ctaText: 'Play Scratch',
@@ -89,14 +89,6 @@ const QUICK_GAMES = [
     accentColor: '#EC4899',
     cardBg: 'linear-gradient(160deg,#1a0830,#2d1040)',
     border: '1px solid rgba(236,72,153,0.25)',
-    icon: (
-      <svg viewBox="0 0 28 28" width="28" height="28" fill="none">
-        <rect x="1" y="5" width="26" height="18" rx="3" stroke="#EC4899" strokeWidth="1.5"/>
-        <rect x="4" y="9"  width="7" height="5" rx="1" fill="rgba(236,72,153,0.25)" stroke="#EC4899" strokeWidth="1"/>
-        <rect x="14" y="9" width="7" height="5" rx="1" fill="rgba(236,72,153,0.25)" stroke="#EC4899" strokeWidth="1"/>
-        <rect x="9"  y="16" width="10" height="5" rx="1" fill="#EC4899" stroke="#EC4899" strokeWidth="1"/>
-      </svg>
-    ),
   },
   {
     type: 'INSTANT',
@@ -108,18 +100,6 @@ const QUICK_GAMES = [
     accentColor: '#00C896',
     cardBg: 'linear-gradient(160deg,#041a12,#082a1e)',
     border: '1px solid rgba(0,200,150,0.25)',
-    icon: (
-      <svg viewBox="0 0 28 28" width="28" height="28" fill="none">
-        <rect x="1" y="7" width="14" height="14" rx="3" fill="#041a12" stroke="#00C896" strokeWidth="1.5"/>
-        <circle cx="5"  cy="11" r="1.3" fill="#00C896"/>
-        <circle cx="11" cy="11" r="1.3" fill="#00C896"/>
-        <circle cx="8"  cy="14" r="1.3" fill="#00C896"/>
-        <circle cx="5"  cy="17" r="1.3" fill="#00C896"/>
-        <circle cx="11" cy="17" r="1.3" fill="#00C896"/>
-        <rect x="16" y="13" width="11" height="11" rx="3" fill="#041a12" stroke="#00C896" strokeWidth="1.5"/>
-        <circle cx="21.5" cy="18.5" r="1.8" fill="#00C896"/>
-      </svg>
-    ),
   },
   {
     type: 'HOURLY',
@@ -131,16 +111,6 @@ const QUICK_GAMES = [
     accentColor: '#F59E0B',
     cardBg: 'linear-gradient(160deg,#1a1000,#2a1a00)',
     border: '1px solid rgba(245,158,11,0.25)',
-    icon: (
-      <svg viewBox="0 0 28 28" width="28" height="28" fill="none">
-        <circle cx="6"  cy="14" r="5" stroke="#F59E0B" strokeWidth="1.5" fill="rgba(245,158,11,0.1)"/>
-        <text x="6"  y="17.5" fontSize="6" fontWeight="bold" textAnchor="middle" fill="#F59E0B">7</text>
-        <circle cx="14" cy="14" r="5" stroke="#F59E0B" strokeWidth="1.5" fill="rgba(245,158,11,0.25)"/>
-        <text x="14" y="17.5" fontSize="6" fontWeight="bold" textAnchor="middle" fill="#F59E0B">9</text>
-        <circle cx="22" cy="14" r="5" stroke="#F59E0B" strokeWidth="1.5" fill="rgba(245,158,11,0.1)"/>
-        <text x="22" y="17.5" fontSize="6" fontWeight="bold" textAnchor="middle" fill="#F59E0B">3</text>
-      </svg>
-    ),
   },
 ]
 
@@ -333,7 +303,7 @@ export default function LandingPage() {
       </div>
 
       {/* ── Hero Carousel ── */}
-      <section className="relative overflow-hidden" style={{ height: 'clamp(200px, 42vw, 380px)' }}>
+      <section className="relative overflow-hidden h-44 md:h-52">
         {/* Background */}
         <div className="absolute inset-0 transition-all duration-700" style={{ background: current.bg }} />
         {/* Decorative orbs */}
@@ -389,19 +359,13 @@ export default function LandingPage() {
         <div className="grid grid-cols-3 gap-2">
           {QUICK_GAMES.map(g => (
             <div key={g.name} className="rounded-xl p-3 flex flex-col gap-2" style={{ background: g.cardBg, border: g.border }}>
-              <div className="flex items-center justify-between">
-                <span className="text-[10px] font-extrabold px-1.5 py-0.5 rounded tracking-wide" style={{ background: g.typeBg, color: g.typeColor }}>{g.type}</span>
-                {g.icon}
-              </div>
+              <span className="text-[10px] font-extrabold px-1.5 py-0.5 rounded tracking-wide w-fit" style={{ background: g.typeBg, color: g.typeColor }}>{g.type}</span>
               <div>
                 <p className="text-xs font-extrabold tracking-wide" style={{ color: g.accentColor }}>{g.name}</p>
                 <p className="text-[10px] text-gray-500 leading-snug mt-0.5">{g.description}</p>
               </div>
-              <button className="text-[10px] text-gray-600 flex items-center gap-1 mt-auto">
-                <HelpCircle size={9} /> How to play
-              </button>
               <Link href={g.href}
-                className="block text-center py-1.5 rounded-lg text-[11px] font-bold tracking-wide transition-opacity hover:opacity-80"
+                className="block text-center py-1.5 rounded-lg text-[11px] font-bold tracking-wide transition-opacity hover:opacity-80 mt-auto"
                 style={{ background: `${g.accentColor}20`, border: `1px solid ${g.accentColor}40`, color: g.accentColor }}>
                 PLAY NOW →
               </Link>
