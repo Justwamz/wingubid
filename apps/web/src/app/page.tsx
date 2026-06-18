@@ -277,7 +277,7 @@ export default function LandingPage() {
 
       {/* ── Hero Carousel — same width as game sections ── */}
       <div className="max-w-7xl mx-auto px-3 pt-3">
-      <section className="relative overflow-hidden rounded-xl h-44 md:h-52">
+      <section className="relative overflow-hidden rounded-xl h-64 md:h-72">
         {/* Background */}
         <div className="absolute inset-0 transition-all duration-700" style={{ background: current.bg }} />
         {/* Decorative orbs */}
