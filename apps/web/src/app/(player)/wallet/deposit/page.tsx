@@ -146,7 +146,7 @@ export default function DepositPage() {
             <button
               key={a}
               onClick={() => setAmount(String(a))}
-              className={`py-2 rounded-lg text-sm font-mono font-semibold border transition-colors ${
+              className={`py-2 rounded-lg text-xs font-mono font-semibold border transition-colors whitespace-nowrap ${
                 amount === String(a)
                   ? 'bg-accent-cyan/20 border-accent-cyan text-accent-cyan'
                   : 'border-game-border text-gray-300 hover:border-gray-500 hover:text-white'

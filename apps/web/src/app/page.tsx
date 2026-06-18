@@ -339,7 +339,7 @@ export default function LandingPage() {
                 <p className="text-[10px] text-gray-500 leading-snug mt-0.5">{g.description}</p>
               </div>
               <Link href={g.href}
-                className="block text-center py-1.5 rounded-lg text-[11px] font-bold tracking-wide transition-opacity hover:opacity-80 mt-auto"
+                className="block text-center py-1.5 rounded-lg text-[11px] font-bold tracking-wide transition-opacity hover:opacity-80 mt-auto whitespace-nowrap"
                 style={{ background: `${g.accentColor}20`, border: `1px solid ${g.accentColor}40`, color: g.accentColor }}>
                 PLAY NOW →
               </Link>
@@ -404,7 +404,7 @@ function GameCard({ game }: { game: GameEntry }) {
         <img src={game.artwork} alt={game.name} className="w-full h-full object-cover" />
       ) : (
         <div className="w-full h-full flex items-end p-3" style={{ background: game.placeholderBg }}>
-          <span className="font-black text-lg md:text-xl leading-tight" style={{ color: game.labelColor, textShadow: '0 2px 8px rgba(0,0,0,0.7)' }}>
+          <span className="font-black text-sm md:text-base leading-tight whitespace-nowrap overflow-hidden" style={{ color: game.labelColor, textShadow: '0 2px 8px rgba(0,0,0,0.7)' }}>
             {game.placeholderLabel}
           </span>
         </div>
