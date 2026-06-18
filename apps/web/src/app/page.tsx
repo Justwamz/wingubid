@@ -16,14 +16,13 @@ interface Banner {
 }
 
 const SECONDARY_NAV = [
-  { label: 'CASINO',    href: '/register', hot: false },
-  { label: 'AVIATOR',   href: '/register', hot: true  },
-  { label: 'AVIATRIX',  href: '/register', hot: false },
-  { label: 'JETX',      href: '/register', hot: false },
-  { label: 'LOTTO',     href: '/register', hot: true  },
-  { label: 'SCRATCH',   href: '/register', hot: true  },
-  { label: 'DICE',      href: '/register', hot: false },
-  { label: 'MINES',     href: '/register', hot: false },
+  { label: 'AVIATOR',   href: '/register' },
+  { label: 'AVIATRIX',  href: '/register' },
+  { label: 'JETX',      href: '/register' },
+  { label: 'LOTTO',     href: '/register' },
+  { label: 'SCRATCH',   href: '/register' },
+  { label: 'DICE',      href: '/register' },
+  { label: 'MINES',     href: '/register' },
 ]
 
 const CAROUSEL_SLIDES = [
@@ -264,12 +263,12 @@ export default function LandingPage() {
         <div className="max-w-7xl mx-auto flex overflow-x-auto scrollbar-hide">
           {SECONDARY_NAV.map((item, i) => (
             <Link key={item.label} href={item.href}
-              className="flex-shrink-0 px-4 py-3 text-xs font-extrabold tracking-widest whitespace-nowrap flex items-center gap-1 transition-colors border-b-2"
+              className="flex-shrink-0 px-4 py-3 text-xs font-extrabold tracking-widest whitespace-nowrap transition-colors border-b-2"
               style={{
                 color: i === 0 ? '#fff' : 'rgba(255,255,255,0.5)',
                 borderBottomColor: i === 0 ? '#00E5FF' : 'transparent',
               }}>
-              {item.label}{item.hot && <span style={{ color: '#FF7A00', fontSize: '11px' }}>🔥</span>}
+              {item.label}
             </Link>
           ))}
         </div>
