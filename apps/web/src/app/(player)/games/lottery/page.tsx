@@ -425,7 +425,7 @@ export default function LotteryPage() {
             <span className={DRAW_COLORS[selectedDraw.drawType].accent + ' font-semibold'}>
               {DRAW_LABEL[selectedDraw.drawType]}
             </span>{' '}
-            draw — ticket costs{' '}
+            draw. Ticket costs{' '}
             <span className="text-white font-semibold">{formatCents(selectedDraw.ticketPrice)}</span>
           </p>
         ) : (

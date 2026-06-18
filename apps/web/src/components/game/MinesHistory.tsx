@@ -75,10 +75,10 @@ export function MinesHistory() {
               </td>
               <td className="text-right text-white">{(r.grossStake / 100).toFixed(0)}</td>
               <td className="text-right text-gray-300">
-                {r.multiplier != null ? `${r.multiplier.toFixed(2)}×` : '—'}
+                {r.multiplier != null ? `${r.multiplier.toFixed(2)}×` : '-'}
               </td>
               <td className={`text-right font-semibold ${r.status === 'won' ? 'text-accent-cyan' : r.status === 'pending' ? 'text-gray-400' : 'text-warning-coral'}`}>
-                {r.winnings != null ? (r.winnings / 100).toFixed(0) : '—'}
+                {r.winnings != null ? (r.winnings / 100).toFixed(0) : '-'}
               </td>
             </tr>
           ))}

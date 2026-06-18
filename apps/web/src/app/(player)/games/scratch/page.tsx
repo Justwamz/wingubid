@@ -319,7 +319,7 @@ export default function ScratchPage() {
           {/* Result — no win */}
           {card && !showBanner && revealed && !isWin && (
             <div className="rounded-2xl p-4 text-center border border-red-500/20 bg-red-500/5">
-              <p className="text-lg font-bold text-red-400">No matching symbols — better luck next time!</p>
+              <p className="text-lg font-bold text-red-400">No matching symbols. Better luck next time!</p>
             </div>
           )}
 

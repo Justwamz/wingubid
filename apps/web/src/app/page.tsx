@@ -46,7 +46,7 @@ const CAROUSEL_SLIDES = [
     orb2: 'rgba(80,0,255,0.15)',
     badge: 'CRASH GAME',
     headline: 'CRASH YOUR WAY\nTO THE TOP',
-    subtext: 'Cash out before it crashes — every second counts',
+    subtext: 'Cash out before it crashes. Every second counts.',
     ctaText: 'Play Crash',
     ctaHref: '/games/crash',
   },

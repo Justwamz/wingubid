@@ -12,7 +12,7 @@ import { DollarSign, TrendingUp, Rocket } from 'lucide-react'
 const HOW_TO_PLAY = [
   { icon: <DollarSign size={16} />, text: 'Enter your stake and place your bet before the round starts.' },
   { icon: <TrendingUp size={16} />, text: 'Watch the multiplier rise. The longer it climbs, the more you win.' },
-  { icon: <Rocket size={16} />, text: 'Cash out before it crashes to lock in your winnings. Wait too long — you lose.' },
+  { icon: <Rocket size={16} />, text: 'Cash out before it crashes to lock in your winnings. Wait too long and you lose.' },
 ]
 
 export default function CrashPage() {
