@@ -59,7 +59,7 @@ CREATE INDEX idx_banners_placement_active ON banners(placement, active);
 INSERT INTO banners (placement, headline, subtext, cta_text, cta_url, gradient, active) VALUES
 (
   'landing',
-  '🎉 Register Free — Start with KES 10,000',
+  '🎉 Register Free. Start with KES 10,000',
   'No deposit needed. Create your account and play Crash, Mines, Dice, Lotto and Scratch instantly.',
   'Create Free Account',
   '/register',
@@ -68,7 +68,7 @@ INSERT INTO banners (placement, headline, subtext, cta_text, cta_url, gradient, 
 ),
 (
   'lobby',
-  '💰 Deposit & Play — Double Your First Top-Up',
+  '💰 Deposit and Play. Double Your First Top-Up',
   'Add KES 500 or more and we match it. Play Crash, Mines, Dice, Lotto and Scratch.',
   'Top Up Now',
   '/wallet/deposit',
