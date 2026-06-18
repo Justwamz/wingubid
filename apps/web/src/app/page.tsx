@@ -17,20 +17,24 @@ interface Banner {
 }
 
 const SECONDARY_NAV = [
-  { label: 'CASINO',   href: '/register', hot: false },
-  { label: 'AVIATOR',  href: '/register', hot: true  },
-  { label: 'JETX',     href: '/register', hot: false },
-  { label: 'LOTTO',    href: '/register', hot: true  },
-  { label: 'SCRATCH',  href: '/register', hot: true  },
-  { label: 'DICE',     href: '/register', hot: false },
-  { label: 'MINES',    href: '/register', hot: false },
+  { label: 'CASINO',    href: '/register', hot: false },
+  { label: 'AVIATOR',   href: '/register', hot: true  },
+  { label: 'AVIATRIX',  href: '/register', hot: false },
+  { label: 'JETX',      href: '/register', hot: false },
+  { label: 'LOTTO',     href: '/register', hot: true  },
+  { label: 'SCRATCH',   href: '/register', hot: true  },
+  { label: 'DICE',      href: '/register', hot: false },
+  { label: 'MINES',     href: '/register', hot: false },
 ]
 
 const CAROUSEL_SLIDES = [
   {
     id: 'betbuilder',
-    bgColor: '#1a0800',
-    gradient: 'from-orange-950/90 via-amber-900/70 to-yellow-900/40',
+    accentColor: '#FF9500',
+    bg: 'linear-gradient(135deg, #3d1a00 0%, #7a3500 40%, #1a0800 100%)',
+    orb1: 'rgba(255,149,0,0.25)',
+    orb2: 'rgba(255,200,0,0.12)',
+    badge: '🏗️ BET BUILDER',
     headline: 'JENGA BET NA\nBET BUILDER',
     subtext: 'Build your perfect bet today',
     ctaText: 'Play Now',
@@ -38,30 +42,39 @@ const CAROUSEL_SLIDES = [
   },
   {
     id: 'crash',
-    bgColor: '#001828',
-    gradient: 'from-cyan-950/90 via-blue-900/70 to-violet-900/40',
+    accentColor: '#00E5FF',
+    bg: 'linear-gradient(135deg, #001828 0%, #003a5c 40%, #001020 100%)',
+    orb1: 'rgba(0,229,255,0.2)',
+    orb2: 'rgba(80,0,255,0.15)',
+    badge: '📈 CRASH GAME',
     headline: 'CRASH YOUR WAY\nTO THE TOP',
-    subtext: 'Cash out before the crash — every second counts',
+    subtext: 'Cash out before it crashes — every second counts',
     ctaText: 'Play Crash',
-    ctaHref: '/register',
+    ctaHref: '/games/crash',
   },
   {
     id: 'lotto',
-    bgColor: '#1a1000',
-    gradient: 'from-yellow-950/90 via-amber-900/70 to-orange-900/40',
+    accentColor: '#FFD700',
+    bg: 'linear-gradient(135deg, #2a1800 0%, #5a3800 40%, #1a1000 100%)',
+    orb1: 'rgba(255,215,0,0.2)',
+    orb2: 'rgba(255,100,0,0.12)',
+    badge: '🎰 JACKPOT',
     headline: 'HOURLY JACKPOTS\nWAITING FOR YOU',
-    subtext: 'Pick 3 numbers. Draw every hour.',
+    subtext: 'Pick 3 numbers. Draws every hour.',
     ctaText: 'Play Lotto',
-    ctaHref: '/register',
+    ctaHref: '/games/lottery',
   },
   {
     id: 'scratch',
-    bgColor: '#1a0020',
-    gradient: 'from-pink-950/90 via-rose-900/70 to-purple-900/40',
+    accentColor: '#FF6EC7',
+    bg: 'linear-gradient(135deg, #2a0040 0%, #5a0070 40%, #1a0030 100%)',
+    orb1: 'rgba(255,110,199,0.2)',
+    orb2: 'rgba(100,0,255,0.15)',
+    badge: '🎟️ INSTANT WIN',
     headline: 'SCRATCH & WIN\nINSTANT PRIZES',
-    subtext: 'Match 3 symbols. Win instantly.',
+    subtext: 'Match 3 symbols. Instant payout.',
     ctaText: 'Play Scratch',
-    ctaHref: '/register',
+    ctaHref: '/games/scratch',
   },
 ]
 
@@ -256,27 +269,33 @@ export default function LandingPage() {
   const raw = CAROUSEL_SLIDES[slideIdx]
   const current = slideIdx === 0 && banner
     ? { ...raw, headline: banner.headline, subtext: banner.subtext ?? raw.subtext, ctaText: banner.ctaText ?? raw.ctaText, ctaHref: banner.ctaUrl ?? raw.ctaHref, imageUrl: banner.imageUrl }
-    : { ...raw, imageUrl: undefined }
+    : { ...raw, imageUrl: undefined as string | undefined }
 
   return (
     <div className="min-h-screen text-white overflow-x-hidden" style={{ background: '#160B2E' }}>
 
       {/* ── Main Nav ── */}
       <nav className="sticky top-0 z-50" style={{ background: '#160B2E', borderBottom: '1px solid rgba(255,255,255,0.07)' }}>
-        <div className="relative flex items-center justify-between px-4 h-16 max-w-7xl mx-auto">
-          <button onClick={() => setMenuOpen(o => !o)} className="p-2 rounded-lg text-white/70 hover:text-white hover:bg-white/5 transition-colors" aria-label="Menu">
-            {menuOpen ? <X size={22} /> : <Menu size={22} />}
+        <div className="flex items-center justify-between px-4 h-16 max-w-7xl mx-auto gap-3">
+          {/* Hamburger — mobile only */}
+          <button onClick={() => setMenuOpen(o => !o)} className="md:hidden flex-shrink-0 p-2 rounded-lg text-white/70 hover:text-white hover:bg-white/5 transition-colors" aria-label="Menu">
+            {menuOpen ? <X size={20} /> : <Menu size={20} />}
           </button>
 
-          <Link href="/" className="absolute left-1/2 -translate-x-1/2">
-            <img src="/wingubet-logo.png" alt="WinguBet" style={{ height: '60px', width: 'auto' }} />
+          {/* Logo */}
+          <Link href="/" className="flex-shrink-0">
+            <img src="/wingubet-logo.png" alt="WinguBet" style={{ height: '52px', width: 'auto' }} />
           </Link>
 
-          <div className="flex items-center gap-2">
-            <Link href="/login" className="px-3 py-1.5 text-sm font-bold border border-white/30 rounded text-white hover:bg-white/10 transition-colors tracking-wide">
+          {/* Spacer on desktop */}
+          <div className="hidden md:flex flex-1" />
+
+          {/* Auth buttons */}
+          <div className="flex items-center gap-2 flex-shrink-0">
+            <Link href="/login" className="px-3 py-1.5 text-xs md:text-sm font-bold border border-white/30 rounded text-white hover:bg-white/10 transition-colors tracking-wide">
               LOGIN
             </Link>
-            <Link href="/register" className="px-3 py-1.5 text-sm font-bold rounded tracking-wide transition-opacity hover:opacity-90" style={{ background: '#00E5FF', color: '#050010' }}>
+            <Link href="/register" className="px-3 py-1.5 text-xs md:text-sm font-bold rounded tracking-wide transition-opacity hover:opacity-90" style={{ background: '#00E5FF', color: '#050010' }}>
               REGISTER
             </Link>
           </div>
@@ -284,7 +303,7 @@ export default function LandingPage() {
 
         {/* Mobile slide-down menu */}
         {menuOpen && (
-          <div className="border-t border-white/10" style={{ background: '#0F0720' }}>
+          <div className="md:hidden border-t border-white/10" style={{ background: '#0F0720' }}>
             <div className="px-4 py-3 grid grid-cols-2 gap-1">
               {SECONDARY_NAV.map(item => (
                 <Link key={item.label} href={item.href} onClick={() => setMenuOpen(false)}
@@ -314,34 +333,53 @@ export default function LandingPage() {
       </div>
 
       {/* ── Hero Carousel ── */}
-      <section className="relative overflow-hidden" style={{ height: '230px' }}>
-        <div className="absolute inset-0 transition-colors duration-700" style={{ background: current.bgColor }} />
-        <div className="absolute inset-0" style={{ background: `linear-gradient(135deg, ${current.bgColor} 0%, #2a1040 100%)` }} />
+      <section className="relative overflow-hidden" style={{ height: 'clamp(200px, 42vw, 380px)' }}>
+        {/* Background */}
+        <div className="absolute inset-0 transition-all duration-700" style={{ background: current.bg }} />
+        {/* Decorative orbs */}
+        <div className="absolute right-0 top-0 w-2/3 h-full pointer-events-none">
+          <div className="absolute top-[-20%] right-[-10%] w-[70%] h-[140%] rounded-full blur-3xl" style={{ background: current.orb1 }} />
+          <div className="absolute bottom-[-30%] right-[20%] w-[50%] h-[100%] rounded-full blur-2xl" style={{ background: current.orb2 }} />
+        </div>
+        {/* Image overlay if API banner has one */}
         {current.imageUrl && (
-          <img src={current.imageUrl} className="absolute inset-0 w-full h-full object-cover opacity-40" alt="" />
+          <img src={current.imageUrl} className="absolute inset-0 w-full h-full object-cover opacity-35" alt="" />
         )}
-        <div className="absolute inset-0" style={{ background: `linear-gradient(to right, rgba(0,0,0,0.6) 0%, transparent 70%)` }} />
+        {/* Left text shadow overlay */}
+        <div className="absolute inset-0" style={{ background: 'linear-gradient(to right, rgba(0,0,0,0.55) 0%, rgba(0,0,0,0.15) 60%, transparent 100%)' }} />
 
-        <div className="relative z-10 h-full flex flex-col justify-center px-5 max-w-lg">
-          <h1 className="text-3xl md:text-4xl font-black leading-tight text-white mb-2" style={{ textShadow: '0 2px 12px rgba(0,0,0,0.7)', letterSpacing: '-0.01em' }}>
+        {/* Content */}
+        <div className="relative z-10 h-full flex flex-col justify-center px-5 md:px-10 max-w-2xl">
+          {/* Badge */}
+          <span className="inline-flex items-center gap-1.5 text-xs font-extrabold tracking-widest mb-3 w-fit px-3 py-1 rounded-full"
+            style={{ background: 'rgba(255,255,255,0.1)', color: current.accentColor, border: `1px solid ${current.accentColor}40` }}>
+            {current.badge}
+          </span>
+          {/* Headline */}
+          <h1 className="font-black leading-[1.05] text-white mb-3"
+            style={{ fontSize: 'clamp(1.6rem, 5vw, 3rem)', textShadow: '0 2px 16px rgba(0,0,0,0.6)', letterSpacing: '-0.01em' }}>
             {current.headline.split('\n').map((line, i, arr) => (
-              <span key={i}>{line}{i < arr.length - 1 && <br />}</span>
+              <span key={i} style={{ color: i === 0 ? '#fff' : current.accentColor }}>
+                {line}{i < arr.length - 1 && <br />}
+              </span>
             ))}
           </h1>
-          {current.subtext && <p className="text-white/60 text-sm mb-4">{current.subtext}</p>}
+          {current.subtext && (
+            <p className="text-white/60 mb-4" style={{ fontSize: 'clamp(0.75rem, 1.8vw, 0.95rem)' }}>{current.subtext}</p>
+          )}
           <Link href={current.ctaHref}
-            className="inline-block px-5 py-2 text-sm font-bold rounded-lg w-fit transition-opacity hover:opacity-90"
-            style={{ background: '#00E5FF', color: '#050010' }}>
+            className="inline-block font-bold rounded-lg w-fit transition-all hover:scale-105 hover:opacity-95"
+            style={{ background: current.accentColor, color: '#050010', padding: 'clamp(6px,1.2vw,10px) clamp(16px,3vw,24px)', fontSize: 'clamp(0.7rem,1.5vw,0.9rem)' }}>
             {current.ctaText} →
           </Link>
         </div>
 
-        {/* Carousel dots */}
-        <div className="absolute bottom-3 left-1/2 -translate-x-1/2 flex items-center gap-2 z-20">
+        {/* Dot indicators */}
+        <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex items-center gap-2 z-20">
           {CAROUSEL_SLIDES.map((_, i) => (
             <button key={i} onClick={() => goTo(i)} aria-label={`Slide ${i + 1}`}
               className="rounded-full transition-all duration-300"
-              style={{ width: i === slideIdx ? '18px' : '6px', height: '6px', background: i === slideIdx ? '#00E5FF' : 'rgba(255,255,255,0.3)' }} />
+              style={{ width: i === slideIdx ? '20px' : '6px', height: '6px', background: i === slideIdx ? current.accentColor : 'rgba(255,255,255,0.25)' }} />
           ))}
         </div>
       </section>
