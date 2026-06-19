@@ -55,7 +55,20 @@ export async function runMigrations(): Promise<void> {
       const sql = fs.readFileSync(path.join(migrationsDir, file), 'utf8')
       await client.query('BEGIN')
       inTransaction = true
-      await client.query(sql)
+      try {
+        await client.query(sql)
+      } catch (sqlErr: unknown) {
+        // 42P07 = relation already exists, 42710 = object already exists
+        // This can happen when a prior deploy crashed after creating the table
+        // but before recording the migration. Treat as idempotent.
+        const code = (sqlErr as { code?: string }).code
+        if (code !== '42P07' && code !== '42710') throw sqlErr
+        console.warn(`  warn  ${file}: relation already exists — recording as applied`)
+        await client.query('ROLLBACK')
+        inTransaction = false
+        await client.query('BEGIN')
+        inTransaction = true
+      }
       await client.query('INSERT INTO migrations (filename) VALUES ($1)', [file])
       await client.query('COMMIT')
       inTransaction = false
