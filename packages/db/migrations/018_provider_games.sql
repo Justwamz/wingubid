@@ -1,6 +1,10 @@
--- Maps a game provider to one of the 5 third-party game slots.
--- UNIQUE(game_slug) enforces one active provider per game at a time.
-CREATE TABLE IF NOT EXISTS provider_games (
+-- The provider_games table may exist from an earlier schema that is incompatible
+-- with the current one (missing game_slug, active, etc.). Drop and recreate so we
+-- always end up with the correct schema. Safe because the table had no real data
+-- (it was created by a failed/rolled-back deploy before migrations were recorded).
+DROP TABLE IF EXISTS provider_games;
+
+CREATE TABLE provider_games (
   id                  UUID         PRIMARY KEY DEFAULT gen_random_uuid(),
   provider_id         UUID         NOT NULL REFERENCES game_providers(id) ON DELETE CASCADE,
   game_slug           VARCHAR(50)  NOT NULL,
@@ -11,9 +15,4 @@ CREATE TABLE IF NOT EXISTS provider_games (
   UNIQUE(game_slug)
 );
 
--- Backfill columns that may be absent if the table was created by an older schema
-ALTER TABLE provider_games ADD COLUMN IF NOT EXISTS provider_game_id    VARCHAR(200) NOT NULL DEFAULT '';
-ALTER TABLE provider_games ADD COLUMN IF NOT EXISTS launch_url_template TEXT         NOT NULL DEFAULT '';
-ALTER TABLE provider_games ADD COLUMN IF NOT EXISTS active              BOOLEAN      NOT NULL DEFAULT true;
-
-CREATE INDEX IF NOT EXISTS idx_provider_games_slug_active ON provider_games(game_slug) WHERE active = true;
+CREATE INDEX idx_provider_games_slug_active ON provider_games(game_slug) WHERE active = true;
