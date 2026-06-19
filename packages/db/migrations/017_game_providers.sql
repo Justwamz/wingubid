@@ -1,4 +1,4 @@
-CREATE TABLE game_providers (
+CREATE TABLE IF NOT EXISTS game_providers (
   id         UUID         PRIMARY KEY DEFAULT gen_random_uuid(),
   name       VARCHAR(100) NOT NULL,
   slug       VARCHAR(50)  NOT NULL UNIQUE,

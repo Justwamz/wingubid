@@ -1,5 +1,5 @@
 -- Payment gateway configuration managed via admin portal
-CREATE TABLE payment_configs (
+CREATE TABLE IF NOT EXISTS payment_configs (
   id          UUID         PRIMARY KEY DEFAULT gen_random_uuid(),
   provider    VARCHAR(20)  NOT NULL UNIQUE,          -- 'mpesa', 'airtel'
   enabled     BOOLEAN      NOT NULL DEFAULT false,
@@ -11,4 +11,5 @@ CREATE TABLE payment_configs (
 -- Seed empty rows for each supported provider
 INSERT INTO payment_configs (provider, enabled, environment, config) VALUES
   ('mpesa',  false, 'sandbox', '{}'),
-  ('airtel', false, 'sandbox', '{}');
+  ('airtel', false, 'sandbox', '{}')
+ON CONFLICT (provider) DO NOTHING;

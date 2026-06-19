@@ -1,6 +1,6 @@
 -- Maps a game provider to one of the 5 third-party game slots.
 -- UNIQUE(game_slug) enforces one active provider per game at a time.
-CREATE TABLE provider_games (
+CREATE TABLE IF NOT EXISTS provider_games (
   id                  UUID         PRIMARY KEY DEFAULT gen_random_uuid(),
   provider_id         UUID         NOT NULL REFERENCES game_providers(id) ON DELETE CASCADE,
   game_slug           VARCHAR(50)  NOT NULL,
@@ -11,4 +11,4 @@ CREATE TABLE provider_games (
   UNIQUE(game_slug)
 );
 
-CREATE INDEX idx_provider_games_slug_active ON provider_games(game_slug) WHERE active = true;
+CREATE INDEX IF NOT EXISTS idx_provider_games_slug_active ON provider_games(game_slug) WHERE active = true;
