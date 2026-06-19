@@ -69,19 +69,29 @@ const STATUS_COLORS: Record<string, string> = {
 // ---------------------------------------------------------------------------
 
 const GRADIENT_PRESETS = [
+  // Game-palette colours matching the landing page
+  { label: 'Crash Blue',    value: 'from-blue-950 to-cyan-900' },
+  { label: 'Aviator Red',   value: 'from-red-950 to-orange-900' },
+  { label: 'Lotto Gold',    value: 'from-yellow-950 to-amber-900' },
+  { label: 'Scratch Pink',  value: 'from-fuchsia-950 to-pink-900' },
+  { label: 'Mines Purple',  value: 'from-violet-950 to-purple-900' },
+  { label: 'Dice Green',    value: 'from-green-950 to-emerald-900' },
+  // Classic presets
   { label: 'Cyan / Violet', value: 'from-cyan-900/60 to-violet-900/40' },
-  { label: 'Violet / Cyan', value: 'from-violet-900/60 to-cyan-900/40' },
-  { label: 'Emerald / Cyan', value: 'from-emerald-900/60 to-cyan-900/40' },
   { label: 'Orange / Rose', value: 'from-orange-900/60 to-rose-900/40' },
-  { label: 'Amber / Yellow', value: 'from-amber-900/60 to-yellow-900/40' },
+  { label: 'Amber / Yellow',value: 'from-amber-900/60 to-yellow-900/40' },
 ]
 
 /** Swatch preview colours (approximate visual for the picker UI) */
 const SWATCH_COLORS: Record<string, string> = {
-  'from-cyan-900/60 to-violet-900/40': 'linear-gradient(to right, #164e63, #4c1d95)',
-  'from-violet-900/60 to-cyan-900/40': 'linear-gradient(to right, #4c1d95, #164e63)',
-  'from-emerald-900/60 to-cyan-900/40': 'linear-gradient(to right, #064e3b, #164e63)',
-  'from-orange-900/60 to-rose-900/40': 'linear-gradient(to right, #7c2d12, #881337)',
+  'from-blue-950 to-cyan-900':          'linear-gradient(to right, #082f49, #083344)',
+  'from-red-950 to-orange-900':         'linear-gradient(to right, #450a0a, #7c2d12)',
+  'from-yellow-950 to-amber-900':       'linear-gradient(to right, #3f3000, #78350f)',
+  'from-fuchsia-950 to-pink-900':       'linear-gradient(to right, #4a044e, #831843)',
+  'from-violet-950 to-purple-900':      'linear-gradient(to right, #2e1065, #4a1d96)',
+  'from-green-950 to-emerald-900':      'linear-gradient(to right, #052e16, #064e3b)',
+  'from-cyan-900/60 to-violet-900/40':  'linear-gradient(to right, #164e63, #4c1d95)',
+  'from-orange-900/60 to-rose-900/40':  'linear-gradient(to right, #7c2d12, #881337)',
   'from-amber-900/60 to-yellow-900/40': 'linear-gradient(to right, #78350f, #713f12)',
 }
 
@@ -140,7 +150,7 @@ function defaultForm(placement: Placement): NewBannerForm {
     ctaText: '',
     ctaUrl: placement === 'landing' ? '/register' : '/wallet/deposit',
     imageUrl: '',
-    gradient: GRADIENT_PRESETS[0].value,
+    gradient: GRADIENT_PRESETS[6].value,
   }
 }
 
@@ -165,6 +175,21 @@ function BannerSection({
   const [form, setForm] = useState<NewBannerForm>(() => defaultForm(placement))
   const [saving, setSaving] = useState(false)
   const [actionLoading, setActionLoading] = useState<string | null>(null)
+  const [imageMode, setImageMode] = useState<'url' | 'upload'>('url')
+  const [imageError, setImageError] = useState<string | null>(null)
+
+  function handleImageUpload(e: React.ChangeEvent<HTMLInputElement>) {
+    setImageError(null)
+    const file = e.target.files?.[0]
+    if (!file) return
+    if (file.size > 400 * 1024) {
+      setImageError('Image must be under 400 KB. Please compress and retry.')
+      return
+    }
+    const reader = new FileReader()
+    reader.onload = () => update('imageUrl', reader.result as string)
+    reader.readAsDataURL(file)
+  }
 
   function update<K extends keyof NewBannerForm>(k: K, v: NewBannerForm[K]) {
     setForm(f => ({ ...f, [k]: v }))
@@ -333,27 +358,54 @@ function BannerSection({
               </div>
             </div>
 
-            {/* Image URL */}
+            {/* Image field — Upload or URL */}
             <div>
-              <label className="text-xs text-gray-400 block mb-1">
-                Banner image URL
-                <span className="text-gray-600 ml-1">
-                  · Recommended: 1200×300px · Ratio 4:1 · Max 500KB · PNG or JPG
-                </span>
-              </label>
-              <input
-                type="url"
-                value={form.imageUrl}
-                onChange={e => update('imageUrl', e.target.value)}
-                placeholder="https://cdn.example.com/banner.png"
-                className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-cyan-600"
-              />
+              <div className="flex items-center justify-between mb-2">
+                <label className="text-xs text-gray-400">Banner Image <span className="text-gray-600">(optional)</span></label>
+                <div className="flex rounded-lg overflow-hidden border border-gray-700 text-xs">
+                  <button
+                    type="button"
+                    onClick={() => { setImageMode('upload'); update('imageUrl', ''); setImageError(null) }}
+                    className={`px-3 py-1 transition-colors ${imageMode === 'upload' ? 'bg-cyan-700 text-white' : 'bg-gray-800 text-gray-400 hover:bg-gray-700'}`}
+                  >Upload</button>
+                  <button
+                    type="button"
+                    onClick={() => { setImageMode('url'); update('imageUrl', ''); setImageError(null) }}
+                    className={`px-3 py-1 transition-colors ${imageMode === 'url' ? 'bg-cyan-700 text-white' : 'bg-gray-800 text-gray-400 hover:bg-gray-700'}`}
+                  >URL</button>
+                </div>
+              </div>
+
+              {imageMode === 'upload' ? (
+                <div className="space-y-1.5">
+                  <input
+                    type="file"
+                    accept="image/png,image/jpeg,image/webp"
+                    onChange={handleImageUpload}
+                    className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm text-gray-300 file:mr-3 file:py-1 file:px-3 file:rounded file:border-0 file:text-xs file:bg-cyan-700 file:text-white hover:file:bg-cyan-600 cursor-pointer"
+                  />
+                  <p className="text-xs text-gray-600">PNG, JPG or WebP · Max 400 KB · Recommended 1200x300px</p>
+                  {imageError && <p className="text-xs text-red-400">{imageError}</p>}
+                  {form.imageUrl.startsWith('data:') && <p className="text-xs text-green-400">Image ready</p>}
+                </div>
+              ) : (
+                <div className="space-y-1.5">
+                  <input
+                    type="url"
+                    value={form.imageUrl}
+                    onChange={e => update('imageUrl', e.target.value)}
+                    placeholder="https://cdn.example.com/banner.png"
+                    className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-cyan-600"
+                  />
+                  <p className="text-xs text-gray-600">Recommended: 1200x300px · Ratio 4:1 · PNG or JPG</p>
+                </div>
+              )}
             </div>
 
             {/* Gradient picker */}
             <div>
               <label className="text-xs text-gray-400 block mb-2">Gradient Preset</label>
-              <div className="flex gap-3">
+              <div className="flex flex-wrap gap-2">
                 {GRADIENT_PRESETS.map(preset => (
                   <button
                     key={preset.value}
