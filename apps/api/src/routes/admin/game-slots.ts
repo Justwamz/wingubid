@@ -5,7 +5,6 @@ import { pool } from '@betting/db'
 export async function adminGameSlotRoutes(app: FastifyInstance) {
   // List all slots with their current provider assignment
   app.get('/admin/game-slots', { preHandler: authenticateAdmin }, async (_req, reply) => {
-    const pool = pool
     const { rows } = await pool.query<{
       id: string; name: string; slug: string; created_at: string
       provider_game_id: string | null; launch_url_template: string | null
@@ -52,7 +51,6 @@ export async function adminGameSlotRoutes(app: FastifyInstance) {
     if (!cleanSlug) {
       return reply.status(400).send({ error: { code: 'VALIDATION_ERROR', message: 'slug must contain letters or numbers' } })
     }
-    const pool = pool
     try {
       const { rows } = await pool.query(
         `INSERT INTO game_slots (name, slug) VALUES ($1, $2) RETURNING id, name, slug, created_at`,
@@ -70,7 +68,6 @@ export async function adminGameSlotRoutes(app: FastifyInstance) {
   // Delete a game slot (only if no active assignment)
   app.delete('/admin/game-slots/:slug', { preHandler: authenticateAdmin }, async (req, reply) => {
     const { slug } = req.params as { slug: string }
-    const pool = pool
     const { rows: existing } = await pool.query(
       `SELECT pg.id FROM game_slots gs LEFT JOIN provider_games pg ON pg.game_slug = gs.slug WHERE gs.slug = $1`,
       [slug],
