@@ -11,4 +11,9 @@ CREATE TABLE IF NOT EXISTS provider_games (
   UNIQUE(game_slug)
 );
 
+-- Backfill columns that may be absent if the table was created by an older schema
+ALTER TABLE provider_games ADD COLUMN IF NOT EXISTS provider_game_id    VARCHAR(200) NOT NULL DEFAULT '';
+ALTER TABLE provider_games ADD COLUMN IF NOT EXISTS launch_url_template TEXT         NOT NULL DEFAULT '';
+ALTER TABLE provider_games ADD COLUMN IF NOT EXISTS active              BOOLEAN      NOT NULL DEFAULT true;
+
 CREATE INDEX IF NOT EXISTS idx_provider_games_slug_active ON provider_games(game_slug) WHERE active = true;
