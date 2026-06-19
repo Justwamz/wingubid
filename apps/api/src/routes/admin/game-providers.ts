@@ -3,8 +3,6 @@ import type { FastifyInstance } from 'fastify'
 import { pool } from '@betting/db'
 import { authenticateAdmin } from '../../middleware/authenticateAdmin.js'
 
-const VALID_SLUGS = ['aviator', 'aviatrix', 'jetx', 'bball-blitz', 'sun-of-egypt-4'] as const
-
 const createBody = z.object({
   name:      z.string().min(1).max(100),
   slug:      z.string().min(1).max(50).regex(/^[a-z0-9-]+$/),
@@ -17,7 +15,7 @@ const createBody = z.object({
 const updateBody = createBody.partial().omit({ slug: true })
 
 const addGameBody = z.object({
-  gameSlug:          z.enum(VALID_SLUGS),
+  gameSlug:          z.string().min(1).max(50).regex(/^[a-z0-9-]+$/),
   providerGameId:    z.string().max(200).default(''),
   launchUrlTemplate: z.string().max(1000).default(''),
   active:            z.boolean().default(true),
@@ -118,6 +116,11 @@ export async function adminGameProviderRoutes(app: FastifyInstance) {
       return reply.status(400).send({ error: { code: 'VALIDATION_ERROR', message: parsed.error.issues[0].message } })
     }
     const { gameSlug, providerGameId, launchUrlTemplate, active } = parsed.data
+    // Validate slug exists in game_slots
+    const { rowCount } = await pool.query(`SELECT 1 FROM game_slots WHERE slug = $1`, [gameSlug])
+    if (!rowCount) {
+      return reply.status(400).send({ error: { code: 'VALIDATION_ERROR', message: `Unknown game slot: ${gameSlug}` } })
+    }
     // Upsert — if the game_slug is already mapped to another provider, replace it
     await pool.query(
       `INSERT INTO provider_games (provider_id, game_slug, provider_game_id, launch_url_template, active)

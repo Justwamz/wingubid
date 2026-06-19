@@ -32,6 +32,7 @@ import { adminBannerRoutes } from './routes/admin/banners.js'
 import { adminPlayersRoutes } from './routes/admin/players.js'
 import { adminTransactionsRoutes } from './routes/admin/transactions.js'
 import { adminGameProviderRoutes } from './routes/admin/game-providers.js'
+import { adminGameSlotRoutes } from './routes/admin/game-slots.js'
 import { providerGameRoutes } from './routes/games/provider-games.js'
 
 export function buildServer() {
@@ -79,6 +80,7 @@ export function buildServer() {
   app.register(adminPlayersRoutes)
   app.register(adminTransactionsRoutes)
   app.register(adminGameProviderRoutes)
+  app.register(adminGameSlotRoutes)
   app.register(providerGameRoutes)
 
   app.setErrorHandler((error, _req, reply) => {

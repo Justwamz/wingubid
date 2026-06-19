@@ -1,393 +1,438 @@
 'use client'
 import { useEffect, useState, useCallback } from 'react'
 import { apiFetch } from '@/lib/api'
-import { RefreshCw, Trash2, Plus, ChevronDown, ChevronUp } from 'lucide-react'
+import { RefreshCw, Plus, Trash2, ChevronDown, ChevronUp } from 'lucide-react'
 
 // ---------------------------------------------------------------------------
 // Types
 // ---------------------------------------------------------------------------
 
-const GAME_SLUGS = ['aviator', 'aviatrix', 'jetx', 'bball-blitz', 'sun-of-egypt-4'] as const
-type GameSlug = typeof GAME_SLUGS[number]
-
-const GAME_LABELS: Record<GameSlug, string> = {
-  'aviator':       'Aviator',
-  'aviatrix':      'Aviatrix',
-  'jetx':          'JetX',
-  'bball-blitz':   'B-Ball Blitz',
-  'sun-of-egypt-4':'Sun of Egypt 4',
+interface ProviderSummary {
+  id: string
+  name: string
+  slug: string
 }
 
-interface GameMapping {
-  gameSlug:          GameSlug
-  providerGameId:    string
+interface SlotAssignment {
+  providerGameId: string
   launchUrlTemplate: string
-  active:            boolean
+  active: boolean
+  provider: ProviderSummary
 }
 
-interface Provider {
-  id:        string
-  name:      string
-  slug:      string
-  baseUrl:   string
-  apiKey:    string
-  active:    boolean
+interface GameSlot {
+  id: string
+  name: string
+  slug: string
   createdAt: string
-  games:     GameMapping[]
+  assignment: SlotAssignment | null
 }
 
 // ---------------------------------------------------------------------------
-// Default form state
+// Add Slot form
 // ---------------------------------------------------------------------------
 
-function defaultProviderForm() {
-  return { name: '', slug: '', baseUrl: '', apiKey: '', apiSecret: '', active: true }
-}
-
-function defaultGameForm(): { gameSlug: GameSlug; providerGameId: string; launchUrlTemplate: string; active: boolean } {
-  return { gameSlug: 'aviator', providerGameId: '', launchUrlTemplate: '', active: true }
-}
-
-// ---------------------------------------------------------------------------
-// Provider card
-// ---------------------------------------------------------------------------
-
-function ProviderCard({
-  provider,
-  onRefresh,
-}: {
-  provider: Provider
-  onRefresh: () => void
-}) {
-  const [expanded, setExpanded] = useState(false)
-  const [addingGame, setAddingGame] = useState(false)
-  const [gameForm, setGameForm] = useState(defaultGameForm)
-  const [saving, setSaving] = useState(false)
-  const [deleting, setDeleting] = useState(false)
-
-  const assignedSlugs = new Set(provider.games.map(g => g.gameSlug))
-  const availableSlugs = GAME_SLUGS.filter(s => !assignedSlugs.has(s))
-
-  async function handleDelete() {
-    if (!confirm(`Delete provider "${provider.name}"? This will remove all its game mappings.`)) return
-    setDeleting(true)
-    await apiFetch(`/admin/game-providers/${provider.id}`, { method: 'DELETE' })
-    onRefresh()
-  }
-
-  async function handleToggleActive() {
-    await apiFetch(`/admin/game-providers/${provider.id}`, {
-      method: 'PUT',
-      body: JSON.stringify({ active: !provider.active }),
-    })
-    onRefresh()
-  }
-
-  async function handleAddGame(e: React.FormEvent) {
-    e.preventDefault()
-    setSaving(true)
-    await apiFetch(`/admin/game-providers/${provider.id}/games`, {
-      method: 'POST',
-      body: JSON.stringify(gameForm),
-    })
-    setGameForm(defaultGameForm)
-    setAddingGame(false)
-    setSaving(false)
-    onRefresh()
-  }
-
-  async function handleRemoveGame(gameSlug: string) {
-    if (!confirm(`Remove ${GAME_LABELS[gameSlug as GameSlug] ?? gameSlug} from this provider?`)) return
-    await apiFetch(`/admin/game-providers/${provider.id}/games/${gameSlug}`, { method: 'DELETE' })
-    onRefresh()
-  }
-
-  async function handleToggleGame(g: GameMapping) {
-    await apiFetch(`/admin/game-providers/${provider.id}/games`, {
-      method: 'POST',
-      body: JSON.stringify({ ...g, active: !g.active }),
-    })
-    onRefresh()
-  }
-
-  return (
-    <div className={`bg-gray-900 border rounded-xl overflow-hidden ${provider.active ? 'border-gray-700' : 'border-gray-800 opacity-60'}`}>
-      {/* Header */}
-      <div className="px-5 py-4 flex items-center justify-between gap-3">
-        <div className="flex items-center gap-3 min-w-0">
-          <div className={`w-2 h-2 rounded-full flex-shrink-0 ${provider.active ? 'bg-green-400' : 'bg-gray-600'}`} />
-          <div className="min-w-0">
-            <p className="font-semibold text-sm truncate">{provider.name}</p>
-            <p className="text-xs text-gray-500 font-mono">{provider.slug}</p>
-          </div>
-          {provider.baseUrl && (
-            <span className="hidden md:block text-xs text-gray-600 truncate max-w-xs">{provider.baseUrl}</span>
-          )}
-        </div>
-        <div className="flex items-center gap-2 flex-shrink-0">
-          <span className="text-xs text-gray-500">{provider.games.length} game{provider.games.length !== 1 ? 's' : ''}</span>
-          <button
-            onClick={handleToggleActive}
-            className={`text-xs px-2 py-1 rounded border transition-colors ${
-              provider.active
-                ? 'border-green-700 text-green-400 hover:bg-green-900/20'
-                : 'border-gray-700 text-gray-500 hover:bg-gray-800'
-            }`}
-          >
-            {provider.active ? 'Active' : 'Inactive'}
-          </button>
-          <button
-            onClick={() => setExpanded(e => !e)}
-            className="text-gray-400 hover:text-white transition-colors"
-          >
-            {expanded ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
-          </button>
-          <button
-            onClick={handleDelete}
-            disabled={deleting}
-            className="text-red-500 hover:text-red-400 disabled:opacity-40 transition-colors"
-          >
-            <Trash2 size={14} />
-          </button>
-        </div>
-      </div>
-
-      {/* Expanded content */}
-      {expanded && (
-        <div className="border-t border-gray-800 px-5 py-4 space-y-4">
-          {/* Game mappings */}
-          <div>
-            <p className="text-xs text-gray-500 uppercase tracking-wider mb-2">Game Mappings</p>
-            {provider.games.length === 0 ? (
-              <p className="text-xs text-gray-600 italic">No games assigned yet</p>
-            ) : (
-              <div className="space-y-2">
-                {provider.games.map(g => (
-                  <div key={g.gameSlug} className="flex items-center gap-3 bg-gray-800/50 rounded-lg px-3 py-2">
-                    <div className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${g.active ? 'bg-cyan-400' : 'bg-gray-600'}`} />
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium">{GAME_LABELS[g.gameSlug]}</p>
-                      {g.providerGameId && (
-                        <p className="text-xs text-gray-500 font-mono truncate">ID: {g.providerGameId}</p>
-                      )}
-                      {g.launchUrlTemplate && (
-                        <p className="text-xs text-gray-600 font-mono truncate">URL: {g.launchUrlTemplate}</p>
-                      )}
-                    </div>
-                    <button
-                      onClick={() => handleToggleGame(g)}
-                      className="text-xs text-gray-500 hover:text-white transition-colors"
-                    >
-                      {g.active ? 'Disable' : 'Enable'}
-                    </button>
-                    <button
-                      onClick={() => handleRemoveGame(g.gameSlug)}
-                      className="text-red-500 hover:text-red-400 transition-colors"
-                    >
-                      <Trash2 size={12} />
-                    </button>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-
-          {/* Add game mapping */}
-          {availableSlugs.length > 0 && (
-            <div>
-              {!addingGame ? (
-                <button
-                  onClick={() => { setAddingGame(true); setGameForm({ ...defaultGameForm(), gameSlug: availableSlugs[0] }) }}
-                  className="flex items-center gap-1.5 text-xs text-cyan-400 hover:text-cyan-300 transition-colors"
-                >
-                  <Plus size={12} /> Assign game
-                </button>
-              ) : (
-                <form onSubmit={handleAddGame} className="space-y-3 bg-gray-800/40 rounded-lg p-3">
-                  <p className="text-xs text-gray-400 font-semibold uppercase tracking-wide">Assign Game</p>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                    <div>
-                      <label className="text-xs text-gray-500 block mb-1">Game</label>
-                      <select
-                        value={gameForm.gameSlug}
-                        onChange={e => setGameForm(f => ({ ...f, gameSlug: e.target.value as GameSlug }))}
-                        className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-cyan-600"
-                      >
-                        {availableSlugs.map(s => (
-                          <option key={s} value={s}>{GAME_LABELS[s]}</option>
-                        ))}
-                      </select>
-                    </div>
-                    <div>
-                      <label className="text-xs text-gray-500 block mb-1">Provider Game ID</label>
-                      <input
-                        type="text"
-                        value={gameForm.providerGameId}
-                        onChange={e => setGameForm(f => ({ ...f, providerGameId: e.target.value }))}
-                        placeholder="e.g. aviator_v2"
-                        className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-cyan-600"
-                      />
-                    </div>
-                  </div>
-                  <div>
-                    <label className="text-xs text-gray-500 block mb-1">
-                      Launch URL Template
-                      <span className="text-gray-600 ml-1">· Use {'{gameId}'}, {'{playerId}'}, {'{token}'}, {'{currency}'}, {'{lang}'}</span>
-                    </label>
-                    <input
-                      type="text"
-                      value={gameForm.launchUrlTemplate}
-                      onChange={e => setGameForm(f => ({ ...f, launchUrlTemplate: e.target.value }))}
-                      placeholder="https://api.provider.com/launch?game={gameId}&token={token}"
-                      className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-cyan-600 font-mono"
-                    />
-                    <p className="text-xs text-gray-600 mt-1">Leave blank to use provider base URL + default params.</p>
-                  </div>
-                  <div className="flex gap-2">
-                    <button
-                      type="submit"
-                      disabled={saving}
-                      className="px-4 py-1.5 bg-cyan-600 hover:bg-cyan-500 disabled:opacity-50 text-white text-xs font-semibold rounded-lg transition-colors"
-                    >
-                      {saving ? 'Saving…' : 'Save'}
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setAddingGame(false)}
-                      className="px-4 py-1.5 bg-gray-700 hover:bg-gray-600 text-white text-xs font-semibold rounded-lg transition-colors"
-                    >
-                      Cancel
-                    </button>
-                  </div>
-                </form>
-              )}
-            </div>
-          )}
-        </div>
-      )}
-    </div>
-  )
-}
-
-// ---------------------------------------------------------------------------
-// Add provider form
-// ---------------------------------------------------------------------------
-
-function AddProviderForm({ onCreated }: { onCreated: () => void }) {
+function AddSlotForm({ onCreated }: { onCreated: () => void }) {
   const [open, setOpen] = useState(false)
-  const [form, setForm] = useState(defaultProviderForm)
+  const [name, setName] = useState('')
+  const [slug, setSlug] = useState('')
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
-  function update(k: string, v: string | boolean) {
-    setForm(f => ({ ...f, [k]: v }))
+  function handleNameChange(v: string) {
+    setName(v)
+    // Auto-generate slug from name
+    setSlug(v.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, ''))
   }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
-    if (!form.name.trim() || !form.slug.trim()) return
     setSaving(true)
     setError(null)
-    const { error: err } = await apiFetch('/admin/game-providers', {
+    const { error: err } = await apiFetch('/admin/game-slots', {
       method: 'POST',
-      body: JSON.stringify(form),
+      body: JSON.stringify({ name: name.trim(), slug }),
     })
-    if (err) {
-      setError(err.message)
-      setSaving(false)
-      return
-    }
-    setForm(defaultProviderForm())
-    setOpen(false)
-    setSaving(false)
+    if (err) { setError(err.message); setSaving(false); return }
+    setName(''); setSlug(''); setOpen(false); setSaving(false)
     onCreated()
   }
 
   return (
     <div>
       <button
-        onClick={() => setOpen(o => !o)}
+        onClick={() => { setOpen(o => !o); setError(null) }}
         className="flex items-center gap-2 text-sm text-cyan-400 hover:text-cyan-300 transition-colors"
       >
-        <span className={`text-lg leading-none transition-transform ${open ? 'rotate-45' : ''}`}>+</span>
-        {open ? 'Cancel' : 'Add Provider'}
+        <Plus size={14} />
+        {open ? 'Cancel' : 'Add Game Slot'}
       </button>
 
       {open && (
-        <form onSubmit={handleSubmit} className="mt-4 bg-gray-900 border border-gray-800 rounded-xl p-5 space-y-4">
-          <p className="text-sm font-semibold text-gray-300">New Game Provider</p>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <label className="text-xs text-gray-400 block mb-1">Display Name</label>
-              <input
-                type="text"
-                value={form.name}
-                onChange={e => update('name', e.target.value.slice(0, 100))}
-                placeholder="Spribe"
-                required
-                className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-cyan-600"
-              />
-            </div>
-            <div>
-              <label className="text-xs text-gray-400 block mb-1">
-                Slug <span className="text-gray-600">(lowercase, hyphens only)</span>
-              </label>
-              <input
-                type="text"
-                value={form.slug}
-                onChange={e => update('slug', e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, '').slice(0, 50))}
-                placeholder="spribe"
-                required
-                className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-cyan-600 font-mono"
-              />
-            </div>
-          </div>
-
+        <form onSubmit={handleSubmit} className="mt-3 bg-gray-900 border border-gray-800 rounded-xl p-4 space-y-3 max-w-md">
+          <p className="text-xs font-semibold text-gray-300 uppercase tracking-wider">New Game Slot</p>
           <div>
-            <label className="text-xs text-gray-400 block mb-1">Base URL</label>
+            <label className="text-xs text-gray-400 block mb-1">Game Name</label>
             <input
-              type="url"
-              value={form.baseUrl}
-              onChange={e => update('baseUrl', e.target.value)}
-              placeholder="https://api.provider.com"
+              type="text"
+              value={name}
+              onChange={e => handleNameChange(e.target.value)}
+              placeholder="e.g. Plinko"
+              required
+              className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-cyan-600"
+            />
+          </div>
+          <div>
+            <label className="text-xs text-gray-400 block mb-1">
+              Slug <span className="text-gray-600">(auto-generated, editable)</span>
+            </label>
+            <input
+              type="text"
+              value={slug}
+              onChange={e => setSlug(e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, ''))}
+              placeholder="plinko"
+              required
               className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-cyan-600 font-mono"
             />
           </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <label className="text-xs text-gray-400 block mb-1">API Key</label>
-              <input
-                type="text"
-                value={form.apiKey}
-                onChange={e => update('apiKey', e.target.value)}
-                placeholder="pk_live_…"
-                className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-cyan-600 font-mono"
-              />
-            </div>
-            <div>
-              <label className="text-xs text-gray-400 block mb-1">API Secret</label>
-              <input
-                type="password"
-                value={form.apiSecret}
-                onChange={e => update('apiSecret', e.target.value)}
-                placeholder="sk_live_…"
-                className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-cyan-600 font-mono"
-              />
-            </div>
-          </div>
-
-          {error && <p className="text-xs text-red-400 bg-red-900/20 border border-red-700/30 rounded px-3 py-2">{error}</p>}
-
+          {error && <p className="text-xs text-red-400">{error}</p>}
           <button
             type="submit"
-            disabled={saving || !form.name.trim() || !form.slug.trim()}
+            disabled={saving || !name.trim() || !slug.trim()}
             className="w-full bg-cyan-600 hover:bg-cyan-500 disabled:opacity-50 text-white font-semibold text-sm py-2 rounded-lg transition-colors"
           >
-            {saving ? 'Creating…' : 'Create Provider'}
+            {saving ? 'Creating…' : 'Create Slot'}
           </button>
         </form>
+      )}
+    </div>
+  )
+}
+
+// ---------------------------------------------------------------------------
+// Configure slot panel — shown inline when a slot is clicked
+// ---------------------------------------------------------------------------
+
+function ConfigureSlotPanel({
+  slot,
+  providers,
+  onDone,
+  onRemove,
+}: {
+  slot: GameSlot
+  providers: ProviderSummary[]
+  onDone: () => void
+  onRemove: () => void
+}) {
+  const isEditing = slot.assignment !== null
+  const [providerMode, setProviderMode] = useState<'existing' | 'new'>(
+    isEditing || providers.length > 0 ? 'existing' : 'new',
+  )
+  const [selectedProviderId, setSelectedProviderId] = useState(
+    slot.assignment?.provider.id ?? providers[0]?.id ?? '',
+  )
+
+  // New provider fields
+  const [provName, setProvName] = useState('')
+  const [provSlug, setProvSlug] = useState('')
+  const [provBaseUrl, setProvBaseUrl] = useState('')
+  const [provApiKey, setProvApiKey] = useState('')
+  const [provApiSecret, setProvApiSecret] = useState('')
+
+  // Game-specific fields
+  const [gameId, setGameId] = useState(slot.assignment?.providerGameId ?? '')
+  const [launchUrl, setLaunchUrl] = useState(slot.assignment?.launchUrlTemplate ?? '')
+
+  const [saving, setSaving] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const [removing, setRemoving] = useState(false)
+
+  function handleProvNameChange(v: string) {
+    setProvName(v)
+    setProvSlug(v.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, ''))
+  }
+
+  async function handleSave(e: React.FormEvent) {
+    e.preventDefault()
+    setSaving(true)
+    setError(null)
+
+    let providerId = selectedProviderId
+
+    // Create provider first if new
+    if (providerMode === 'new') {
+      const { data, error: err } = await apiFetch<{ id: string }>('/admin/game-providers', {
+        method: 'POST',
+        body: JSON.stringify({
+          name: provName.trim(),
+          slug: provSlug.trim(),
+          baseUrl: provBaseUrl.trim(),
+          apiKey: provApiKey,
+          apiSecret: provApiSecret,
+          active: true,
+        }),
+      })
+      if (err || !data?.id) { setError(err?.message ?? 'Failed to create provider'); setSaving(false); return }
+      providerId = data.id
+    }
+
+    // Assign game slot to provider
+    const { error: err2 } = await apiFetch(`/admin/game-providers/${providerId}/games`, {
+      method: 'POST',
+      body: JSON.stringify({
+        gameSlug: slot.slug,
+        providerGameId: gameId,
+        launchUrlTemplate: launchUrl,
+        active: true,
+      }),
+    })
+    if (err2) { setError(err2.message); setSaving(false); return }
+
+    setSaving(false)
+    onDone()
+  }
+
+  async function handleRemove() {
+    if (!slot.assignment) return
+    if (!confirm(`Remove the provider assignment from "${slot.name}"?`)) return
+    setRemoving(true)
+    await apiFetch(
+      `/admin/game-providers/${slot.assignment.provider.id}/games/${slot.slug}`,
+      { method: 'DELETE' },
+    )
+    setRemoving(false)
+    onRemove()
+  }
+
+  return (
+    <form onSubmit={handleSave} className="mt-2 bg-gray-900 border border-gray-800 rounded-xl p-4 space-y-4">
+      <div className="flex items-center justify-between">
+        <p className="text-xs font-semibold text-gray-300 uppercase tracking-wider">
+          {isEditing ? `Edit: ${slot.name}` : `Configure: ${slot.name}`}
+        </p>
+        {isEditing && (
+          <button
+            type="button"
+            onClick={handleRemove}
+            disabled={removing}
+            className="text-xs text-red-400 hover:text-red-300 disabled:opacity-50 flex items-center gap-1 transition-colors"
+          >
+            <Trash2 size={11} /> {removing ? 'Removing…' : 'Remove assignment'}
+          </button>
+        )}
+      </div>
+
+      {/* Provider selection */}
+      <div>
+        <label className="text-xs text-gray-400 block mb-2">Provider</label>
+
+        {providers.length > 0 && (
+          <div className="flex rounded-lg overflow-hidden border border-gray-700 text-xs mb-3 w-fit">
+            <button
+              type="button"
+              onClick={() => setProviderMode('existing')}
+              className={`px-3 py-1.5 transition-colors ${providerMode === 'existing' ? 'bg-cyan-700 text-white' : 'bg-gray-800 text-gray-400 hover:bg-gray-700'}`}
+            >
+              Existing provider
+            </button>
+            <button
+              type="button"
+              onClick={() => setProviderMode('new')}
+              className={`px-3 py-1.5 transition-colors ${providerMode === 'new' ? 'bg-cyan-700 text-white' : 'bg-gray-800 text-gray-400 hover:bg-gray-700'}`}
+            >
+              New provider
+            </button>
+          </div>
+        )}
+
+        {providerMode === 'existing' && providers.length > 0 ? (
+          <select
+            value={selectedProviderId}
+            onChange={e => setSelectedProviderId(e.target.value)}
+            className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-cyan-600"
+          >
+            {providers.map(p => (
+              <option key={p.id} value={p.id}>{p.name} ({p.slug})</option>
+            ))}
+          </select>
+        ) : (
+          <div className="space-y-3">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              <div>
+                <label className="text-xs text-gray-500 block mb-1">Provider Name</label>
+                <input
+                  type="text"
+                  value={provName}
+                  onChange={e => handleProvNameChange(e.target.value)}
+                  placeholder="Spribe"
+                  required={providerMode === 'new'}
+                  className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-cyan-600"
+                />
+              </div>
+              <div>
+                <label className="text-xs text-gray-500 block mb-1">Provider Slug</label>
+                <input
+                  type="text"
+                  value={provSlug}
+                  onChange={e => setProvSlug(e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, ''))}
+                  placeholder="spribe"
+                  required={providerMode === 'new'}
+                  className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-cyan-600 font-mono"
+                />
+              </div>
+            </div>
+            <div>
+              <label className="text-xs text-gray-500 block mb-1">Base URL</label>
+              <input
+                type="url"
+                value={provBaseUrl}
+                onChange={e => setProvBaseUrl(e.target.value)}
+                placeholder="https://api.provider.com"
+                className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-cyan-600 font-mono"
+              />
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              <div>
+                <label className="text-xs text-gray-500 block mb-1">API Key</label>
+                <input
+                  type="text"
+                  value={provApiKey}
+                  onChange={e => setProvApiKey(e.target.value)}
+                  placeholder="pk_live_…"
+                  className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-cyan-600 font-mono"
+                />
+              </div>
+              <div>
+                <label className="text-xs text-gray-500 block mb-1">API Secret</label>
+                <input
+                  type="password"
+                  value={provApiSecret}
+                  onChange={e => setProvApiSecret(e.target.value)}
+                  placeholder="sk_live_…"
+                  className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-cyan-600 font-mono"
+                />
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* Game-specific fields */}
+      <div className="border-t border-gray-800 pt-4 space-y-3">
+        <p className="text-xs text-gray-500 uppercase tracking-wider">Game Configuration</p>
+        <div>
+          <label className="text-xs text-gray-400 block mb-1">Provider Game ID <span className="text-gray-600">(optional)</span></label>
+          <input
+            type="text"
+            value={gameId}
+            onChange={e => setGameId(e.target.value)}
+            placeholder="e.g. aviator_v2"
+            className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-cyan-600 font-mono"
+          />
+        </div>
+        <div>
+          <label className="text-xs text-gray-400 block mb-1">
+            Launch URL Template <span className="text-gray-600">· {'{gameId}'} {'{playerId}'} {'{token}'} {'{currency}'} {'{lang}'}</span>
+          </label>
+          <input
+            type="text"
+            value={launchUrl}
+            onChange={e => setLaunchUrl(e.target.value)}
+            placeholder="https://api.provider.com/launch?game={gameId}&token={token}&player={playerId}"
+            className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-cyan-600 font-mono text-xs"
+          />
+          <p className="text-xs text-gray-600 mt-1">Leave blank to use provider base URL with default params.</p>
+        </div>
+      </div>
+
+      {error && <p className="text-xs text-red-400 bg-red-900/20 border border-red-700/30 rounded px-3 py-2">{error}</p>}
+
+      <button
+        type="submit"
+        disabled={saving}
+        className="w-full bg-cyan-600 hover:bg-cyan-500 disabled:opacity-50 text-white font-semibold text-sm py-2 rounded-lg transition-colors"
+      >
+        {saving ? 'Saving…' : isEditing ? 'Update Configuration' : 'Save Configuration'}
+      </button>
+    </form>
+  )
+}
+
+// ---------------------------------------------------------------------------
+// Slot card
+// ---------------------------------------------------------------------------
+
+function SlotCard({
+  slot,
+  providers,
+  onRefresh,
+  onDelete,
+}: {
+  slot: GameSlot
+  providers: ProviderSummary[]
+  onRefresh: () => void
+  onDelete: (slug: string) => void
+}) {
+  const [open, setOpen] = useState(false)
+  const isLive = slot.assignment?.active ?? false
+  const isAssigned = slot.assignment !== null
+
+  return (
+    <div className={`border rounded-xl overflow-hidden transition-colors ${isLive ? 'border-cyan-800/60 bg-cyan-950/10' : 'border-gray-800 bg-gray-900/40'}`}>
+      {/* Slot header — always clickable */}
+      <button
+        onClick={() => setOpen(o => !o)}
+        className="w-full px-4 py-3 flex items-center gap-3 text-left hover:bg-white/[0.02] transition-colors"
+      >
+        {/* Status dot */}
+        <div className={`w-2 h-2 rounded-full flex-shrink-0 ${isLive ? 'bg-cyan-400' : isAssigned ? 'bg-yellow-500' : 'bg-gray-600'}`} />
+
+        {/* Slot info */}
+        <div className="flex-1 min-w-0">
+          <p className="text-sm font-semibold text-white">{slot.name}</p>
+          <p className="text-xs text-gray-500 font-mono">{slot.slug}</p>
+        </div>
+
+        {/* Status badge */}
+        {isLive ? (
+          <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-cyan-900/40 text-cyan-400 border border-cyan-700/40 flex-shrink-0">
+            Live · {slot.assignment!.provider.name}
+          </span>
+        ) : isAssigned ? (
+          <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-yellow-900/30 text-yellow-500 border border-yellow-700/30 flex-shrink-0">
+            Inactive · {slot.assignment!.provider.name}
+          </span>
+        ) : (
+          <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-gray-800 text-gray-500 border border-gray-700 flex-shrink-0">
+            Not configured
+          </span>
+        )}
+
+        {/* Chevron */}
+        <span className="text-gray-600 flex-shrink-0">
+          {open ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
+        </span>
+      </button>
+
+      {/* Expanded panel */}
+      {open && (
+        <div className="px-4 pb-4 border-t border-gray-800">
+          <ConfigureSlotPanel
+            slot={slot}
+            providers={providers}
+            onDone={() => { setOpen(false); onRefresh() }}
+            onRemove={() => { setOpen(false); onRefresh() }}
+          />
+          {/* Delete slot option — only when unassigned */}
+          {!isAssigned && (
+            <button
+              onClick={() => onDelete(slot.slug)}
+              className="mt-3 text-xs text-gray-600 hover:text-red-400 flex items-center gap-1 transition-colors"
+            >
+              <Trash2 size={11} /> Delete this slot
+            </button>
+          )}
+        </div>
       )}
     </div>
   )
@@ -398,94 +443,107 @@ function AddProviderForm({ onCreated }: { onCreated: () => void }) {
 // ---------------------------------------------------------------------------
 
 export function IntegrationsTab() {
-  const [providers, setProviders] = useState<Provider[]>([])
+  const [slots, setSlots] = useState<GameSlot[]>([])
+  const [providers, setProviders] = useState<ProviderSummary[]>([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [showWebhooks, setShowWebhooks] = useState(false)
 
-  const fetchProviders = useCallback(async () => {
+  const fetchAll = useCallback(async () => {
     setLoading(true)
     setError(null)
-    const { data, error: err } = await apiFetch<{ providers: Provider[] }>('/admin/game-providers')
-    if (data) setProviders(data.providers)
-    else setError(err?.message ?? 'Failed to load providers')
+    const [slotsRes, providersRes] = await Promise.all([
+      apiFetch<{ slots: GameSlot[] }>('/admin/game-slots'),
+      apiFetch<{ providers: ProviderSummary[] }>('/admin/game-providers'),
+    ])
+    if (slotsRes.data) setSlots(slotsRes.data.slots)
+    else setError(slotsRes.error?.message ?? 'Failed to load game slots')
+    if (providersRes.data) setProviders(providersRes.data.providers)
     setLoading(false)
   }, [])
 
-  useEffect(() => { fetchProviders() }, [fetchProviders])
+  useEffect(() => { fetchAll() }, [fetchAll])
 
-  const configured = new Set(providers.flatMap(p => p.games.filter(g => g.active).map(g => g.gameSlug)))
+  async function handleDelete(slug: string) {
+    if (!confirm(`Delete game slot "${slug}"? This cannot be undone.`)) return
+    const { error: err } = await apiFetch(`/admin/game-slots/${slug}`, { method: 'DELETE' })
+    if (err) { alert(err.message); return }
+    fetchAll()
+  }
+
+  const liveCount = slots.filter(s => s.assignment?.active).length
 
   return (
     <div className="space-y-6">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-lg font-semibold">Game Provider Integrations</h2>
-          <p className="text-xs text-gray-500 mt-0.5">Configure third-party providers and assign them to game slots.</p>
+          <h2 className="text-lg font-semibold">Game Integrations</h2>
+          <p className="text-xs text-gray-500 mt-0.5">
+            {liveCount} of {slots.length} game slot{slots.length !== 1 ? 's' : ''} live.
+            Click any slot to configure its provider.
+          </p>
         </div>
         <button
-          onClick={fetchProviders}
+          onClick={fetchAll}
           disabled={loading}
-          className="rounded-lg bg-gray-800 px-3 py-1.5 text-xs hover:bg-gray-700 disabled:opacity-50 transition-colors"
+          className="rounded-lg bg-gray-800 px-3 py-1.5 text-xs hover:bg-gray-700 disabled:opacity-50 transition-colors flex items-center gap-1.5"
         >
-          {loading ? 'Loading…' : <><RefreshCw size={12} className="inline mr-1" />Refresh</>}
+          <RefreshCw size={11} className={loading ? 'animate-spin' : ''} />
+          Refresh
         </button>
-      </div>
-
-      {/* Game slot status grid */}
-      <div className="bg-gray-900 border border-gray-800 rounded-xl p-4">
-        <p className="text-xs text-gray-500 uppercase tracking-wider mb-3">Game Slot Status</p>
-        <div className="grid grid-cols-2 md:grid-cols-5 gap-2">
-          {GAME_SLUGS.map(slug => (
-            <div
-              key={slug}
-              className={`rounded-lg px-3 py-2.5 border text-center ${
-                configured.has(slug)
-                  ? 'border-cyan-700/50 bg-cyan-900/10'
-                  : 'border-gray-800 bg-gray-800/30'
-              }`}
-            >
-              <div className={`w-1.5 h-1.5 rounded-full mx-auto mb-1.5 ${configured.has(slug) ? 'bg-cyan-400' : 'bg-gray-600'}`} />
-              <p className="text-xs font-semibold leading-tight">{GAME_LABELS[slug]}</p>
-              <p className={`text-[10px] mt-0.5 ${configured.has(slug) ? 'text-cyan-500' : 'text-gray-600'}`}>
-                {configured.has(slug) ? 'Live' : 'Not configured'}
-              </p>
-            </div>
-          ))}
-        </div>
       </div>
 
       {error && (
         <div className="bg-red-900/30 border border-red-700/50 rounded-lg px-4 py-3 text-sm text-red-400">{error}</div>
       )}
 
-      {/* Provider list */}
-      <div className="space-y-3">
-        {providers.length === 0 && !loading && (
-          <p className="text-sm text-gray-600 text-center py-8">No providers added yet. Add one below.</p>
-        )}
-        {providers.map(p => (
-          <ProviderCard key={p.id} provider={p} onRefresh={fetchProviders} />
-        ))}
-      </div>
-
-      {/* Add provider */}
-      <AddProviderForm onCreated={fetchProviders} />
-
-      {/* Webhook info */}
-      <div className="bg-gray-900 border border-gray-800 rounded-xl p-4 space-y-2">
-        <p className="text-xs text-gray-500 uppercase tracking-wider">Webhook Endpoints</p>
-        <p className="text-xs text-gray-400">Provide these URLs to your game provider for seamless wallet callbacks:</p>
-        <div className="space-y-1 font-mono text-xs text-gray-300 bg-gray-800 rounded-lg px-3 py-3">
-          <p><span className="text-gray-500">Balance:</span>  POST /provider/balance</p>
-          <p><span className="text-gray-500">Debit:  </span>  POST /provider/debit</p>
-          <p><span className="text-gray-500">Credit: </span>  POST /provider/credit</p>
-          <p><span className="text-gray-500">Rollback:</span> POST /provider/rollback</p>
+      {/* Slot list */}
+      {loading && slots.length === 0 ? (
+        <div className="text-center text-gray-600 text-sm py-12">Loading…</div>
+      ) : (
+        <div className="space-y-2">
+          {slots.map(slot => (
+            <SlotCard
+              key={slot.slug}
+              slot={slot}
+              providers={providers}
+              onRefresh={fetchAll}
+              onDelete={handleDelete}
+            />
+          ))}
+          {slots.length === 0 && (
+            <p className="text-sm text-gray-600 text-center py-8">No game slots yet. Add one below.</p>
+          )}
         </div>
-        <p className="text-xs text-gray-600">
-          Auth: HMAC-SHA256 via <span className="font-mono">x-provider-id</span>, <span className="font-mono">x-timestamp</span>, <span className="font-mono">x-signature</span> headers.
-          The provider slug is used as the provider ID.
-        </p>
+      )}
+
+      {/* Add slot */}
+      <AddSlotForm onCreated={fetchAll} />
+
+      {/* Webhook reference — collapsed by default */}
+      <div className="bg-gray-900 border border-gray-800 rounded-xl overflow-hidden">
+        <button
+          onClick={() => setShowWebhooks(w => !w)}
+          className="w-full px-4 py-3 flex items-center justify-between text-xs text-gray-500 hover:text-gray-400 transition-colors"
+        >
+          <span className="uppercase tracking-wider font-semibold">Webhook Endpoints</span>
+          {showWebhooks ? <ChevronUp size={13} /> : <ChevronDown size={13} />}
+        </button>
+        {showWebhooks && (
+          <div className="px-4 pb-4 border-t border-gray-800 space-y-2 pt-3">
+            <p className="text-xs text-gray-400">Provide these URLs to your game provider for wallet callbacks:</p>
+            <div className="space-y-1 font-mono text-xs text-gray-300 bg-gray-800 rounded-lg px-3 py-3">
+              <p><span className="text-gray-500">Balance: </span> POST /provider/balance</p>
+              <p><span className="text-gray-500">Debit:   </span> POST /provider/debit</p>
+              <p><span className="text-gray-500">Credit:  </span> POST /provider/credit</p>
+              <p><span className="text-gray-500">Rollback:</span> POST /provider/rollback</p>
+            </div>
+            <p className="text-xs text-gray-600">
+              Auth: HMAC-SHA256 via <span className="font-mono">x-provider-id</span>, <span className="font-mono">x-timestamp</span>, <span className="font-mono">x-signature</span> headers.
+            </p>
+          </div>
+        )}
       </div>
     </div>
   )
