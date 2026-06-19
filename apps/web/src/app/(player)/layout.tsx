@@ -42,7 +42,7 @@ export default function PlayerLayout({ children }: { children: React.ReactNode }
   function handleLogout() {
     apiFetch('/auth/logout', { method: 'POST' })
     clearToken()
-    router.push('/login')
+    router.push('/')
   }
 
   const navLinks: { href: string; label: string; icon: React.ReactNode; match: (p: string) => boolean }[] = [
