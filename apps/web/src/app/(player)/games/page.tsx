@@ -123,10 +123,61 @@ const GAMES = [
   },
 ]
 
+// Provider-powered games — activate when a provider is configured via admin
+const PROVIDER_GAMES = [
+  {
+    providerSlug: 'aviator',
+    name: 'AVIATOR',
+    tagline: 'Fly high, cash out before the crash',
+    gradient: 'from-orange-500/15 to-amber-700/10',
+    border: 'border-orange-500/25',
+    accent: '#FF9500',
+    badgeColor: 'bg-orange-500/20 text-orange-400',
+  },
+  {
+    providerSlug: 'aviatrix',
+    name: 'AVIATRIX',
+    tagline: 'The next generation crash game',
+    gradient: 'from-violet-500/15 to-indigo-700/10',
+    border: 'border-violet-500/25',
+    accent: '#A78BFA',
+    badgeColor: 'bg-violet-500/20 text-violet-300',
+  },
+  {
+    providerSlug: 'jetx',
+    name: 'JETX',
+    tagline: 'Ride the jet, escape before it explodes',
+    gradient: 'from-blue-500/15 to-cyan-700/10',
+    border: 'border-blue-500/25',
+    accent: '#38BDF8',
+    badgeColor: 'bg-blue-500/20 text-blue-300',
+  },
+  {
+    providerSlug: 'bball-blitz',
+    name: 'B-BALL BLITZ',
+    tagline: 'Basketball meets casino',
+    gradient: 'from-orange-600/15 to-red-700/10',
+    border: 'border-orange-600/25',
+    accent: '#FB923C',
+    badgeColor: 'bg-orange-600/20 text-orange-300',
+  },
+  {
+    providerSlug: 'sun-of-egypt-4',
+    name: 'SUN OF EGYPT 4',
+    tagline: 'Uncover pharaoh\'s treasures',
+    gradient: 'from-yellow-500/15 to-amber-600/10',
+    border: 'border-yellow-500/25',
+    accent: '#FCD34D',
+    badgeColor: 'bg-yellow-500/20 text-yellow-300',
+  },
+]
+
 export default function GamesLobby() {
   const [leaderboard, setLeaderboard] = useState<LeaderboardEntry[]>([])
   const [expanded, setExpanded] = useState<string | null>(null)
   const [banner, setBanner] = useState<Banner | null>(null)
+  const [availableSlugs, setAvailableSlugs] = useState<Set<string>>(new Set())
+  const [launching, setLaunching] = useState<string | null>(null)
 
   useEffect(() => {
     const load = () => apiFetch<LeaderboardEntry[]>('/games/leaderboard')
@@ -137,8 +188,22 @@ export default function GamesLobby() {
     apiFetch<{ banner: Banner | null }>('/banners/lobby')
       .then(({ data }) => data?.banner ? setBanner(data.banner) : null)
 
+    apiFetch<{ slugs: string[] }>('/games/available')
+      .then(({ data }) => data?.slugs && setAvailableSlugs(new Set(data.slugs)))
+
     return () => clearInterval(id)
   }, [])
+
+  async function handleLaunch(slug: string) {
+    setLaunching(slug)
+    const { data, error } = await apiFetch<{ launchUrl: string }>(`/games/launch/${slug}`)
+    setLaunching(null)
+    if (data?.launchUrl) {
+      window.open(data.launchUrl, '_blank', 'noopener,noreferrer')
+    } else {
+      alert(error?.message ?? 'Game unavailable. Please try again later.')
+    }
+  }
 
   return (
     <div className="max-w-7xl mx-auto px-4 py-6">
@@ -170,7 +235,6 @@ export default function GamesLobby() {
           <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
             {GAMES.map(g => (
               <div key={g.href} className={`bg-gradient-to-br ${g.gradient} border ${g.border} rounded-2xl overflow-hidden flex flex-col`}>
-                {/* Card header */}
                 <div className="p-5 flex-1">
                   <div className="flex items-start justify-between mb-3">
                     <div>
@@ -183,7 +247,6 @@ export default function GamesLobby() {
                     <div className="flex-shrink-0 ml-2">{g.visual}</div>
                   </div>
 
-                  {/* Collapsible instructions */}
                   <button
                     onClick={() => setExpanded(expanded === g.href ? null : g.href)}
                     className="flex items-center gap-1.5 text-xs text-gray-500 hover:text-gray-300 transition-colors mt-2"
@@ -197,7 +260,6 @@ export default function GamesLobby() {
                   )}
                 </div>
 
-                {/* Play button */}
                 <Link href={g.href} className="block">
                   <div
                     className="mx-4 mb-4 py-2.5 rounded-xl text-center font-bold text-sm transition-opacity hover:opacity-90"
@@ -208,6 +270,46 @@ export default function GamesLobby() {
                 </Link>
               </div>
             ))}
+
+            {/* Provider-powered games */}
+            {PROVIDER_GAMES.map(g => {
+              const isActive = availableSlugs.has(g.providerSlug)
+              const isLaunching = launching === g.providerSlug
+              return (
+                <div key={g.providerSlug} className={`bg-gradient-to-br ${g.gradient} border ${g.border} rounded-2xl overflow-hidden flex flex-col`}>
+                  <div className="p-5 flex-1">
+                    <div className="flex items-start justify-between mb-3">
+                      <div>
+                        <div className="flex items-center gap-2 mb-1">
+                          {isActive ? (
+                            <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${g.badgeColor}`}>LIVE</span>
+                          ) : (
+                            <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-gray-700/50 text-gray-500">COMING SOON</span>
+                          )}
+                        </div>
+                        <h3 className="text-xl font-extrabold font-mono" style={{ color: isActive ? g.accent : '#6b7280' }}>{g.name}</h3>
+                        <p className="text-gray-400 text-sm mt-0.5">{g.tagline}</p>
+                      </div>
+                    </div>
+                  </div>
+
+                  {isActive ? (
+                    <button
+                      onClick={() => handleLaunch(g.providerSlug)}
+                      disabled={isLaunching}
+                      className="mx-4 mb-4 py-2.5 rounded-xl text-center font-bold text-sm transition-opacity hover:opacity-90 disabled:opacity-60 disabled:cursor-not-allowed"
+                      style={{ background: `${g.accent}22`, border: `1px solid ${g.accent}44`, color: g.accent }}
+                    >
+                      {isLaunching ? 'LAUNCHING...' : 'PLAY NOW →'}
+                    </button>
+                  ) : (
+                    <div className="mx-4 mb-4 py-2.5 rounded-xl text-center font-bold text-sm cursor-not-allowed bg-gray-800/30 border border-gray-700/30 text-gray-600">
+                      COMING SOON
+                    </div>
+                  )}
+                </div>
+              )
+            })}
           </div>
         </div>
 

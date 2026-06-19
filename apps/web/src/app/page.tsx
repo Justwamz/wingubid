@@ -112,10 +112,11 @@ const QUICK_GAMES = [
   },
 ]
 
-// Crash games — Aviator / Aviatrix / JetX are placeholder UI; Crash is live
+// Crash games — Aviator / Aviatrix / JetX activate when a provider is configured
 const CRASH_GAMES = [
   {
     name: 'Aviator',
+    slug: 'aviator',
     active: false,
     href: '/register',
     artwork: '',
@@ -125,6 +126,7 @@ const CRASH_GAMES = [
   },
   {
     name: 'Aviatrix',
+    slug: 'aviatrix',
     active: false,
     href: '/register',
     artwork: '',
@@ -134,6 +136,7 @@ const CRASH_GAMES = [
   },
   {
     name: 'JetX',
+    slug: 'jetx',
     active: false,
     href: '/register',
     artwork: '',
@@ -152,10 +155,11 @@ const CRASH_GAMES = [
   },
 ]
 
-// Casino games — B-Ball Blitz / Sun of Egypt 4 are placeholder UI; rest are live
+// Casino games — B-Ball Blitz / Sun of Egypt 4 activate when a provider is configured
 const CASINO_GAMES = [
   {
     name: 'B-Ball Blitz',
+    slug: 'bball-blitz',
     active: false,
     href: '/register',
     artwork: '',
@@ -165,6 +169,7 @@ const CASINO_GAMES = [
   },
   {
     name: 'Sun of Egypt 4',
+    slug: 'sun-of-egypt-4',
     active: false,
     href: '/register',
     artwork: '',
@@ -214,6 +219,7 @@ export default function LandingPage() {
   const router = useRouter()
   const [slideIdx, setSlideIdx] = useState(0)
   const [banner, setBanner] = useState<Banner | null>(null)
+  const [availableSlugs, setAvailableSlugs] = useState<Set<string>>(new Set())
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null)
 
   useEffect(() => {
@@ -221,6 +227,10 @@ export default function LandingPage() {
     fetch(`${API_URL}/banners/landing`)
       .then(r => r.ok ? r.json() : null)
       .then((d: { banner: Banner } | null) => { if (d?.banner) setBanner(d.banner) })
+      .catch(() => {})
+    fetch(`${API_URL}/games/available`)
+      .then(r => r.ok ? r.json() : null)
+      .then((d: { slugs: string[] } | null) => { if (d?.slugs) setAvailableSlugs(new Set(d.slugs)) })
       .catch(() => {})
   }, [router])
 
@@ -232,6 +242,14 @@ export default function LandingPage() {
   useEffect(() => { startTimer(); return () => { if (timerRef.current) clearInterval(timerRef.current) } }, [startTimer])
 
   const goTo = (i: number) => { setSlideIdx(i); startTimer() }
+
+  // Activate provider games that have a configured provider
+  const crashGames = CRASH_GAMES.map(g =>
+    g.slug && availableSlugs.has(g.slug) ? { ...g, active: true } : g,
+  )
+  const casinoGames = CASINO_GAMES.map(g =>
+    g.slug && availableSlugs.has(g.slug) ? { ...g, active: true } : g,
+  )
 
   const raw = CAROUSEL_SLIDES[slideIdx]
   const current = slideIdx === 0 && banner
@@ -352,7 +370,7 @@ export default function LandingPage() {
       <section className="px-3 pt-5 pb-2 max-w-7xl mx-auto">
         <SectionHeader title="CRASH GAMES" />
         <div className="grid grid-cols-2 gap-2 mt-3">
-          {CRASH_GAMES.map(g => <GameCard key={g.name} game={g} />)}
+          {crashGames.map(g => <GameCard key={g.name} game={g} />)}
         </div>
       </section>
 
@@ -360,7 +378,7 @@ export default function LandingPage() {
       <section className="px-3 pt-5 pb-6 max-w-7xl mx-auto">
         <SectionHeader title="CASINO" />
         <div className="grid grid-cols-2 gap-2 mt-3">
-          {CASINO_GAMES.map(g => <GameCard key={g.name} game={g} />)}
+          {casinoGames.map(g => <GameCard key={g.name} game={g} />)}
         </div>
       </section>
 
@@ -389,6 +407,7 @@ function SectionHeader({ title }: { title: string }) {
 
 interface GameEntry {
   name: string
+  slug?: string
   active: boolean
   href: string
   artwork: string

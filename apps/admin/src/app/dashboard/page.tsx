@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import { apiFetch } from '@/lib/api'
 import { UsersTab } from '@/components/UsersTab'
 import { TransactionsTab } from '@/components/TransactionsTab'
+import { IntegrationsTab } from '@/components/IntegrationsTab'
 import { Users, Dice6, BarChart3, ArrowDownCircle, Landmark, DollarSign, Wallet, RefreshCw } from 'lucide-react'
 
 // ---------------------------------------------------------------------------
@@ -449,7 +450,7 @@ function BannerSection({
 
 export default function AdminDashboardPage() {
   const router = useRouter()
-  const [tab, setTab] = useState<'stats' | 'promotions' | 'users' | 'transactions'>('stats')
+  const [tab, setTab] = useState<'stats' | 'promotions' | 'users' | 'transactions' | 'integrations'>('stats')
   const [stats, setStats] = useState<Stats | null>(null)
   const [loading, setLoading] = useState(true)
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null)
@@ -559,7 +560,7 @@ export default function AdminDashboardPage() {
 
       {/* Tab bar */}
       <div className="flex gap-1 mb-6 border-b border-gray-800">
-        {(['stats', 'promotions', 'users', 'transactions'] as const).map(t => (
+        {(['stats', 'promotions', 'integrations', 'users', 'transactions'] as const).map(t => (
           <button
             key={t}
             onClick={() => setTab(t)}
@@ -684,6 +685,7 @@ export default function AdminDashboardPage() {
           />
         </div>
       )}
+      {tab === 'integrations' && <IntegrationsTab />}
       {tab === 'users' && <UsersTab />}
       {tab === 'transactions' && <TransactionsTab />}
     </main>
