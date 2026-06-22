@@ -133,6 +133,7 @@ const PROVIDER_GAMES = [
     border: 'border-orange-500/25',
     accent: '#FF9500',
     badgeColor: 'bg-orange-500/20 text-orange-400',
+    image: '/games/aviator.webp',
   },
   {
     providerSlug: 'aviatrix',
@@ -142,6 +143,7 @@ const PROVIDER_GAMES = [
     border: 'border-violet-500/25',
     accent: '#A78BFA',
     badgeColor: 'bg-violet-500/20 text-violet-300',
+    image: '/games/aviatrix.webp',
   },
   {
     providerSlug: 'jetx',
@@ -151,6 +153,7 @@ const PROVIDER_GAMES = [
     border: 'border-blue-500/25',
     accent: '#38BDF8',
     badgeColor: 'bg-blue-500/20 text-blue-300',
+    image: '/games/jetx.webp',
   },
   {
     providerSlug: 'bball-blitz',
@@ -160,6 +163,7 @@ const PROVIDER_GAMES = [
     border: 'border-orange-600/25',
     accent: '#FB923C',
     badgeColor: 'bg-orange-600/20 text-orange-300',
+    image: null,
   },
   {
     providerSlug: 'sun-of-egypt-4',
@@ -169,6 +173,7 @@ const PROVIDER_GAMES = [
     border: 'border-yellow-500/25',
     accent: '#FCD34D',
     badgeColor: 'bg-yellow-500/20 text-yellow-300',
+    image: '/games/sun-of-egypt-4.webp',
   },
 ]
 
@@ -277,20 +282,37 @@ export default function GamesLobby() {
               const isLaunching = launching === g.providerSlug
               return (
                 <div key={g.providerSlug} className={`bg-gradient-to-br ${g.gradient} border ${g.border} rounded-2xl overflow-hidden flex flex-col`}>
-                  <div className="p-5 flex-1">
-                    <div className="flex items-start justify-between mb-3">
-                      <div>
-                        <div className="flex items-center gap-2 mb-1">
-                          {isActive ? (
-                            <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${g.badgeColor}`}>LIVE</span>
-                          ) : (
-                            <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-gray-700/50 text-gray-500">COMING SOON</span>
-                          )}
-                        </div>
-                        <h3 className="text-xl font-extrabold font-mono" style={{ color: isActive ? g.accent : '#6b7280' }}>{g.name}</h3>
-                        <p className="text-gray-400 text-sm mt-0.5">{g.tagline}</p>
+                  {/* Game image */}
+                  {g.image && (
+                    <div className="relative w-full h-36 overflow-hidden">
+                      <img
+                        src={g.image}
+                        alt={g.name}
+                        className={`w-full h-full object-cover transition-opacity duration-300 ${isActive ? 'opacity-90' : 'opacity-40 grayscale'}`}
+                      />
+                      <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
+                      <div className="absolute top-2 left-2">
+                        {isActive ? (
+                          <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${g.badgeColor}`}>LIVE</span>
+                        ) : (
+                          <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-gray-700/80 text-gray-400">COMING SOON</span>
+                        )}
                       </div>
                     </div>
+                  )}
+
+                  <div className="p-4 flex-1">
+                    {!g.image && (
+                      <div className="flex items-center gap-2 mb-2">
+                        {isActive ? (
+                          <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${g.badgeColor}`}>LIVE</span>
+                        ) : (
+                          <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-gray-700/50 text-gray-500">COMING SOON</span>
+                        )}
+                      </div>
+                    )}
+                    <h3 className="text-lg font-extrabold font-mono" style={{ color: isActive ? g.accent : '#6b7280' }}>{g.name}</h3>
+                    <p className="text-gray-400 text-sm mt-0.5">{g.tagline}</p>
                   </div>
 
                   {isActive ? (
