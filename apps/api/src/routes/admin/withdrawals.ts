@@ -1,5 +1,5 @@
 import type { FastifyInstance } from 'fastify'
-import { authenticateAdmin } from '../../middleware/authenticate.js'
+import { authenticateAdmin } from '../../middleware/authenticateAdmin.js'
 import { pool } from '@betting/db'
 
 export async function adminWithdrawalRoutes(app: FastifyInstance) {
