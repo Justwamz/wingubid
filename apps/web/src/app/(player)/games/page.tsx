@@ -18,9 +18,9 @@ interface Banner {
 
 const GAMES = [
   {
-    href: '/games/forex',
-    name: 'FOREX',
-    tagline: 'Trade the multiplier, cash out before it crashes',
+    href: '/games/wingu-crash',
+    name: 'WINGU CRASH',
+    tagline: 'Fly high, cash out before it crashes',
     description: 'Watch the multiplier climb and bail out at the right moment. The longer you wait, the bigger the reward. But wait too long and you lose everything.',
     gradient: 'from-cyan-500/20 to-blue-600/10',
     border: 'border-cyan-500/30',
@@ -173,7 +173,7 @@ const PROVIDER_GAMES = [
     border: 'border-orange-600/25',
     accent: '#FB923C',
     badgeColor: 'bg-orange-600/20 text-orange-300',
-    image: null,
+    image: '/games/bball-blitz.webp',
   },
   {
     providerSlug: 'sun-of-egypt-4',

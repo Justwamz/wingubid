@@ -15,7 +15,7 @@ const HOW_TO_PLAY = [
   { icon: <Rocket size={16} />, text: 'Cash out before it crashes to lock in your winnings. Wait too long and you lose.' },
 ]
 
-export default function ForexPage() {
+export default function WinguCrashPage() {
   const { status, multiplier, myBet, crashPoint, waitingEndsAt, recentCrashes, feed, error, connected, cashoutResult, placeBet, cashout } =
     useCrashGame()
 
@@ -38,7 +38,7 @@ export default function ForexPage() {
   return (
     <div className="max-w-7xl mx-auto px-4 py-6 space-y-4">
       <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-extrabold font-mono text-accent-cyan">FOREX</h1>
+        <h1 className="text-2xl font-extrabold font-mono text-accent-cyan">WINGU CRASH</h1>
         <span className="text-xs px-2 py-1 rounded-full bg-cyan-500/10 text-cyan-400 border border-cyan-500/20 font-mono">LIVE</span>
       </div>
 
