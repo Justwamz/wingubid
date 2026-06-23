@@ -27,12 +27,8 @@ const GAMES = [
     accent: '#00F2FE',
     badge: 'LIVE',
     badgeColor: 'bg-cyan-500/20 text-cyan-400',
-    visual: (
-      <svg viewBox="0 0 80 50" className="w-20 h-12 opacity-80">
-        <polyline points="0,45 20,40 35,28 50,15 65,8 80,4" fill="none" stroke="#00F2FE" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/>
-        <circle cx="80" cy="4" r="3" fill="#00F2FE"/>
-      </svg>
-    ),
+    image: '/games/wingu-crash.webp',
+    visual: null,
   },
   {
     href: '/games/mines',
@@ -249,17 +245,32 @@ export default function GamesLobby() {
           </h2>
           <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
             {GAMES.map(g => (
-              <div key={g.href} className={`bg-gradient-to-br ${g.gradient} border ${g.border} rounded-2xl overflow-hidden flex flex-col`}>
+              <div key={g.href} className={`bg-gray-900 bg-gradient-to-br ${g.gradient} border ${g.border} rounded-2xl overflow-hidden flex flex-col`}>
+                {'image' in g && g.image && (
+                  <div className="relative w-full h-36 overflow-hidden bg-gray-950">
+                    <img
+                      src={g.image}
+                      alt={g.name}
+                      className="w-full h-full object-cover opacity-90"
+                    />
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
+                    <div className="absolute top-2 left-2">
+                      <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${g.badgeColor}`}>{g.badge}</span>
+                    </div>
+                  </div>
+                )}
                 <div className="p-5 flex-1">
+                  {(!('image' in g) || !g.image) && (
+                    <div className="flex items-center gap-2 mb-1">
+                      <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${g.badgeColor}`}>{g.badge}</span>
+                    </div>
+                  )}
                   <div className="flex items-start justify-between mb-3">
                     <div>
-                      <div className="flex items-center gap-2 mb-1">
-                        <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${g.badgeColor}`}>{g.badge}</span>
-                      </div>
                       <h3 className="text-xl font-extrabold font-mono" style={{ color: g.accent }}>{g.name}</h3>
                       <p className="text-gray-400 text-sm mt-0.5">{g.tagline}</p>
                     </div>
-                    <div className="flex-shrink-0 ml-2">{g.visual}</div>
+                    {('visual' in g) && g.visual && <div className="flex-shrink-0 ml-2">{g.visual}</div>}
                   </div>
 
                   <button
@@ -291,7 +302,7 @@ export default function GamesLobby() {
               const isActive = availableSlugs.has(g.providerSlug)
               const isLaunching = launching === g.providerSlug
               return (
-                <div key={g.providerSlug} className={`bg-gradient-to-br ${g.gradient} border ${g.border} rounded-2xl overflow-hidden flex flex-col`}>
+                <div key={g.providerSlug} className={`bg-gray-900 bg-gradient-to-br ${g.gradient} border ${g.border} rounded-2xl overflow-hidden flex flex-col`}>
                   {/* Game image */}
                   {g.image && (
                     <div className="relative w-full h-36 overflow-hidden">
