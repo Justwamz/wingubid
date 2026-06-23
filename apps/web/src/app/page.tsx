@@ -39,16 +39,16 @@ const CAROUSEL_SLIDES = [
     ctaHref: '/register',
   },
   {
-    id: 'crash',
+    id: 'forex',
     accentColor: '#00E5FF',
     bg: 'linear-gradient(135deg, #001828 0%, #003a5c 40%, #001020 100%)',
     orb1: 'rgba(0,229,255,0.2)',
     orb2: 'rgba(80,0,255,0.15)',
-    badge: 'CRASH GAME',
-    headline: 'CRASH YOUR WAY\nTO THE TOP',
+    badge: 'FOREX GAME',
+    headline: 'TRADE YOUR WAY\nTO THE TOP',
     subtext: 'Cash out before it crashes. Every second counts.',
-    ctaText: 'Play Crash',
-    ctaHref: '/games/crash',
+    ctaText: 'Play Forex',
+    ctaHref: '/games/forex',
   },
   {
     id: 'lotto',
@@ -112,8 +112,18 @@ const QUICK_GAMES = [
   },
 ]
 
-// Crash games — Aviator / Aviatrix / JetX activate when a provider is configured
+// Crash games — Aviator / Aviatrix / JetX / Crash activate when a provider is configured
 const CRASH_GAMES = [
+  {
+    name: 'Crash',
+    slug: 'crash',
+    active: false,
+    href: '/register',
+    artwork: '/games/crash.webp',
+    placeholderBg: 'linear-gradient(135deg,#4a0000 0%,#cc2200 50%,#ff6600 100%)',
+    placeholderLabel: 'CRASH',
+    labelColor: '#fff',
+  },
   {
     name: 'Aviator',
     slug: 'aviator',
@@ -145,13 +155,13 @@ const CRASH_GAMES = [
     labelColor: '#fff',
   },
   {
-    name: 'Crash',
+    name: 'Forex',
     active: true,
-    href: '/games/crash',
+    href: '/games/forex',
     artwork: '',
-    placeholderBg: 'linear-gradient(135deg,#4a0000 0%,#cc2200 50%,#ff6600 100%)',
-    placeholderLabel: 'CRASH',
-    labelColor: '#fff',
+    placeholderBg: 'linear-gradient(135deg,#001828 0%,#003a5c 50%,#006080 100%)',
+    placeholderLabel: 'FOREX',
+    labelColor: '#00E5FF',
   },
 ]
 

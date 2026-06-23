@@ -18,9 +18,9 @@ interface Banner {
 
 const GAMES = [
   {
-    href: '/games/crash',
-    name: 'CRASH',
-    tagline: 'Cash out before it crashes',
+    href: '/games/forex',
+    name: 'FOREX',
+    tagline: 'Trade the multiplier, cash out before it crashes',
     description: 'Watch the multiplier climb and bail out at the right moment. The longer you wait, the bigger the reward. But wait too long and you lose everything.',
     gradient: 'from-cyan-500/20 to-blue-600/10',
     border: 'border-cyan-500/30',
@@ -125,6 +125,16 @@ const GAMES = [
 
 // Provider-powered games — activate when a provider is configured via admin
 const PROVIDER_GAMES = [
+  {
+    providerSlug: 'crash',
+    name: 'CRASH',
+    tagline: 'The ultimate crash game experience',
+    gradient: 'from-red-500/15 to-orange-700/10',
+    border: 'border-red-500/25',
+    accent: '#FF4444',
+    badgeColor: 'bg-red-500/20 text-red-400',
+    image: '/games/crash.webp',
+  },
   {
     providerSlug: 'aviator',
     name: 'AVIATOR',

@@ -56,7 +56,7 @@ export default function DashboardPage() {
         <p className="text-xs text-gray-500 uppercase tracking-widest mb-3">Play a game</p>
         <div className="grid grid-cols-3 gap-3">
           {[
-            { href: '/games/crash', label: 'CRASH', color: '#00F2FE', icon: <TrendingUp size={20} /> },
+            { href: '/games/forex', label: 'FOREX', color: '#00F2FE', icon: <TrendingUp size={20} /> },
             { href: '/games/mines', label: 'MINES', color: '#80508B', icon: <Gem size={20} /> },
             { href: '/games/dice', label: 'DICE', color: '#00C896', icon: <Dice6 size={20} /> },
           ].map(g => (

@@ -17,16 +17,16 @@ vi.mock('@/hooks/useCrashGame', () => ({
   }),
 }))
 
-import CrashPage from '../page'
+import ForexPage from '../page'
 
-describe('CrashPage', () => {
+describe('ForexPage', () => {
   it('renders without crashing', () => {
-    const { container } = render(<CrashPage />)
+    const { container } = render(<ForexPage />)
     expect(container.firstChild).toBeTruthy()
   })
 
   it('renders the chart container', () => {
-    const { container } = render(<CrashPage />)
+    const { container } = render(<ForexPage />)
     expect(container.querySelector('[data-testid="crash-chart"]')).toBeTruthy()
   })
 })
