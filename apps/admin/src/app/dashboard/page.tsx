@@ -627,15 +627,17 @@ export default function AdminDashboardPage() {
                         <td className="px-5 py-3 text-right font-mono">
                           {b.winnings !== null ? (
                             <span className={b.winnings > 0 ? 'text-green-400' : 'text-gray-500'}>{kes(b.winnings)}</span>
-                          ) : (
+                          ) : b.status === 'active' ? (
                             <span className="text-gray-600 italic text-xs">pending</span>
+                          ) : (
+                            <span className="text-gray-500">{kes(0)}</span>
                           )}
                         </td>
                         <td className={`px-5 py-3 capitalize font-semibold text-xs ${STATUS_COLORS[b.status] ?? 'text-gray-400'}`}>
                           {b.status}
                         </td>
                         <td className="px-5 py-3 text-gray-500 text-xs">
-                          {new Date(b.createdAt).toLocaleTimeString()}
+                          {new Date(b.createdAt).toLocaleString()}
                         </td>
                       </tr>
                     ))}
