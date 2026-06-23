@@ -11,6 +11,7 @@ export async function adminStatsRoutes(app: FastifyInstance) {
       betWonRes,
       walletRes,
       betCountRes,
+      withdrawalRes,
       recentBetsRes,
     ] = await Promise.all([
       pool.query<{ count: string }>(`SELECT COUNT(*) AS count FROM players`),
@@ -19,6 +20,7 @@ export async function adminStatsRoutes(app: FastifyInstance) {
       pool.query<{ total: string }>(`SELECT COALESCE(SUM(amount), 0) AS total FROM transactions WHERE type = 'bet_won'`),
       pool.query<{ total: string }>(`SELECT COALESCE(SUM(balance), 0) AS total FROM wallets`),
       pool.query<{ count: string }>(`SELECT COUNT(*) AS count FROM bets`),
+      pool.query<{ total: string }>(`SELECT COALESCE(SUM(amount), 0) AS total FROM payment_transactions WHERE type = 'withdrawal' AND status = 'completed'`),
       pool.query<{
         id: string; player_name: string; game_type: string
         gross_stake: string; winnings: string | null; status: string; created_at: string
@@ -41,8 +43,9 @@ export async function adminStatsRoutes(app: FastifyInstance) {
       totalBetVolume: totalBetPlaced,
       totalPaidOut:   totalBetWon,
       houseRevenue:   totalBetPlaced - totalBetWon,
-      totalHeldBalance: Number(walletRes.rows[0].total),
-      totalBets:      Number(betCountRes.rows[0].count),
+      totalHeldBalance:  Number(walletRes.rows[0].total),
+      totalBets:         Number(betCountRes.rows[0].count),
+      totalWithdrawals:  Number(withdrawalRes.rows[0].total),
       recentBets: recentBetsRes.rows.map(b => ({
         id:         b.id,
         playerName: b.player_name,

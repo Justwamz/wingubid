@@ -8,7 +8,7 @@ import { TransactionsTab } from '@/components/TransactionsTab'
 import { IntegrationsTab } from '@/components/IntegrationsTab'
 import { PaymentsTab } from '@/components/PaymentsTab'
 import { WithdrawalsTab } from '@/components/WithdrawalsTab'
-import { Users, Dice6, BarChart3, ArrowDownCircle, Landmark, DollarSign, Wallet, RefreshCw } from 'lucide-react'
+import { Users, Dice6, BarChart3, ArrowDownCircle, Landmark, DollarSign, Wallet, ArrowUpFromLine, RefreshCw } from 'lucide-react'
 
 // ---------------------------------------------------------------------------
 // Types
@@ -21,6 +21,7 @@ interface Stats {
   totalPaidOut: number
   houseRevenue: number
   totalHeldBalance: number
+  totalWithdrawals: number
   totalBets: number
   recentBets: {
     id: string
@@ -527,6 +528,7 @@ export default function AdminDashboardPage() {
     { label: 'House Revenue', value: kes(stats.houseRevenue), color: stats.houseRevenue >= 0 ? 'text-green-400' : 'text-red-400', icon: <Landmark size={16} /> },
     { label: 'Deposits (real)', value: kes(stats.totalDeposits), color: 'text-emerald-400', icon: <DollarSign size={16} /> },
     { label: 'Balance Held', value: kes(stats.totalHeldBalance), color: 'text-yellow-400', icon: <Wallet size={16} /> },
+    { label: 'Withdrawals', value: kes(stats.totalWithdrawals), color: 'text-red-400', icon: <ArrowUpFromLine size={16} /> },
   ] : []
 
   return (
