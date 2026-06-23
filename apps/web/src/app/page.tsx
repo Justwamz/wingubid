@@ -1,8 +1,10 @@
 'use client'
 import { useEffect, useState, useRef, useCallback } from 'react'
 import Link from 'next/link'
-import { isAuthenticated } from '@/lib/auth'
+import { isAuthenticated, saveToken } from '@/lib/auth'
 import { useRouter } from 'next/navigation'
+import { apiFetch } from '@/lib/api'
+import { X } from 'lucide-react'
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3001'
 
@@ -230,10 +232,14 @@ export default function LandingPage() {
   const [slideIdx, setSlideIdx] = useState(0)
   const [banner, setBanner] = useState<Banner | null>(null)
   const [availableSlugs, setAvailableSlugs] = useState<Set<string>>(new Set())
+  const [loginOpen, setLoginOpen] = useState(false)
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null)
 
   useEffect(() => {
     if (isAuthenticated()) { router.replace('/games'); return }
+    if (typeof window !== 'undefined' && window.location.search.includes('login=true')) {
+      setLoginOpen(true)
+    }
     fetch(`${API_URL}/banners/landing`)
       .then(r => r.ok ? r.json() : null)
       .then((d: { banner: Banner } | null) => { if (d?.banner) setBanner(d.banner) })
@@ -276,9 +282,9 @@ export default function LandingPage() {
             <img src="/wingubet-logo.png" alt="WinguBet" className="h-16 md:h-24 w-auto" />
           </Link>
           <div className="flex items-center gap-2 flex-shrink-0">
-            <Link href="/login" className="px-3 py-1.5 text-xs font-bold border border-white/30 rounded text-white hover:bg-white/10 transition-colors tracking-wide">
+            <button onClick={() => setLoginOpen(true)} className="px-3 py-1.5 text-xs font-bold border border-white/30 rounded text-white hover:bg-white/10 transition-colors tracking-wide">
               LOGIN
-            </Link>
+            </button>
             <Link href="/register" className="px-3 py-1.5 text-xs font-bold rounded tracking-wide transition-opacity hover:opacity-90" style={{ background: '#00E5FF', color: '#050010' }}>
               REGISTER
             </Link>
@@ -398,11 +404,14 @@ export default function LandingPage() {
           <img src="/wingubet-logo.png" alt="WinguBet" className="h-14 md:h-24 w-auto" />
           <p className="text-xs text-gray-600 text-center">18+ only · Please gamble responsibly · Demonstration platform</p>
           <div className="flex gap-6 text-xs text-gray-600">
-            <Link href="/login" className="hover:text-gray-400 transition-colors">Log in</Link>
+            <button onClick={() => setLoginOpen(true)} className="hover:text-gray-400 transition-colors">Log in</button>
             <Link href="/register" className="hover:text-gray-400 transition-colors">Register</Link>
           </div>
         </div>
       </footer>
+
+      {/* ── Login Modal ── */}
+      {loginOpen && <LoginModal onClose={() => setLoginOpen(false)} onSuccess={() => router.push('/games')} />}
     </div>
   )
 }
@@ -447,4 +456,87 @@ function GameCard({ game }: { game: GameEntry }) {
     </div>
   )
   return game.active ? <Link href={game.href}>{inner}</Link> : <div>{inner}</div>
+}
+
+function LoginModal({ onClose, onSuccess }: { onClose: () => void; onSuccess: () => void }) {
+  const [phone, setPhone] = useState('')
+  const [password, setPassword] = useState('')
+  const [error, setError] = useState('')
+  const [loading, setLoading] = useState(false)
+
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault()
+    setError('')
+    setLoading(true)
+    const { data, error: err } = await apiFetch<{ access_token: string }>('/auth/login', {
+      method: 'POST',
+      body: JSON.stringify({ phone, password }),
+    })
+    setLoading(false)
+    if (err) { setError(err.message); return }
+    saveToken(data!.access_token)
+    onSuccess()
+  }
+
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center p-4"
+      style={{ background: 'rgba(0,0,0,0.75)', backdropFilter: 'blur(6px)' }}
+      onClick={e => { if (e.target === e.currentTarget) onClose() }}
+    >
+      <div className="relative w-full max-w-sm rounded-2xl p-6 shadow-2xl" style={{ background: '#160B2E', border: '1px solid rgba(255,255,255,0.1)' }}>
+        {/* Close */}
+        <button onClick={onClose} className="absolute top-4 right-4 text-gray-500 hover:text-white transition-colors">
+          <X size={18} />
+        </button>
+
+        {/* Logo */}
+        <div className="flex justify-center mb-6">
+          <img src="/wingubet-logo.png" alt="WinguBet" className="h-16 w-auto" />
+        </div>
+
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div>
+            <label className="block text-xs text-gray-400 mb-1 uppercase tracking-wide">Phone</label>
+            <input
+              type="tel"
+              value={phone}
+              onChange={e => setPhone(e.target.value)}
+              placeholder="+254700000000"
+              required
+              className="w-full rounded-xl px-4 py-3 text-sm text-white placeholder-gray-600 focus:outline-none focus:ring-1 focus:ring-cyan-500"
+              style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)' }}
+            />
+          </div>
+          <div>
+            <label className="block text-xs text-gray-400 mb-1 uppercase tracking-wide">Password</label>
+            <input
+              type="password"
+              value={password}
+              onChange={e => setPassword(e.target.value)}
+              required
+              className="w-full rounded-xl px-4 py-3 text-sm text-white placeholder-gray-600 focus:outline-none focus:ring-1 focus:ring-cyan-500"
+              style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)' }}
+            />
+          </div>
+
+          {error && <p className="text-red-400 text-xs bg-red-900/20 border border-red-700/30 rounded-lg px-3 py-2">{error}</p>}
+
+          <button
+            type="submit"
+            disabled={loading}
+            className="w-full py-3 rounded-xl font-bold text-sm tracking-wide transition-opacity hover:opacity-90 disabled:opacity-50"
+            style={{ background: '#00E5FF', color: '#050010' }}
+          >
+            {loading ? 'Logging in…' : 'LOG IN'}
+          </button>
+        </form>
+
+        <p className="mt-4 text-center text-xs text-gray-500">
+          No account?{' '}
+          <Link href="/register" className="text-cyan-400 hover:text-cyan-300 transition-colors">Register now</Link>
+        </p>
+      </div>
+    </div>
+  )
 }

@@ -32,7 +32,7 @@ export default function PlayerLayout({ children }: { children: React.ReactNode }
   }, [profile])
 
   useEffect(() => {
-    if (!isAuthenticated()) { router.replace('/login'); return }
+    if (!isAuthenticated()) { router.replace('/?login=true'); return }
     const fetchProfile = () => apiFetch<PlayerProfile>('/player/me', { cache: 'no-store' }).then(({ data }) => data && setProfile(data))
     fetchProfile()
     window.addEventListener('balanceRefresh', fetchProfile)
@@ -42,7 +42,7 @@ export default function PlayerLayout({ children }: { children: React.ReactNode }
   function handleLogout() {
     apiFetch('/auth/logout', { method: 'POST' })
     clearToken()
-    router.push('/')
+    router.push('/?login=true')
   }
 
   const navLinks: { href: string; label: string; icon: React.ReactNode; match: (p: string) => boolean }[] = [
