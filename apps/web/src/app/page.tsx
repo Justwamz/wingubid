@@ -243,6 +243,7 @@ export default function LandingPage() {
     if (isAuthenticated()) { router.replace('/games'); return }
     if (typeof window !== 'undefined' && window.location.search.includes('login=true')) {
       setLoginOpen(true)
+      window.history.replaceState(null, '', '/')
     }
     fetch(`${API_URL}/banners/landing`)
       .then(r => r.ok ? r.json() : null)
