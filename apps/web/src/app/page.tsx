@@ -18,6 +18,7 @@ interface Banner {
 }
 
 const SECONDARY_NAV = [
+  { label: 'WINGU CRASH',   href: '/games/wingu-crash' },
   { label: 'AVIATOR',       href: '/register' },
   { label: 'AVIATRIX',      href: '/register' },
   { label: 'JETX',          href: '/register' },
