@@ -57,8 +57,8 @@ export default function DashboardPage() {
         <div className="grid grid-cols-3 gap-3">
           {[
             { href: '/games/wingu-crash', label: 'WINGU CRASH', color: '#00F2FE', icon: <TrendingUp size={20} /> },
-            { href: '/games/mines', label: 'MINES', color: '#80508B', icon: <Gem size={20} /> },
-            { href: '/games/dice', label: 'DICE', color: '#00C896', icon: <Dice6 size={20} /> },
+            { href: '/games/wingu-mines', label: 'WINGU MINES', color: '#80508B', icon: <Gem size={20} /> },
+            { href: '/games/wingu-dice', label: 'WINGU DICE', color: '#00C896', icon: <Dice6 size={20} /> },
           ].map(g => (
             <Link
               key={g.href}

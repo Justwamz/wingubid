@@ -27,7 +27,7 @@ const HOW_TO_PLAY = [
   { icon: <Dice6 size={16} />, text: 'Enter your stake and roll. Win instantly if the result matches your prediction.' },
 ]
 
-export default function DicePage() {
+export default function WinguDicePage() {
   const [target, setTarget] = useState(50)
   const [direction, setDirection] = useState<Direction>('over')
   const [grossStake, setGrossStake] = useState('')
@@ -64,7 +64,7 @@ export default function DicePage() {
   return (
     <div className="max-w-7xl mx-auto px-4 py-6 space-y-4">
       <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-extrabold font-mono" style={{ color: '#00C896' }}>DICE</h1>
+        <h1 className="text-2xl font-extrabold font-mono" style={{ color: '#00C896' }}>WINGU DICE</h1>
         <span className="text-xs px-2 py-1 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 font-mono">INSTANT</span>
       </div>
 

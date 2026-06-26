@@ -12,7 +12,7 @@ const HOW_TO_PLAY = [
   { icon: <DollarSign size={16} />, text: 'Cash out any time to keep your winnings. Hit a mine and lose your stake.' },
 ]
 
-export default function MinesPage() {
+export default function WinguMinesPage() {
   const { game, loading, error, startGame, revealTile, cashout } = useMinesGame()
   const [stake, setStake] = useState('')
   const [gridSize, setGridSize] = useState(3)
@@ -24,7 +24,7 @@ export default function MinesPage() {
   return (
     <div className="max-w-7xl mx-auto px-4 py-6 space-y-4">
       <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-extrabold font-mono text-accent-violet">MINES</h1>
+        <h1 className="text-2xl font-extrabold font-mono text-accent-violet">WINGU MINES</h1>
         <span className="text-xs px-2 py-1 rounded-full bg-violet-500/10 text-violet-300 border border-violet-500/20 font-mono">INSTANT</span>
       </div>
 

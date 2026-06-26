@@ -31,8 +31,8 @@ const GAMES = [
     visual: null,
   },
   {
-    href: '/games/mines',
-    name: 'MINES',
+    href: '/games/wingu-mines',
+    name: 'WINGU MINES',
     tagline: 'Reveal gems, avoid mines',
     description: 'Uncover gems on the grid to multiply your stake. Every tile you reveal increases your winnings, but one mine ends it all. Cash out anytime.',
     gradient: 'from-violet-500/20 to-purple-700/10',
@@ -52,8 +52,8 @@ const GAMES = [
     ),
   },
   {
-    href: '/games/dice',
-    name: 'DICE',
+    href: '/games/wingu-dice',
+    name: 'WINGU DICE',
     tagline: 'Roll over or under your target',
     description: 'Set your target number and predict whether the roll will go higher or lower. Adjust the range to control your risk: tighter range, bigger multiplier.',
     gradient: 'from-emerald-500/20 to-teal-600/10',
@@ -75,8 +75,8 @@ const GAMES = [
     ),
   },
   {
-    href: '/games/lottery',
-    name: 'LOTTO',
+    href: '/games/wingu-lotto',
+    name: 'WINGU LOTTO',
     tagline: 'Pick 3, draw every hour',
     description: 'Choose three numbers and wait for the hourly draw. Match all three to win big. Simple to play, huge potential payouts every hour.',
     gradient: 'from-yellow-500/20 to-orange-600/10',
@@ -96,8 +96,8 @@ const GAMES = [
     ),
   },
   {
-    href: '/games/scratch',
-    name: 'SCRATCH',
+    href: '/games/wingu-scratch',
+    name: 'WINGU SCRATCH',
     tagline: 'Instant win scratch cards',
     description: 'Scratch to reveal your prize instantly. No waiting, no strategy required. Pure instant-win excitement with every card.',
     gradient: 'from-pink-500/20 to-rose-600/10',

@@ -277,7 +277,7 @@ function TicketRow({ ticket }: { ticket: Ticket }) {
 
 // ─── Main Page ────────────────────────────────────────────────────────────────
 
-export default function LotteryPage() {
+export default function WinguLottoPage() {
   const [draws, setDraws] = useState<Draw[]>([])
   const [drawsLoading, setDrawsLoading] = useState(true)
   const [drawsError, setDrawsError] = useState<string | null>(null)
@@ -364,7 +364,7 @@ export default function LotteryPage() {
     <div className="max-w-7xl mx-auto px-4 py-6 space-y-6">
       {/* Header */}
       <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-extrabold font-mono text-amber-400">LOTTERY</h1>
+        <h1 className="text-2xl font-extrabold font-mono text-amber-400">WINGU LOTTO</h1>
         <span className="text-xs px-2 py-1 rounded-full bg-amber-500/10 text-amber-400 border border-amber-500/20 font-mono">DRAW</span>
       </div>
 

@@ -153,7 +153,7 @@ function HistoryRow({ card }: { card: HistoryCard }) {
 
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
-export default function ScratchPage() {
+export default function WinguScratchPage() {
   const [selectedStake, setSelectedStake] = useState(STAKES[0].cents)
   const [buying, setBuying] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -235,7 +235,7 @@ export default function ScratchPage() {
           className="text-2xl font-extrabold font-mono"
           style={{ color: '#F5C518' }}
         >
-          SCRATCH CARD
+          WINGU SCRATCH
         </h1>
         <span className="text-xs px-2 py-1 rounded-full bg-yellow-500/10 text-yellow-300 border border-yellow-500/20 font-mono">
           INSTANT
