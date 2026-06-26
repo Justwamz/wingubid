@@ -18,14 +18,14 @@ interface Banner {
 }
 
 const SECONDARY_NAV = [
-  { label: 'WINGU CRASH',   href: '/games/wingu-crash' },
   { label: 'AVIATOR',       href: '/register' },
   { label: 'AVIATRIX',      href: '/register' },
   { label: 'JETX',          href: '/register' },
-  { label: 'WINGU LOTTO',   href: '/register' },
-  { label: 'WINGU SCRATCH', href: '/register' },
-  { label: 'WINGU DICE',    href: '/register' },
-  { label: 'WINGU MINES',   href: '/register' },
+  { label: 'WINGU CRASH',   href: '/games/wingu-crash' },
+  { label: 'WINGU LOTTO',   href: '/games/wingu-lotto' },
+  { label: 'WINGU SCRATCH', href: '/games/wingu-scratch' },
+  { label: 'WINGU DICE',    href: '/games/wingu-dice' },
+  { label: 'WINGU MINES',   href: '/games/wingu-mines' },
 ]
 
 const CAROUSEL_SLIDES = [
