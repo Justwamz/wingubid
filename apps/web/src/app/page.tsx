@@ -21,11 +21,14 @@ const SECONDARY_NAV = [
   { label: 'AVIATOR',       href: '/register' },
   { label: 'AVIATRIX',      href: '/register' },
   { label: 'JETX',          href: '/register' },
+  { label: 'CRASH',         href: '/register' },
   { label: 'WINGU CRASH',   href: '/games/wingu-crash' },
   { label: 'WINGU LOTTO',   href: '/games/wingu-lotto' },
   { label: 'WINGU SCRATCH', href: '/games/wingu-scratch' },
   { label: 'WINGU DICE',    href: '/games/wingu-dice' },
   { label: 'WINGU MINES',   href: '/games/wingu-mines' },
+  { label: 'B-BALL BLITZ',  href: '/register' },
+  { label: 'SUN OF EGYPT 4',href: '/register' },
 ]
 
 const CAROUSEL_SLIDES = [
