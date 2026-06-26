@@ -2,6 +2,7 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
+import { X } from 'lucide-react'
 import { apiFetch } from '@/lib/api'
 
 export default function RegisterPage() {
@@ -37,7 +38,14 @@ export default function RegisterPage() {
 
   return (
     <main className="flex min-h-screen items-center justify-center px-4">
-      <div className="w-full max-w-sm">
+      <div className="w-full max-w-sm relative">
+        <button
+          onClick={() => router.back()}
+          className="absolute -top-2 -right-2 p-1.5 rounded-full text-gray-400 hover:text-white hover:bg-white/10 transition-colors"
+          aria-label="Close"
+        >
+          <X size={20} />
+        </button>
         <h1 className="mb-8 text-3xl font-bold text-center">Create Account</h1>
         <form onSubmit={handleSubmit} className="space-y-4">
           {([
