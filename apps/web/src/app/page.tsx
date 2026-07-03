@@ -197,7 +197,7 @@ const CASINO_GAMES = [
     name: 'Wingu Mines',
     active: true,
     href: '/games/wingu-mines',
-    artwork: '',
+    artwork: '/games/wingu-mines.webp',
     placeholderBg: 'linear-gradient(135deg,#1a0840 0%,#3d1a80 60%,#2d1060 100%)',
     placeholderLabel: 'WINGU MINES',
     labelColor: '#d4b8ff',

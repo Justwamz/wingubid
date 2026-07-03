@@ -34,6 +34,7 @@ const GAMES = [
     href: '/games/wingu-mines',
     name: 'WINGU MINES',
     tagline: 'Reveal gems, avoid mines',
+    image: '/games/wingu-mines-logo.webp',
     description: 'Uncover gems on the grid to multiply your stake. Every tile you reveal increases your winnings, but one mine ends it all. Cash out anytime.',
     gradient: 'from-violet-500/20 to-purple-700/10',
     border: 'border-violet-500/30',
