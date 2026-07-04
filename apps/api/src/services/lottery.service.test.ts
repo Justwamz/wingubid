@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { draw3Numbers, countMatches, calculateLotteryPrize } from './lottery.service.js'
+import { draw3Numbers, draw3NumbersFromSeed, countMatches, calculateLotteryPrize } from './lottery.service.js'
 
 beforeEach(() => vi.clearAllMocks())
 
@@ -23,6 +23,26 @@ describe('draw3Numbers', () => {
       const nums = draw3Numbers()
       expect(new Set(nums).size).toBe(3)
     }
+  })
+})
+
+describe('draw3NumbersFromSeed', () => {
+  it('returns 3 unique numbers in [1,36]', () => {
+    const nums = draw3NumbersFromSeed('some-server-seed')
+    expect(nums).toHaveLength(3)
+    expect(new Set(nums).size).toBe(3)
+    for (const n of nums) {
+      expect(n).toBeGreaterThanOrEqual(1)
+      expect(n).toBeLessThanOrEqual(36)
+    }
+  })
+
+  it('is deterministic for the same seed (player can verify the draw)', () => {
+    expect(draw3NumbersFromSeed('seed-xyz')).toEqual(draw3NumbersFromSeed('seed-xyz'))
+  })
+
+  it('differs across seeds', () => {
+    expect(draw3NumbersFromSeed('seed-a')).not.toEqual(draw3NumbersFromSeed('seed-b'))
   })
 })
 

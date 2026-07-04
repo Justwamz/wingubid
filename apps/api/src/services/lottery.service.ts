@@ -1,4 +1,4 @@
-import { randomBytes } from 'crypto'
+import { randomBytes, createHmac } from 'crypto'
 import { pool } from '@betting/db'
 import { debitForBet, creditWinnings } from './wallet.service.js'
 import { AppError } from '../lib/errors.js'
@@ -23,6 +23,27 @@ export function draw3Numbers(): number[] {
     // Reject values above floor(2^32/36)*36 to avoid modulo bias
     const max = Math.floor(0xffffffff / 36) * 36
     if (val <= max) numbers.add((val % 36) + 1)
+  }
+  return [...numbers].sort((a, b) => a - b)
+}
+
+/**
+ * Deterministically derive the 3 winning numbers from a draw's server seed, so
+ * a player can reproduce (and thus verify) the result once the seed is revealed.
+ * Same modulo-bias rejection as draw3Numbers, drawing 4-byte words from
+ * HMAC(serverSeed, `draw-<counter>`).
+ */
+export function draw3NumbersFromSeed(serverSeed: string): number[] {
+  const numbers = new Set<number>()
+  const max = Math.floor(0xffffffff / 36) * 36
+  let counter = 0
+  while (numbers.size < 3) {
+    const digest = createHmac('sha256', serverSeed).update(`draw-${counter}`).digest()
+    for (let off = 0; off + 4 <= digest.length && numbers.size < 3; off += 4) {
+      const val = digest.readUInt32BE(off)
+      if (val <= max) numbers.add((val % 36) + 1)
+    }
+    counter++
   }
   return [...numbers].sort((a, b) => a - b)
 }
@@ -146,11 +167,13 @@ export async function settleTickets(drawId: string, drawType: string, winningNum
 
 export async function getUpcomingDraws(): Promise<{
   id: string; drawType: string; ticketPrice: number; scheduledAt: string; jackpot: number
+  serverSeedHash: string | null
 }[]> {
   const { rows } = await pool.query<{
     id: string; draw_type: string; ticket_price: string; scheduled_at: string
+    server_seed_hash: string | null
   }>(
-    `SELECT DISTINCT ON (draw_type) id, draw_type, ticket_price, scheduled_at
+    `SELECT DISTINCT ON (draw_type) id, draw_type, ticket_price, scheduled_at, server_seed_hash
      FROM lottery_draws WHERE status = 'pending' AND scheduled_at > NOW()
      ORDER BY draw_type, scheduled_at ASC`,
   )
@@ -163,6 +186,9 @@ export async function getUpcomingDraws(): Promise<{
       ticketPrice,
       scheduledAt: r.scheduled_at,
       jackpot: ticketPrice * mult,
+      // Committed before any ticket is sold; the raw seed is revealed only
+      // after the draw (see getPlayerTickets).
+      serverSeedHash: r.server_seed_hash,
     }
   })
 }
@@ -171,15 +197,21 @@ export async function getPlayerTickets(playerId: string): Promise<{
   id: string; drawType: string; pickedNumbers: number[]; ticketPrice: number
   matchedCount: number | null; prizeCents: number; status: string
   scheduledAt: string; winningNumbers: number[] | null; createdAt: string
+  serverSeedHash: string | null; serverSeed: string | null
 }[]> {
   const { rows } = await pool.query<{
     id: string; draw_type: string; picked_numbers: number[]; ticket_price: string
     matched_count: number | null; prize_cents: string; status: string
     scheduled_at: string; winning_numbers: number[] | null; created_at: string
+    server_seed_hash: string | null; server_seed: string | null
   }>(
     `SELECT t.id, d.draw_type, t.picked_numbers, t.ticket_price,
             t.matched_count, t.prize_cents, t.status,
-            d.scheduled_at, d.winning_numbers, t.created_at
+            d.scheduled_at, d.winning_numbers, t.created_at,
+            d.server_seed_hash,
+            -- Reveal the raw seed only once the draw is complete, so it can't
+            -- be used to predict a pending draw.
+            CASE WHEN d.status = 'completed' THEN d.server_seed ELSE NULL END AS server_seed
      FROM lottery_tickets t
      JOIN lottery_draws d ON d.id = t.draw_id
      WHERE t.player_id = $1
@@ -197,5 +229,7 @@ export async function getPlayerTickets(playerId: string): Promise<{
     scheduledAt: r.scheduled_at,
     winningNumbers: r.winning_numbers,
     createdAt: r.created_at,
+    serverSeedHash: r.server_seed_hash,
+    serverSeed: r.server_seed,
   }))
 }

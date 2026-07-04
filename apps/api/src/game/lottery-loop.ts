@@ -1,5 +1,6 @@
 import { pool } from '@betting/db'
-import { draw3Numbers, settleTickets, TICKET_PRICES } from '../services/lottery.service.js'
+import { draw3NumbersFromSeed, settleTickets, TICKET_PRICES } from '../services/lottery.service.js'
+import { newServerSeed } from '../services/player-seed.service.js'
 
 type DrawType = 'hourly' | 'daily' | 'weekly'
 
@@ -52,21 +53,40 @@ async function runLoop(drawType: DrawType): Promise<void> {
         scheduledAt = new Date(rows[0].scheduled_at)
       } else {
         const nextTime = getNextDrawTime(drawType)
+        const { serverSeed, serverSeedHash } = newServerSeed()
         const { rows: inserted } = await pool.query<{ id: string }>(
-          `INSERT INTO lottery_draws (draw_type, ticket_price, scheduled_at)
-           VALUES ($1, $2, $3) RETURNING id`,
-          [drawType, TICKET_PRICES[drawType], nextTime],
+          `INSERT INTO lottery_draws (draw_type, ticket_price, scheduled_at, server_seed, server_seed_hash)
+           VALUES ($1, $2, $3, $4, $5) RETURNING id`,
+          [drawType, TICKET_PRICES[drawType], nextTime, serverSeed, serverSeedHash],
         )
         drawId = inserted[0].id
         scheduledAt = nextTime
+      }
+
+      // Ensure the draw has a committed seed before it fires. New draws are
+      // seeded at insert; this backfills any legacy pending draw that predates
+      // the provably-fair change, committing well before scheduled_at.
+      {
+        const { serverSeed, serverSeedHash } = newServerSeed()
+        await pool.query(
+          `UPDATE lottery_draws SET server_seed = $1, server_seed_hash = $2
+           WHERE id = $3 AND server_seed IS NULL`,
+          [serverSeed, serverSeedHash, drawId],
+        )
       }
 
       const msUntilDraw = Math.max(0, scheduledAt.getTime() - Date.now())
       if (msUntilDraw > 0) await sleep(msUntilDraw)
       if (!running) break
 
-      // Fire the draw
-      const winningNumbers = draw3Numbers()
+      // Fire the draw: winning numbers are derived deterministically from the
+      // seed committed above, so players can verify them once the seed is
+      // revealed (getPlayerTickets exposes it after completion).
+      const { rows: seedRows } = await pool.query<{ server_seed: string }>(
+        `SELECT server_seed FROM lottery_draws WHERE id = $1`,
+        [drawId],
+      )
+      const winningNumbers = draw3NumbersFromSeed(seedRows[0].server_seed)
       await pool.query(
         `UPDATE lottery_draws SET status = 'completed', drawn_at = NOW(), winning_numbers = $1 WHERE id = $2`,
         [winningNumbers, drawId],
