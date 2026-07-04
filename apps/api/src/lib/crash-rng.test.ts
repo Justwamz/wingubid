@@ -17,6 +17,21 @@ describe('generateCrashPoint', () => {
     const values = new Set(Array.from({ length: 30 }, (_, i) => generateCrashPoint(SERVER, CLIENT, i, 5)))
     expect(values.size).toBeGreaterThan(5)
   })
+
+  it('realizes the configured house edge (single-source, no double-counting)', () => {
+    // Deterministic Monte Carlo over fixed round numbers: bet 1, auto-cashout
+    // at 2x. Expected RTP = 1 - edge/100 = 0.95. If a second edge were stacked
+    // on top (e.g. a separate instant-crash branch) RTP would fall well below
+    // 0.93. Bounds are wide enough that this is stable, not flaky.
+    const N = 50000
+    let payout = 0
+    for (let r = 1; r <= N; r++) {
+      if (generateCrashPoint(SERVER, CLIENT, r, 5) >= 2.0) payout += 2.0
+    }
+    const rtp = payout / N
+    expect(rtp).toBeGreaterThan(0.93)
+    expect(rtp).toBeLessThan(0.97)
+  })
 })
 
 describe('generateMinePositions', () => {

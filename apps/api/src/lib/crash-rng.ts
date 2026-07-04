@@ -10,8 +10,15 @@ export function generateCrashPoint(
     .update(`${clientSeed}-${roundNumber}`)
     .digest('hex')
 
-  if (hash[0] === '0') return 1.00
-
+  // Single-source house edge. With n uniform in [0, 2^52), this formula gives
+  //   P(crash >= x) = (1 - houseEdge/100) / x
+  // so the realized RTP is exactly (1 - houseEdge/100) and the edge equals the
+  // configured houseEdge. The clamp to 1.00 is what produces the instant-bust
+  // rounds, at the correct frequency (~houseEdge% of rounds).
+  //
+  // Do NOT re-add a separate instant-crash branch (e.g. `if (hash[0]==='0')`):
+  // that stacks a second edge on top and makes the true edge far exceed the
+  // configured value.
   const n = parseInt(hash.slice(0, 13), 16)
   const e = 100 - houseEdge
   return Math.max(1.00, Math.floor((e * 2 ** 52) / (2 ** 52 - n)) / 100)
