@@ -1,5 +1,6 @@
 import type { FastifyInstance } from 'fastify'
 import { confirmDeposit, confirmWithdrawal } from '../../services/payment.service.js'
+import { authenticatePaymentWebhook } from '../../middleware/authenticate-payment-webhook.js'
 
 interface AirtelCallback {
   transaction: {
@@ -11,7 +12,7 @@ interface AirtelCallback {
 }
 
 export async function airtelWebhookRoutes(app: FastifyInstance) {
-  app.post('/webhooks/airtel', async (req, reply) => {
+  app.post('/webhooks/airtel', { preHandler: authenticatePaymentWebhook }, async (req, reply) => {
     try {
       const body = req.body as AirtelCallback
       const { id, status, message, type } = body.transaction

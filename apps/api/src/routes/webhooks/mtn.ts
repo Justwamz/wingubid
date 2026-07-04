@@ -1,5 +1,6 @@
 import type { FastifyInstance } from 'fastify'
 import { confirmDeposit, confirmWithdrawal } from '../../services/payment.service.js'
+import { authenticatePaymentWebhook } from '../../middleware/authenticate-payment-webhook.js'
 
 interface MtnCallback {
   referenceId: string
@@ -9,7 +10,7 @@ interface MtnCallback {
 }
 
 export async function mtnWebhookRoutes(app: FastifyInstance) {
-  app.post('/webhooks/mtn', async (req, reply) => {
+  app.post('/webhooks/mtn', { preHandler: authenticatePaymentWebhook }, async (req, reply) => {
     try {
       const body = req.body as MtnCallback
       const success = body.status === 'SUCCESSFUL'

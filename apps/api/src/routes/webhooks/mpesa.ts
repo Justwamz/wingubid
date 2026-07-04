@@ -1,5 +1,6 @@
 import type { FastifyInstance } from 'fastify'
 import { confirmDeposit, confirmWithdrawal } from '../../services/payment.service.js'
+import { authenticatePaymentWebhook } from '../../middleware/authenticate-payment-webhook.js'
 
 interface MpesaCallback {
   Body: {
@@ -13,7 +14,7 @@ interface MpesaCallback {
 }
 
 export async function mpesaWebhookRoutes(app: FastifyInstance) {
-  app.post('/webhooks/mpesa', async (req, reply) => {
+  app.post('/webhooks/mpesa', { preHandler: authenticatePaymentWebhook }, async (req, reply) => {
     try {
       const body = req.body as MpesaCallback
       const { CheckoutRequestID, ResultCode, ResultDesc } = body.Body.stkCallback

@@ -11,6 +11,10 @@ const schema = z.object({
   SMS_ENABLED:        z.enum(['true', 'false']).default('false').transform(v => v === 'true'),
   AT_API_KEY:         z.string().default(''),
   AT_USERNAME:        z.string().default('sandbox'),
+  // Shared secret required on inbound payment-provider callbacks. Left empty
+  // until a real provider is connected; while empty the webhook routes reject
+  // every request (fail closed).
+  PAYMENT_WEBHOOK_SECRET: z.string().default(''),
 })
 
 const parsed = schema.safeParse(process.env)
