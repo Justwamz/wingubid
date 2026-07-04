@@ -24,6 +24,9 @@ vi.mock('../lib/hash.js', () => ({
 vi.mock('../lib/jwt.js', () => ({
   signPlayerAccessToken: vi.fn((id: string) => `access:${id}`),
 }))
+// These tests exercise the OTP/verification flow, so run them with SMS enabled
+// and demo mode off (rather than relying on the ambient env defaults).
+vi.mock('../env.js', () => ({ env: { SMS_ENABLED: true, DEMO_MODE: false } }))
 
 import { pool } from '@betting/db'
 import {

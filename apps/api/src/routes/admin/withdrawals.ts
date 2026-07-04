@@ -57,22 +57,50 @@ export async function adminWithdrawalRoutes(app: FastifyInstance) {
     try {
       await client.query('BEGIN')
 
+      // Re-read and lock the withdrawal row; only proceed if it is still
+      // 'failed'. This makes concurrent/duplicate retries idempotent — the
+      // loser sees a non-failed status and is rejected instead of double-debiting.
+      const { rows: locked } = await client.query<{
+        status: string; amount: number; player_id: string; wallet_id: string
+      }>(
+        `SELECT status, amount, player_id, wallet_id FROM payment_transactions
+         WHERE id = $1 AND type = 'withdrawal' FOR UPDATE`,
+        [pt.id],
+      )
+      if (locked.length === 0 || locked[0].status !== 'failed') {
+        await client.query('ROLLBACK')
+        return reply.status(422).send({ error: { code: 'INVALID_STATE', message: 'Withdrawal is not in a retryable state' } })
+      }
+      const amount = Number(locked[0].amount)
+
+      // Lock the wallet and check funds. The balance was refunded when the
+      // withdrawal failed, so retrying debits it again — but the player may have
+      // since spent it, so verify sufficiency and return a clean error.
+      const { rows: wrows } = await client.query<{ balance: number }>(
+        `SELECT balance FROM wallets WHERE player_id = $1 FOR UPDATE`,
+        [locked[0].player_id],
+      )
+      if (wrows.length === 0) {
+        await client.query('ROLLBACK')
+        return reply.status(404).send({ error: { code: 'NOT_FOUND', message: 'Wallet not found' } })
+      }
+      if (Number(wrows[0].balance) < amount) {
+        await client.query('ROLLBACK')
+        return reply.status(422).send({ error: { code: 'INSUFFICIENT_FUNDS', message: 'Player balance is insufficient to retry this withdrawal' } })
+      }
+
       await client.query(
         `UPDATE payment_transactions SET status = 'completed', updated_at = NOW() WHERE id = $1`,
         [pt.id],
       )
-
-      // The balance was already refunded when the withdrawal failed, so we must
-      // debit it again now that we're marking it as successfully paid out.
       const { rows: updated } = await client.query<{ balance: number }>(
         `UPDATE wallets SET balance = balance - $1 WHERE player_id = $2 RETURNING balance`,
-        [pt.amount, pt.player_id],
+        [amount, locked[0].player_id],
       )
-
       await client.query(
         `INSERT INTO transactions (wallet_id, player_id, type, amount, balance_after, status, metadata)
          VALUES ($1, $2, 'withdrawal', $3, $4, 'completed', '{"admin_retry":true}')`,
-        [pt.wallet_id, pt.player_id, pt.amount, Number(updated[0].balance)],
+        [locked[0].wallet_id, locked[0].player_id, amount, Number(updated[0].balance)],
       )
 
       await client.query('COMMIT')
