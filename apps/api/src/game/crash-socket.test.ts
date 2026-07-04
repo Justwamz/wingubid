@@ -47,6 +47,39 @@ describe('bet:place', () => {
     expect(socket.emit).toHaveBeenCalledWith('bet:confirmed', expect.objectContaining({ betId: 'bet-1' }))
   })
 
+  it('rejects a negative grossStake without touching the wallet', async () => {
+    vi.mocked(getCurrentRound).mockReturnValue({ status: 'waiting', roundId: 'r-1', bets: {} } as any)
+
+    const socket = makeSocket()
+    handleCrashSocket(makeIo() as any, socket as any)
+    await socket._trigger('bet:place', { grossStake: -1000000 })
+
+    expect(placeBet).not.toHaveBeenCalled()
+    expect(socket.emit).toHaveBeenCalledWith('bet:error', expect.objectContaining({ code: 'VALIDATION_ERROR' }))
+  })
+
+  it('rejects a non-integer / fractional grossStake', async () => {
+    vi.mocked(getCurrentRound).mockReturnValue({ status: 'waiting', roundId: 'r-1', bets: {} } as any)
+
+    const socket = makeSocket()
+    handleCrashSocket(makeIo() as any, socket as any)
+    await socket._trigger('bet:place', { grossStake: 0.5 })
+
+    expect(placeBet).not.toHaveBeenCalled()
+    expect(socket.emit).toHaveBeenCalledWith('bet:error', expect.objectContaining({ code: 'VALIDATION_ERROR' }))
+  })
+
+  it('rejects an autoCashoutAt below 1.01', async () => {
+    vi.mocked(getCurrentRound).mockReturnValue({ status: 'waiting', roundId: 'r-1', bets: {} } as any)
+
+    const socket = makeSocket()
+    handleCrashSocket(makeIo() as any, socket as any)
+    await socket._trigger('bet:place', { grossStake: 10000, autoCashoutAt: 1.0 })
+
+    expect(placeBet).not.toHaveBeenCalled()
+    expect(socket.emit).toHaveBeenCalledWith('bet:error', expect.objectContaining({ code: 'VALIDATION_ERROR' }))
+  })
+
   it('emits bet:error when round is not waiting', async () => {
     vi.mocked(getCurrentRound).mockReturnValue({ status: 'running', roundId: 'r-1', bets: {} } as any)
 

@@ -1,7 +1,16 @@
+import { z } from 'zod'
 import type { Server, Socket } from 'socket.io'
 import { verifyPlayerAccessToken } from '../lib/jwt.js'
 import { placeBet, cashout } from '../services/crash.service.js'
 import { addBetToRound, removeBetFromRound, getCurrentRound, sendCurrentStateTo } from './crash-loop.js'
+
+// Socket payloads are untrusted input just like HTTP bodies — validate with the
+// same rules the HTTP game routes use. Without this, a negative grossStake would
+// credit the wallet (balance - (-x) = balance + x) instead of debiting it.
+const betPlaceSchema = z.object({
+  grossStake: z.number().int().positive(),
+  autoCashoutAt: z.number().min(1.01).optional(),
+})
 
 export function registerCrashSocket(io: Server): void {
   io.on('connection', (socket: Socket) => {
@@ -23,8 +32,16 @@ export function registerCrashSocket(io: Server): void {
 }
 
 export function handleCrashSocket(io: Server, socket: Socket): void {
-  socket.on('bet:place', async (data: { grossStake: number; autoCashoutAt?: number }) => {
+  socket.on('bet:place', async (data: unknown) => {
     const playerId: string = socket.data.playerId
+
+    const parsed = betPlaceSchema.safeParse(data)
+    if (!parsed.success) {
+      socket.emit('bet:error', { code: 'VALIDATION_ERROR', message: parsed.error.issues[0].message })
+      return
+    }
+    const { grossStake, autoCashoutAt } = parsed.data
+
     const round = getCurrentRound()
 
     if (!round || round.status !== 'waiting') {
@@ -37,8 +54,8 @@ export function handleCrashSocket(io: Server, socket: Socket): void {
     }
 
     try {
-      const bet = await placeBet(playerId, round.roundId, data.grossStake, data.autoCashoutAt)
-      addBetToRound(playerId, bet.betId, bet.effectiveStake, data.autoCashoutAt)
+      const bet = await placeBet(playerId, round.roundId, grossStake, autoCashoutAt)
+      addBetToRound(playerId, bet.betId, bet.effectiveStake, autoCashoutAt)
       socket.emit('bet:confirmed', { betId: bet.betId, effectiveStake: bet.effectiveStake })
     } catch (err: any) {
       socket.emit('bet:error', { code: err.code ?? 'BET_FAILED', message: err.message })

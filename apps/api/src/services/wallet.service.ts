@@ -51,6 +51,18 @@ export async function debitForBet(
   effectiveStake: number,
   metadata: Record<string, unknown>,
 ): Promise<{ transactionId: string; walletId: string }> {
+  // Backstop against non-positive / malformed stakes reaching the ledger. A
+  // negative grossStake would turn the debit below into a credit; an
+  // effectiveStake above grossStake would inflate locked_balance. Callers
+  // should validate their inputs, but this guarantees the invariant here too.
+  if (
+    !Number.isInteger(grossStake) || grossStake <= 0 ||
+    !Number.isInteger(effectiveStake) || effectiveStake < 0 ||
+    effectiveStake > grossStake
+  ) {
+    throw new AppError('INVALID_STAKE', 'Invalid stake amount', 400)
+  }
+
   const wallet = await selectWalletForUpdate(client, playerId)
   if (Number(wallet.balance) < grossStake) {
     throw new AppError('INSUFFICIENT_FUNDS', 'Insufficient balance', 422)
