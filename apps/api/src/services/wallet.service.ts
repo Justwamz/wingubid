@@ -195,6 +195,26 @@ export async function creditWinnings(
   return { transactionId: txRows[0].id, walletId: wallet.id }
 }
 
+export async function creditDemoTopup(
+  client: PoolClient,
+  playerId: string,
+  amount: number,
+): Promise<{ balance: number }> {
+  const wallet = await selectWalletForUpdate(client, playerId)
+
+  const { rows: updated } = await client.query<{ balance: string }>(
+    `UPDATE wallets SET balance = balance + $1 WHERE player_id = $2 RETURNING balance`,
+    [amount, playerId],
+  )
+  // Ledger row so demo credits are traceable like any other balance change.
+  await client.query(
+    `INSERT INTO transactions (wallet_id, player_id, type, amount, balance_after, status, metadata)
+     VALUES ($1, $2, 'demo_topup', $3, $4, 'completed', '{"demo":true}')`,
+    [wallet.id, playerId, amount, Number(updated[0].balance)],
+  )
+  return { balance: Number(updated[0].balance) }
+}
+
 export async function refundBet(
   client: PoolClient,
   playerId: string,

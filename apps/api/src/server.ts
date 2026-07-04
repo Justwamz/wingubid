@@ -1,6 +1,7 @@
 import Fastify from 'fastify'
 import cookie from '@fastify/cookie'
 import cors from '@fastify/cors'
+import rateLimit from '@fastify/rate-limit'
 import { healthRoutes } from './routes/health.js'
 import { registerRoutes } from './routes/auth/register.js'
 import { verifyOtpRoutes } from './routes/auth/verify-otp.js'
@@ -38,7 +39,9 @@ import { adminWithdrawalRoutes } from './routes/admin/withdrawals.js'
 import { providerGameRoutes } from './routes/games/provider-games.js'
 
 export function buildServer() {
-  const app = Fastify({ logger: process.env.NODE_ENV !== 'test' })
+  // trustProxy so req.ip is the real client IP behind Render's proxy — required
+  // for per-IP rate limiting to bucket by client rather than by the proxy.
+  const app = Fastify({ logger: process.env.NODE_ENV !== 'test', trustProxy: true })
 
   // Fail closed: if CORS_ORIGIN is unset, deny cross-origin rather than
   // reflecting any origin. Never pair credentials:true with origin:true/'*',
@@ -49,6 +52,11 @@ export function buildServer() {
     credentials: true,
   })
   app.register(cookie)
+
+  // Rate limiting is opt-in per route (global: false); auth endpoints set their
+  // own limits via `config.rateLimit`. In-memory store is fine for a single
+  // instance; use the Redis store if the API is scaled horizontally.
+  app.register(rateLimit, { global: false })
 
   app.register(healthRoutes)
   app.register(registerRoutes)

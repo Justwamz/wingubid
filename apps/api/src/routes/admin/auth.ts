@@ -9,7 +9,9 @@ const loginBody = z.object({
 })
 
 export async function adminAuthRoutes(app: FastifyInstance) {
-  app.post('/admin/auth/login', async (req, reply) => {
+  app.post('/admin/auth/login', {
+    config: { rateLimit: { max: 10, timeWindow: '1 minute' } },
+  }, async (req, reply) => {
     const parsed = loginBody.safeParse(req.body)
     if (!parsed.success) {
       return reply.status(400).send({

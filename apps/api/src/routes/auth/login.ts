@@ -8,7 +8,9 @@ const body = z.object({
 })
 
 export async function loginRoutes(app: FastifyInstance) {
-  app.post('/auth/login', async (req, reply) => {
+  app.post('/auth/login', {
+    config: { rateLimit: { max: 10, timeWindow: '1 minute' } },
+  }, async (req, reply) => {
     const parsed = body.safeParse(req.body)
     if (!parsed.success) {
       return reply.status(400).send({

@@ -8,7 +8,10 @@ const body = z.object({
 })
 
 export async function verifyOtpRoutes(app: FastifyInstance) {
-  app.post('/auth/verify-otp', async (req, reply) => {
+  app.post('/auth/verify-otp', {
+    // Cap attempts so the 6-digit code can't be brute-forced.
+    config: { rateLimit: { max: 10, timeWindow: '1 minute' } },
+  }, async (req, reply) => {
     const parsed = body.safeParse(req.body)
     if (!parsed.success) {
       return reply.status(400).send({
