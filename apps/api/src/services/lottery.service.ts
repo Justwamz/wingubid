@@ -104,37 +104,43 @@ export async function settleTickets(drawId: string, drawType: string, winningNum
     [drawId],
   )
 
-  for (const ticket of tickets) {
-    const ticketPrice = Number(ticket.ticket_price)
-    const matched = countMatches(winningNumbers, ticket.picked_numbers)
-    const prizeCents = calculateLotteryPrize(drawType, matched, ticketPrice)
-    const status = prizeCents > 0 ? 'won' : 'lost'
+  // Settle the whole draw on ONE pooled connection. Previously this opened a
+  // new pool.connect() per ticket, so a popular draw could exhaust the pool and
+  // starve every other request. Each ticket still runs in its own transaction
+  // on the shared connection, so one bad ticket doesn't roll back the rest.
+  const client = await pool.connect()
+  try {
+    for (const ticket of tickets) {
+      const ticketPrice = Number(ticket.ticket_price)
+      const matched = countMatches(winningNumbers, ticket.picked_numbers)
+      const prizeCents = calculateLotteryPrize(drawType, matched, ticketPrice)
+      const status = prizeCents > 0 ? 'won' : 'lost'
 
-    const client = await pool.connect()
-    try {
-      await client.query('BEGIN')
-      await client.query(
-        `UPDATE lottery_tickets SET matched_count = $1, prize_cents = $2, status = $3 WHERE id = $4`,
-        [matched, prizeCents, status, ticket.id],
-      )
-      // Release the stake reserved at buy time (buyTicket locks it). This runs
-      // for every ticket — won or lost — to keep locked_balance accurate.
-      await client.query(
-        `UPDATE wallets SET locked_balance = locked_balance - $1 WHERE player_id = $2`,
-        [ticketPrice, ticket.player_id],
-      )
-      if (prizeCents > 0) {
-        await creditWinnings(client, ticket.player_id, prizeCents, {
-          game: 'lottery', drawId, ticketId: ticket.id, matched,
-        })
+      try {
+        await client.query('BEGIN')
+        await client.query(
+          `UPDATE lottery_tickets SET matched_count = $1, prize_cents = $2, status = $3 WHERE id = $4`,
+          [matched, prizeCents, status, ticket.id],
+        )
+        // Release the stake reserved at buy time (buyTicket locks it). This runs
+        // for every ticket — won or lost — to keep locked_balance accurate.
+        await client.query(
+          `UPDATE wallets SET locked_balance = locked_balance - $1 WHERE player_id = $2`,
+          [ticketPrice, ticket.player_id],
+        )
+        if (prizeCents > 0) {
+          await creditWinnings(client, ticket.player_id, prizeCents, {
+            game: 'lottery', drawId, ticketId: ticket.id, matched,
+          })
+        }
+        await client.query('COMMIT')
+      } catch (err) {
+        await client.query('ROLLBACK')
+        console.error('[lottery] settle ticket error', ticket.id, err)
       }
-      await client.query('COMMIT')
-    } catch (err) {
-      await client.query('ROLLBACK')
-      console.error('[lottery] settle ticket error', ticket.id, err)
-    } finally {
-      client.release()
     }
+  } finally {
+    client.release()
   }
 }
 
