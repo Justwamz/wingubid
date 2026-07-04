@@ -50,7 +50,7 @@ export async function debitForBet(
   grossStake: number,
   effectiveStake: number,
   metadata: Record<string, unknown>,
-  opts: { lock?: boolean } = {},
+  opts: { lock?: boolean; idempotencyKey?: string } = {},
 ): Promise<{ transactionId: string; walletId: string }> {
   // Backstop against non-positive / malformed stakes reaching the ledger. A
   // negative grossStake would turn the debit below into a credit; an
@@ -85,10 +85,10 @@ export async function debitForBet(
   )
 
   const { rows: txRows } = await client.query<{ id: string }>(
-    `INSERT INTO transactions (wallet_id, player_id, type, amount, balance_after, status, metadata)
-     VALUES ($1, $2, $3, $4, $5, $6, $7)
+    `INSERT INTO transactions (wallet_id, player_id, type, amount, balance_after, status, metadata, idempotency_key)
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
      RETURNING id`,
-    [wallet.id, playerId, 'bet_placed', effectiveStake, Number(updated[0].balance), 'completed', JSON.stringify(metadata)],
+    [wallet.id, playerId, 'bet_placed', effectiveStake, Number(updated[0].balance), 'completed', JSON.stringify(metadata), opts.idempotencyKey ?? null],
   )
 
   return { transactionId: txRows[0].id, walletId: wallet.id }
@@ -177,6 +177,10 @@ export async function creditWinnings(
   playerId: string,
   amount: number,
   metadata: Record<string, unknown>,
+  // When provided, written into the row's UNIQUE idempotency_key so a duplicate
+  // credit (e.g. a retried provider callback) violates the constraint instead of
+  // crediting twice.
+  idempotencyKey?: string,
 ): Promise<{ transactionId: string; walletId: string }> {
   const wallet = await selectWalletForUpdate(client, playerId)
 
@@ -186,10 +190,10 @@ export async function creditWinnings(
   )
 
   const { rows: txRows } = await client.query<{ id: string }>(
-    `INSERT INTO transactions (wallet_id, player_id, type, amount, balance_after, status, metadata)
-     VALUES ($1, $2, $3, $4, $5, $6, $7)
+    `INSERT INTO transactions (wallet_id, player_id, type, amount, balance_after, status, metadata, idempotency_key)
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
      RETURNING id`,
-    [wallet.id, playerId, 'bet_won', amount, Number(updated[0].balance), 'completed', JSON.stringify(metadata)],
+    [wallet.id, playerId, 'bet_won', amount, Number(updated[0].balance), 'completed', JSON.stringify(metadata), idempotencyKey ?? null],
   )
 
   return { transactionId: txRows[0].id, walletId: wallet.id }

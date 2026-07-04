@@ -11,6 +11,10 @@ export async function initiateDeposit(
   playerId: string,
   amount: number,
   providerName: string,
+  // A client-supplied Idempotency-Key collapses retries of the same intended
+  // deposit onto one payment_transactions row (ON CONFLICT returns the existing
+  // one) instead of creating a new pending row per attempt.
+  clientIdempotencyKey?: string,
 ): Promise<{ transactionId: string; providerRef: string }> {
   // Load player
   const { rows: pRows } = await pool.query<{
@@ -37,7 +41,9 @@ export async function initiateDeposit(
     }
   }
 
-  const idempotencyKey = `deposit:${playerId}:${Date.now()}:${crypto.randomBytes(4).toString('hex')}`
+  const idempotencyKey = clientIdempotencyKey
+    ? `deposit:${playerId}:${clientIdempotencyKey}`
+    : `deposit:${playerId}:${Date.now()}:${crypto.randomBytes(4).toString('hex')}`
 
   // Insert payment_transactions — handle duplicate key (idempotency)
   let paymentTxId: string
@@ -90,15 +96,19 @@ export async function confirmDeposit(
   providerRef: string,
   success: boolean,
   failureReason?: string,
+  // What the provider says was actually collected. When supplied, it MUST match
+  // the amount/currency we recorded at initiation before we credit — otherwise a
+  // partial/mismatched payment could credit the full requested amount.
+  confirmed?: { amount?: number; currency?: string },
 ): Promise<void> {
   const client = await pool.connect()
   try {
     await client.query('BEGIN')
 
     const { rows } = await client.query<{
-      id: string; player_id: string; amount: number; status: string
+      id: string; player_id: string; amount: number; currency: string; status: string
     }>(
-      `SELECT id, player_id, amount, status FROM payment_transactions
+      `SELECT id, player_id, amount, currency, status FROM payment_transactions
        WHERE provider_ref = $1 FOR UPDATE`,
       [providerRef],
     )
@@ -112,6 +122,24 @@ export async function confirmDeposit(
     const pt = rows[0]
 
     if (pt.status === 'completed' || pt.status === 'failed') {
+      await client.query('COMMIT')
+      return
+    }
+
+    // Reject a "successful" callback whose confirmed amount/currency doesn't
+    // match what we recorded — never credit the requested amount for a partial
+    // or wrong-currency payment.
+    const amountMismatch = confirmed?.amount != null && confirmed.amount !== Number(pt.amount)
+    const currencyMismatch = confirmed?.currency != null && confirmed.currency !== pt.currency
+    if (success && (amountMismatch || currencyMismatch)) {
+      const reason = amountMismatch
+        ? `amount mismatch: provider ${confirmed?.amount} vs expected ${pt.amount}`
+        : `currency mismatch: provider ${confirmed?.currency} vs expected ${pt.currency}`
+      console.warn(`[payment] confirmDeposit rejected — ${reason} (ref ${providerRef})`)
+      await client.query(
+        `UPDATE payment_transactions SET status = 'failed', failure_reason = $1, updated_at = NOW() WHERE id = $2`,
+        [reason, pt.id],
+      )
       await client.query('COMMIT')
       return
     }
@@ -202,10 +230,10 @@ export async function initiateWithdrawal(
 
     const { rows } = await client.query<{ id: string }>(
       `INSERT INTO payment_transactions
-         (player_id, wallet_id, type, provider, amount, currency, idempotency_key, status)
-       VALUES ($1, $2, 'withdrawal', $3, $4, $5, $6, 'pending')
+         (player_id, wallet_id, type, provider, amount, currency, idempotency_key, status, net_amount, tax_amount)
+       VALUES ($1, $2, 'withdrawal', $3, $4, $5, $6, 'pending', $7, $8)
        RETURNING id`,
-      [playerId, walletId, providerName, amount, player.currency, idempotencyKey],
+      [playerId, walletId, providerName, amount, player.currency, idempotencyKey, netPayout, taxAmount],
     )
     paymentTxId = rows[0].id
     await client.query('COMMIT')
@@ -234,12 +262,6 @@ export async function initiateWithdrawal(
     [providerRef, paymentTxId],
   )
 
-  // Cache netPayout in failure_reason field so confirmWithdrawal knows the net amount
-  await pool.query(
-    `UPDATE payment_transactions SET failure_reason = $1 WHERE id = $2`,
-    [JSON.stringify({ netPayout, taxAmount }), paymentTxId],
-  )
-
   return { transactionId: paymentTxId, providerRef }
 }
 
@@ -253,9 +275,9 @@ export async function confirmWithdrawal(
     await client.query('BEGIN')
 
     const { rows } = await client.query<{
-      id: string; player_id: string; amount: number; status: string; failure_reason: string | null
+      id: string; player_id: string; amount: number; status: string; net_amount: number | null
     }>(
-      `SELECT id, player_id, amount, status, failure_reason
+      `SELECT id, player_id, amount, status, net_amount
        FROM payment_transactions WHERE provider_ref = $1 FOR UPDATE`,
       [providerRef],
     )
@@ -273,9 +295,7 @@ export async function confirmWithdrawal(
       return
     }
 
-    // Parse cached netPayout from failure_reason field (set during initiation)
-    const meta = pt.failure_reason ? JSON.parse(pt.failure_reason) : {}
-    const netPayout = meta.netPayout ?? Number(pt.amount)
+    const netPayout = pt.net_amount != null ? Number(pt.net_amount) : Number(pt.amount)
 
     await settleWithdrawal(client, pt.player_id, Number(pt.amount), netPayout, success, { providerRef })
 

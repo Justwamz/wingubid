@@ -1,6 +1,7 @@
 import crypto from 'node:crypto'
 import type { FastifyRequest, FastifyReply } from 'fastify'
 import { pool } from '@betting/db'
+import { getRedis } from '../lib/redis.js'
 
 declare module 'fastify' {
   interface FastifyRequest {
@@ -71,6 +72,21 @@ export async function authenticateProvider(
   ) {
     reply.status(401).send({ error: { code: 'INVALID_SIGNATURE', message: 'Invalid signature' } })
     return
+  }
+
+  // Single-use guard: a valid signature can otherwise be replayed within the
+  // 60s timestamp window. Claim the signature in Redis (SET NX) with a TTL
+  // longer than the window; a second use is rejected. Fail open on a Redis
+  // error so a cache blip doesn't break provider calls — the HMAC + timestamp
+  // window remain the primary protection.
+  try {
+    const claimed = await getRedis().set(`provider-nonce:${providerId}:${signature}`, '1', 'EX', 120, 'NX')
+    if (claimed !== 'OK') {
+      reply.status(401).send({ error: { code: 'REPLAY_DETECTED', message: 'Request already used' } })
+      return
+    }
+  } catch (err) {
+    req.log.warn({ err }, 'provider replay-nonce check unavailable; allowing on HMAC+timestamp only')
   }
 
   req.providerId = providerId

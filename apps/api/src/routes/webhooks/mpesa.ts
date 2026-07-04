@@ -9,6 +9,9 @@ interface MpesaCallback {
       CheckoutRequestID: string
       ResultCode: number
       ResultDesc: string
+      CallbackMetadata?: {
+        Item: { Name: string; Value: string | number }[]
+      }
     }
   }
 }
@@ -17,9 +20,14 @@ export async function mpesaWebhookRoutes(app: FastifyInstance) {
   app.post('/webhooks/mpesa', { preHandler: authenticatePaymentWebhook }, async (req, reply) => {
     try {
       const body = req.body as MpesaCallback
-      const { CheckoutRequestID, ResultCode, ResultDesc } = body.Body.stkCallback
+      const { CheckoutRequestID, ResultCode, ResultDesc, CallbackMetadata } = body.Body.stkCallback
       const success = ResultCode === 0
-      await confirmDeposit(CheckoutRequestID, success, success ? undefined : ResultDesc)
+      // Safaricom sends the paid Amount in major units (KES); we store cents.
+      const amountItem = CallbackMetadata?.Item?.find(i => i.Name === 'Amount')
+      const confirmed = amountItem != null
+        ? { amount: Math.round(Number(amountItem.Value) * 100) }
+        : undefined
+      await confirmDeposit(CheckoutRequestID, success, success ? undefined : ResultDesc, confirmed)
     } catch (err) {
       app.log.error(err, 'mpesa webhook error')
     }

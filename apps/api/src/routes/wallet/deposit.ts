@@ -27,7 +27,8 @@ export async function walletDepositRoutes(app: FastifyInstance) {
     }
 
     try {
-      const result = await initiateDeposit(req.playerId, parsed.data.amount, parsed.data.provider)
+      const idempotencyKey = (req.headers['idempotency-key'] as string | undefined)?.slice(0, 200)
+      const result = await initiateDeposit(req.playerId, parsed.data.amount, parsed.data.provider, idempotencyKey)
       return reply.status(202).send(result)
     } catch (err) {
       if (err instanceof AppError) {

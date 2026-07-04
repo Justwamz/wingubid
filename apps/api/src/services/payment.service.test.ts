@@ -143,4 +143,37 @@ describe('confirmDeposit', () => {
 
     await expect(confirmDeposit('unknown-ref', true)).resolves.toBeUndefined()
   })
+
+  function pendingClient() {
+    const client = makeMockClient()
+    client.query
+      .mockResolvedValueOnce({ rows: [] } as any) // BEGIN
+      .mockResolvedValueOnce({
+        rows: [{ id: 'pt-1', player_id: 'player-1', amount: 50000, currency: 'KES', status: 'awaiting_callback' }],
+      } as any)
+      .mockResolvedValueOnce({ rows: [] } as any) // UPDATE (failed or completed)
+      .mockResolvedValueOnce({ rows: [] } as any) // COMMIT
+    return client
+  }
+
+  it('C3: does not credit when the confirmed amount is short', async () => {
+    const client = pendingClient()
+    mockConnect.mockResolvedValueOnce(client as any)
+    await confirmDeposit('stub-ref-001', true, undefined, { amount: 100 })
+    expect(creditDeposit).not.toHaveBeenCalled()
+  })
+
+  it('C3: does not credit on a currency mismatch', async () => {
+    const client = pendingClient()
+    mockConnect.mockResolvedValueOnce(client as any)
+    await confirmDeposit('stub-ref-001', true, undefined, { currency: 'UGX' })
+    expect(creditDeposit).not.toHaveBeenCalled()
+  })
+
+  it('C3: credits when confirmed amount and currency match', async () => {
+    const client = pendingClient()
+    mockConnect.mockResolvedValueOnce(client as any)
+    await confirmDeposit('stub-ref-001', true, undefined, { amount: 50000, currency: 'KES' })
+    expect(creditDeposit).toHaveBeenCalledOnce()
+  })
 })

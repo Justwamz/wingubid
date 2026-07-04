@@ -23,9 +23,9 @@ export async function providerCreditRoutes(app: FastifyInstance) {
       })
     }
 
-    const { playerId, amount, roundId, gameId, transactionRef } = parsed.data
+    const { playerId, amount, currency, roundId, gameId, transactionRef } = parsed.data
 
-    // Idempotency check
+    // Idempotency fast-path: return the cached result if this ref was seen.
     const { rows: existing } = await pool.query<{ id: string; balance_after: number }>(
       `SELECT id, balance_after FROM transactions WHERE idempotency_key = $1`,
       [transactionRef],
@@ -38,25 +38,43 @@ export async function providerCreditRoutes(app: FastifyInstance) {
     try {
       await client.query('BEGIN')
 
+      // Validate the provider's currency against the wallet before crediting.
+      const { rows: wRows } = await client.query<{ currency: string }>(
+        `SELECT currency FROM wallets WHERE player_id = $1`,
+        [playerId],
+      )
+      if (wRows.length === 0) throw new AppError('NOT_FOUND', 'Wallet not found', 404)
+      if (wRows[0].currency !== currency) {
+        throw new AppError('CURRENCY_MISMATCH', `Currency ${currency} does not match wallet ${wRows[0].currency}`, 422)
+      }
+
+      // Write the idempotency key inside the INSERT so a concurrent duplicate
+      // hits the UNIQUE constraint rather than double-crediting.
       const { transactionId } = await creditWinnings(
         client, playerId, amount,
         { roundId, gameId, provider: req.providerId, transactionRef },
+        transactionRef,
       )
 
-      await client.query(
-        `UPDATE transactions SET idempotency_key = $1 WHERE id = $2`,
-        [transactionRef, transactionId],
-      )
-
-      const { rows: wRows } = await client.query<{ balance: string }>(
+      const { rows: balRows } = await client.query<{ balance: string }>(
         `SELECT balance FROM wallets WHERE player_id = $1`,
         [playerId],
       )
 
       await client.query('COMMIT')
-      return reply.send({ balance: Number(wRows[0].balance), transactionId })
+      return reply.send({ balance: Number(balRows[0].balance), transactionId })
     } catch (err) {
       await client.query('ROLLBACK')
+      // Lost a concurrent-duplicate race — return the winner's cached result.
+      if ((err as { code?: string }).code === '23505') {
+        const { rows } = await pool.query<{ id: string; balance_after: number }>(
+          `SELECT id, balance_after FROM transactions WHERE idempotency_key = $1`,
+          [transactionRef],
+        )
+        if (rows.length > 0) {
+          return reply.send({ balance: Number(rows[0].balance_after), transactionId: rows[0].id })
+        }
+      }
       if (err instanceof AppError) {
         return reply.status(err.statusCode).send({ error: { code: err.code, message: err.message } })
       }
