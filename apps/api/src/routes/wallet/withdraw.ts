@@ -38,10 +38,10 @@ export async function walletWithdrawRoutes(app: FastifyInstance) {
     }
   })
 
-  // Demo withdrawal — only available when SMS_ENABLED=false (demo mode)
+  // Demo withdrawal — only available when DEMO_MODE is explicitly enabled
   app.post('/wallet/demo-withdraw', { preHandler: authenticate }, async (req, reply) => {
-    if (env.SMS_ENABLED) {
-      return reply.status(403).send({ error: { code: 'NOT_AVAILABLE', message: 'Demo withdrawal not available in production' } })
+    if (!env.DEMO_MODE) {
+      return reply.status(403).send({ error: { code: 'NOT_AVAILABLE', message: 'Demo withdrawal is disabled' } })
     }
 
     const parsed = demoBody.safeParse(req.body)

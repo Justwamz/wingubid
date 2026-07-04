@@ -35,10 +35,10 @@ export async function walletDepositRoutes(app: FastifyInstance) {
     }
   })
 
-  // Demo top-up — only available when SMS_ENABLED=false (demo mode)
+  // Demo top-up — only available when DEMO_MODE is explicitly enabled
   app.post('/wallet/demo-topup', { preHandler: authenticate }, async (req, reply) => {
-    if (env.SMS_ENABLED) {
-      return reply.status(403).send({ error: { code: 'NOT_AVAILABLE', message: 'Demo top-up not available in production' } })
+    if (!env.DEMO_MODE) {
+      return reply.status(403).send({ error: { code: 'NOT_AVAILABLE', message: 'Demo top-up is disabled' } })
     }
 
     const parsed = demoBody.safeParse(req.body)

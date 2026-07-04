@@ -65,7 +65,7 @@ export async function registerPlayer(
       [playerId, currency],
     )
 
-    if (!env.SMS_ENABLED) {
+    if (env.DEMO_MODE) {
       await client.query(
         `UPDATE wallets SET balance = 1000000 WHERE id = $1`,
         [walletRows[0].id],
