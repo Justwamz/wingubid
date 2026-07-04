@@ -66,7 +66,7 @@ export async function buyScratchCard(
   const client = await pool.connect()
   try {
     await client.query('BEGIN')
-    const { walletId } = await debitForBet(client, playerId, stakeCents, stakeCents, { game: 'scratch' })
+    const { walletId } = await debitForBet(client, playerId, stakeCents, stakeCents, { game: 'scratch' }, { lock: false })
 
     const { rows } = await client.query<{ id: string }>(
       `INSERT INTO scratch_cards (player_id, wallet_id, stake_cents, grid, prize_cents, status)

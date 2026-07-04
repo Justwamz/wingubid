@@ -90,6 +90,28 @@ describe('debitForBet', () => {
       debitForBet(client as any, 'player-1', 10000, 8750, {})
     ).rejects.toMatchObject({ code: 'INSUFFICIENT_FUNDS' })
   })
+
+  it('locks 0 when lock:false (instant-settle games must not reserve locked_balance)', async () => {
+    const client = makeMockClient([
+      [{ id: 'w-1', balance: '20000', currency: 'KES' }], // SELECT FOR UPDATE
+      [{ balance: '10000' }],                              // UPDATE wallets
+      [{ id: 'tx-1' }],                                    // INSERT transactions
+    ])
+
+    await debitForBet(client as any, 'player-1', 10000, 10000, { game: 'scratch' }, { lock: false })
+
+    const updateCall = client.query.mock.calls[1] as unknown as [string, unknown[]]
+    expect(updateCall[0]).toContain('locked_balance = locked_balance + $2')
+    expect(updateCall[1][0]).toBe(10000) // gross still debited from balance
+    expect(updateCall[1][1]).toBe(0)     // but nothing added to locked_balance
+  })
+
+  it('rejects effectiveStake greater than grossStake', async () => {
+    const client = makeMockClient([])
+    await expect(
+      debitForBet(client as any, 'player-1', 10000, 20000, {})
+    ).rejects.toMatchObject({ code: 'INVALID_STAKE' })
+  })
 })
 
 describe('creditDeposit', () => {

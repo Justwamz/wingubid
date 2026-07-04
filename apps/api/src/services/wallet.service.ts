@@ -50,6 +50,7 @@ export async function debitForBet(
   grossStake: number,
   effectiveStake: number,
   metadata: Record<string, unknown>,
+  opts: { lock?: boolean } = {},
 ): Promise<{ transactionId: string; walletId: string }> {
   // Backstop against non-positive / malformed stakes reaching the ledger. A
   // negative grossStake would turn the debit below into a credit; an
@@ -63,6 +64,13 @@ export async function debitForBet(
     throw new AppError('INVALID_STAKE', 'Invalid stake amount', 400)
   }
 
+  // Only games that settle in a LATER request (crash cashout, mines reveal,
+  // lottery draw) should reserve locked_balance — they must release it on
+  // settlement. Instant/externally-settled bets (dice, scratch, provider
+  // debit) settle in this same transaction, so they must NOT lock, otherwise
+  // locked_balance grows forever (nothing ever releases it).
+  const lock = opts.lock ?? true
+
   const wallet = await selectWalletForUpdate(client, playerId)
   if (Number(wallet.balance) < grossStake) {
     throw new AppError('INSUFFICIENT_FUNDS', 'Insufficient balance', 422)
@@ -73,7 +81,7 @@ export async function debitForBet(
      SET balance = balance - $1, locked_balance = locked_balance + $2
      WHERE player_id = $3
      RETURNING balance`,
-    [grossStake, effectiveStake, playerId],
+    [grossStake, lock ? effectiveStake : 0, playerId],
   )
 
   const { rows: txRows } = await client.query<{ id: string }>(

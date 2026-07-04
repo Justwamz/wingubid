@@ -117,6 +117,12 @@ export async function settleTickets(drawId: string, drawType: string, winningNum
         `UPDATE lottery_tickets SET matched_count = $1, prize_cents = $2, status = $3 WHERE id = $4`,
         [matched, prizeCents, status, ticket.id],
       )
+      // Release the stake reserved at buy time (buyTicket locks it). This runs
+      // for every ticket — won or lost — to keep locked_balance accurate.
+      await client.query(
+        `UPDATE wallets SET locked_balance = locked_balance - $1 WHERE player_id = $2`,
+        [ticketPrice, ticket.player_id],
+      )
       if (prizeCents > 0) {
         await creditWinnings(client, ticket.player_id, prizeCents, {
           game: 'lottery', drawId, ticketId: ticket.id, matched,

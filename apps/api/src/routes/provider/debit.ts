@@ -51,9 +51,13 @@ export async function providerDebitRoutes(app: FastifyInstance) {
 
       const { taxAmount, effectiveAmount } = await calculateTax(country, 'wager_tax', amount)
 
+      // Provider settlement is external (credit/rollback are separate calls),
+      // so this debit does not reserve locked_balance — there is no later
+      // in-house settlement step to release it.
       const { transactionId, walletId } = await debitForBet(
         client, playerId, amount, effectiveAmount,
         { roundId, gameId, provider: req.providerId, transactionRef },
+        { lock: false },
       )
 
       await client.query(

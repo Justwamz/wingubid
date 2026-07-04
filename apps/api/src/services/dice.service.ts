@@ -33,9 +33,11 @@ export async function rollDice(
     const won = direction === 'over' ? result >= target : result < target
     const winnings = won ? Math.floor(grossStake * multiplier) : 0
 
+    // Dice settles in this same transaction, so don't reserve locked_balance
+    // (nothing would release it later).
     const { walletId } = await debitForBet(client, playerId, grossStake, grossStake, {
       game: 'dice', result, target, direction,
-    })
+    }, { lock: false })
 
     const { rows } = await client.query<{ id: string }>(
       `INSERT INTO bets (player_id, wallet_id, game_type, gross_stake, wager_tax, effective_stake,
@@ -47,11 +49,6 @@ export async function rollDice(
     if (won) {
       await creditWinnings(client, playerId, winnings, { game: 'dice', betId: rows[0].id })
     }
-
-    await client.query(
-      `UPDATE wallets SET locked_balance = locked_balance - $1 WHERE player_id = $2`,
-      [grossStake, playerId],
-    )
 
     await client.query('COMMIT')
     return { result, won, multiplier, winnings, serverSeed, clientSeed, nonce }
