@@ -1,20 +1,30 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { generateGrid, calculatePrize, SYMBOLS_EMOJI } from './scratch.service.js'
+import { generateGridFromSeed, calculatePrize, SYMBOLS_EMOJI } from './scratch.service.js'
 
 beforeEach(() => vi.clearAllMocks())
 
-describe('generateGrid', () => {
+describe('generateGridFromSeed', () => {
   it('returns exactly 9 cells', () => {
-    const grid = generateGrid()
+    const grid = generateGridFromSeed('server-seed', 'client-seed', 1)
     expect(grid).toHaveLength(9)
   })
 
   it('all cells are valid symbol indices 0-5', () => {
-    const grid = generateGrid()
+    const grid = generateGridFromSeed('server-seed', 'client-seed', 1)
     for (const cell of grid) {
       expect(cell).toBeGreaterThanOrEqual(0)
       expect(cell).toBeLessThanOrEqual(5)
     }
+  })
+
+  it('is deterministic for the same seed/client/nonce (player can verify)', () => {
+    expect(generateGridFromSeed('srv', 'cli', 5)).toEqual(generateGridFromSeed('srv', 'cli', 5))
+  })
+
+  it('differs across nonces', () => {
+    const a = generateGridFromSeed('srv', 'cli', 1)
+    const b = generateGridFromSeed('srv', 'cli', 2)
+    expect(a).not.toEqual(b)
   })
 })
 

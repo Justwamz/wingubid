@@ -1,6 +1,7 @@
-import { randomBytes } from 'crypto'
+import { createHmac } from 'crypto'
 import { pool } from '@betting/db'
 import { debitForBet, creditWinnings } from './wallet.service.js'
+import { nextScratchRoll } from './scratch-seed.service.js'
 import { AppError } from '../lib/errors.js'
 
 export const SYMBOLS_EMOJI = ['💎', '🌟', '🍀', '🔥', '💰', '❌']
@@ -17,19 +18,35 @@ const PRIZE_MULTIPLIERS: Record<number, Record<number, number>> = {
   4: { 3: 4,   4: 10,  5: 30  }, // 💰
 }
 
-export function generateGrid(): number[] {
+function symbolForByte(byte: number): number | null {
+  // Reject bytes >= 200 to avoid modulo bias (200 = 2×100)
+  if (byte >= 200) return null
+  const val = byte % 100
+  for (let i = 0; i < CUMULATIVE_WEIGHTS.length; i++) {
+    if (val < CUMULATIVE_WEIGHTS[i]) return i
+  }
+  return null
+}
+
+/**
+ * Deterministically derive the 9-cell grid from the committed seed, so a player
+ * can reproduce (and thus verify) their card after the server seed is revealed.
+ * Bytes are drawn from HMAC(serverSeed, `${clientSeed}-${nonce}-${counter}`),
+ * with the same modulo-bias rejection as before.
+ */
+export function generateGridFromSeed(serverSeed: string, clientSeed: string, nonce: number): number[] {
   const grid: number[] = []
+  let counter = 0
   while (grid.length < 9) {
-    const byte = randomBytes(1)[0]
-    // Reject bytes >= 200 to avoid modulo bias (200 = 2×100)
-    if (byte >= 200) continue
-    const val = byte % 100
-    for (let i = 0; i < CUMULATIVE_WEIGHTS.length; i++) {
-      if (val < CUMULATIVE_WEIGHTS[i]) {
-        grid.push(i)
-        break
-      }
+    const digest = createHmac('sha256', serverSeed)
+      .update(`${clientSeed}-${nonce}-${counter}`)
+      .digest()
+    for (const byte of digest) {
+      if (grid.length >= 9) break
+      const sym = symbolForByte(byte)
+      if (sym !== null) grid.push(sym)
     }
+    counter++
   }
   return grid
 }
@@ -55,17 +72,25 @@ const VALID_STAKES = new Set([2000, 5000, 10000, 20000])
 export async function buyScratchCard(
   playerId: string,
   stakeCents: number,
-): Promise<{ cardId: string; grid: number[]; prizeCents: number }> {
+): Promise<{
+  cardId: string; grid: number[]; prizeCents: number
+  serverSeedHash: string; clientSeed: string; nonce: number
+}> {
   if (!VALID_STAKES.has(stakeCents)) {
     throw new AppError('INVALID_STAKE', 'Stake must be 2000, 5000, 10000, or 20000 cents', 400)
   }
 
-  const grid = generateGrid()
-  const prizeCents = calculatePrize(grid, stakeCents)
-
   const client = await pool.connect()
   try {
     await client.query('BEGIN')
+
+    // Provably fair: the server seed's hash was committed before this purchase
+    // and is revealed only on rotation; the grid is derived deterministically
+    // from the seed + atomically-claimed nonce so the player can verify it.
+    const { serverSeed, serverSeedHash, clientSeed, nonce } = await nextScratchRoll(client, playerId)
+    const grid = generateGridFromSeed(serverSeed, clientSeed, nonce)
+    const prizeCents = calculatePrize(grid, stakeCents)
+
     const { walletId } = await debitForBet(client, playerId, stakeCents, stakeCents, { game: 'scratch' }, { lock: false })
 
     const { rows } = await client.query<{ id: string }>(
@@ -80,7 +105,7 @@ export async function buyScratchCard(
     }
 
     await client.query('COMMIT')
-    return { cardId, grid, prizeCents }
+    return { cardId, grid, prizeCents, serverSeedHash, clientSeed, nonce }
   } catch (err) {
     await client.query('ROLLBACK')
     throw err
