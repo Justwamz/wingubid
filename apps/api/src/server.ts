@@ -40,9 +40,12 @@ import { providerGameRoutes } from './routes/games/provider-games.js'
 export function buildServer() {
   const app = Fastify({ logger: process.env.NODE_ENV !== 'test' })
 
+  // Fail closed: if CORS_ORIGIN is unset, deny cross-origin rather than
+  // reflecting any origin. Never pair credentials:true with origin:true/'*',
+  // which would let any site make credentialed requests and read the response.
   const allowedOrigins = (process.env.CORS_ORIGIN ?? '').split(',').map(o => o.trim()).filter(Boolean)
   app.register(cors, {
-    origin: allowedOrigins.length > 0 ? allowedOrigins : true,
+    origin: allowedOrigins.length > 0 ? allowedOrigins : false,
     credentials: true,
   })
   app.register(cookie)

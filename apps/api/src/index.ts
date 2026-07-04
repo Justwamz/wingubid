@@ -16,9 +16,11 @@ async function main() {
 
   startCron()
 
+  // Fail closed (see server.ts): deny cross-origin when CORS_ORIGIN is unset
+  // instead of allowing '*' with credentials.
   const allowedOrigins = (process.env.CORS_ORIGIN ?? '').split(',').map(o => o.trim()).filter(Boolean)
   const io = new Server(app.server, {
-    cors: { origin: allowedOrigins.length > 0 ? allowedOrigins : '*', credentials: true },
+    cors: { origin: allowedOrigins.length > 0 ? allowedOrigins : false, credentials: true },
   })
   registerCrashSocket(io)
   startCrashLoop(io)
