@@ -29,6 +29,12 @@ export async function placeBet(
     return { betId: rows[0].id, effectiveStake: Number(rows[0].effective_stake) }
   } catch (err) {
     await client.query('ROLLBACK')
+    // Unique-violation on (player_id, round_id) for crash: a concurrent bet:place
+    // for the same round. The rollback undid this duplicate's debit, so surface a
+    // clean already-placed error instead of a 500.
+    if ((err as { code?: string }).code === '23505') {
+      throw new AppError('BET_ALREADY_PLACED', 'Already bet this round', 409)
+    }
     throw err
   } finally {
     client.release()

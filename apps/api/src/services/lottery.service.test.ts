@@ -1,5 +1,16 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { draw3Numbers, draw3NumbersFromSeed, countMatches, calculateLotteryPrize } from './lottery.service.js'
+
+vi.mock('@betting/db', () => ({ pool: { query: vi.fn(), connect: vi.fn() } }))
+vi.mock('./wallet.service.js', () => ({
+  debitForBet: vi.fn(async () => ({ transactionId: 'tx', walletId: 'w' })),
+  creditWinnings: vi.fn(async () => ({ transactionId: 'tx', walletId: 'w' })),
+}))
+
+import { pool } from '@betting/db'
+import { creditWinnings } from './wallet.service.js'
+import {
+  draw3Numbers, draw3NumbersFromSeed, countMatches, calculateLotteryPrize, settleTickets,
+} from './lottery.service.js'
 
 beforeEach(() => vi.clearAllMocks())
 
@@ -23,6 +34,46 @@ describe('draw3Numbers', () => {
       const nums = draw3Numbers()
       expect(new Set(nums).size).toBe(3)
     }
+  })
+})
+
+describe('settleTickets idempotency (M4)', () => {
+  const oneTicket = {
+    rows: [{ id: 't1', player_id: 'p1', wallet_id: 'w1', picked_numbers: [1, 2, 3], ticket_price: '2000' }],
+  }
+
+  it('skips the credit when the ticket was already settled (claim returns 0 rows)', async () => {
+    vi.mocked(pool.query).mockResolvedValueOnce(oneTicket as any) // SELECT pending
+    const client = {
+      query: vi.fn()
+        .mockResolvedValueOnce({})              // BEGIN
+        .mockResolvedValueOnce({ rowCount: 0 }) // claim UPDATE — already settled
+        .mockResolvedValueOnce({}),             // COMMIT
+      release: vi.fn(),
+    }
+    vi.mocked(pool.connect).mockResolvedValue(client as any)
+
+    await settleTickets('draw-1', 'hourly', [1, 2, 3])
+
+    expect(creditWinnings).not.toHaveBeenCalled()
+  })
+
+  it('credits a winning ticket when the claim succeeds', async () => {
+    vi.mocked(pool.query).mockResolvedValueOnce(oneTicket as any)
+    const client = {
+      query: vi.fn()
+        .mockResolvedValueOnce({})              // BEGIN
+        .mockResolvedValueOnce({ rowCount: 1 }) // claim UPDATE — freshly settled
+        .mockResolvedValueOnce({})              // UPDATE locked_balance
+        .mockResolvedValueOnce({}),             // COMMIT
+      release: vi.fn(),
+    }
+    vi.mocked(pool.connect).mockResolvedValue(client as any)
+
+    // picks [1,2,3] fully match → hourly 3-match prize > 0 → won
+    await settleTickets('draw-1', 'hourly', [1, 2, 3])
+
+    expect(creditWinnings).toHaveBeenCalledOnce()
   })
 })
 

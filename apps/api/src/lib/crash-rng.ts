@@ -49,8 +49,22 @@ export function rollDiceResult(
   clientSeed: string,
   nonce: number,
 ): number {
-  const hash = createHmac('sha256', serverSeed)
-    .update(`${clientSeed}-${nonce}`)
-    .digest('hex')
-  return parseInt(hash.slice(0, 8), 16) % 100
+  // Rejection sampling to remove modulo bias: a bare `x % 100` on a 32-bit value
+  // favors 0..95 (2^32 % 100 = 96). Reject words at or above the largest
+  // multiple of 100 that fits in 32 bits, drawing more HMAC output if needed.
+  // Rejection is astronomically rare (~2e-8), so this returns on the first word
+  // in practice while staying deterministic and verifiable.
+  const max = Math.floor(0xffffffff / 100) * 100
+  let counter = 0
+  // eslint-disable-next-line no-constant-condition
+  while (true) {
+    const digest = createHmac('sha256', serverSeed)
+      .update(`${clientSeed}-${nonce}-${counter}`)
+      .digest()
+    for (let off = 0; off + 4 <= digest.length; off += 4) {
+      const val = digest.readUInt32BE(off)
+      if (val < max) return val % 100
+    }
+    counter++
+  }
 }

@@ -22,6 +22,14 @@ function nextMultiplier(cur: number, safe: number, total: number, revealed: numb
   return Math.floor((cur / pSafe) * 100) / 100
 }
 
+// A successful reveal must never be worth less than the stake. On very-low-mine
+// grids the fair-times-edge multiplier after the first reveal can dip just below
+// 1.0 (e.g. 25 tiles / 1 mine -> ~0.99); floor the paid/displayed value at 1.0
+// so a win is never a loss. The raw progression value is kept for the curve.
+function payoutMultiplier(m: number): number {
+  return Math.max(1.0, m)
+}
+
 export async function startGame(
   playerId: string, grossStake: number, gridSize: number, mineCount: number,
 ): Promise<{ gameId: string; serverSeedHash: string; clientSeed: string; gridSize: number; mineCount: number }> {
@@ -122,7 +130,7 @@ export async function revealTile(
   state.revealedTiles.push(tileIndex)
   state.currentMultiplier = newMultiplier
   await redis.setex(redisKey(playerId), GAME_TTL, JSON.stringify(state))
-  return { safe: true, multiplier: newMultiplier }
+  return { safe: true, multiplier: payoutMultiplier(newMultiplier) }
 }
 
 export async function cashoutMines(
@@ -155,16 +163,17 @@ export async function cashoutMines(
     if (rows.length === 0) throw new AppError('GAME_NOT_FOUND', 'No active mines game', 404)
 
     const effectiveStake = Number(rows[0].effective_stake)
-    winnings = Math.floor(effectiveStake * state.currentMultiplier)
+    const paidMultiplier = payoutMultiplier(state.currentMultiplier)
+    winnings = Math.floor(effectiveStake * paidMultiplier)
 
-    await creditWinnings(client, playerId, winnings, { game: 'mines', gameId, multiplier: state.currentMultiplier })
+    await creditWinnings(client, playerId, winnings, { game: 'mines', gameId, multiplier: paidMultiplier })
     await client.query(
       `UPDATE wallets SET locked_balance = locked_balance - $1 WHERE player_id = $2`,
       [effectiveStake, playerId],
     )
     await client.query(
       `UPDATE bets SET status = 'won', cashout_multiplier = $1, winnings = $2, settled_at = NOW() WHERE id = $3`,
-      [state.currentMultiplier, winnings, state.betId],
+      [paidMultiplier, winnings, state.betId],
     )
     await client.query('COMMIT')
   } catch (err) {
