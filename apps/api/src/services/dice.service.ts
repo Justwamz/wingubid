@@ -1,8 +1,8 @@
-import { randomBytes } from 'crypto'
 import { pool } from '@betting/db'
 import { debitForBet, creditWinnings } from './wallet.service.js'
 import { rollDiceResult } from '../lib/crash-rng.js'
 import { getHouseEdge } from './crash.service.js'
+import { nextDiceRoll } from './dice-seed.service.js'
 
 export async function rollDice(
   playerId: string,
@@ -11,10 +11,8 @@ export async function rollDice(
   direction: 'over' | 'under',
 ): Promise<{
   result: number; won: boolean; multiplier: number; winnings: number
-  serverSeed: string; clientSeed: string; nonce: number
+  serverSeedHash: string; clientSeed: string; nonce: number
 }> {
-  const serverSeed = randomBytes(32).toString('hex')
-  const clientSeed = randomBytes(16).toString('hex')
   const houseEdge = await getHouseEdge('dice_house_edge')
 
   const winCount = direction === 'over' ? 100 - target : target
@@ -24,11 +22,9 @@ export async function rollDice(
   try {
     await client.query('BEGIN')
 
-    const { rows: nonceRows } = await client.query<{ count: string }>(
-      `SELECT COUNT(*) AS count FROM bets WHERE player_id = $1 AND game_type = 'dice'`,
-      [playerId],
-    )
-    const nonce = Number(nonceRows[0].count)
+    // Provably fair: the server seed's hash was committed before this roll and
+    // is only revealed on rotation; the nonce is claimed atomically per roll.
+    const { serverSeed, serverSeedHash, clientSeed, nonce } = await nextDiceRoll(client, playerId)
     const result = rollDiceResult(serverSeed, clientSeed, nonce)
     const won = direction === 'over' ? result >= target : result < target
     const winnings = won ? Math.floor(grossStake * multiplier) : 0
@@ -51,7 +47,7 @@ export async function rollDice(
     }
 
     await client.query('COMMIT')
-    return { result, won, multiplier, winnings, serverSeed, clientSeed, nonce }
+    return { result, won, multiplier, winnings, serverSeedHash, clientSeed, nonce }
   } catch (err) {
     await client.query('ROLLBACK')
     throw err

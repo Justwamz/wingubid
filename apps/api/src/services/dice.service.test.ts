@@ -7,10 +7,16 @@ vi.mock('./wallet.service.js', () => ({
   creditWinnings: vi.fn(async () => ({ transactionId: 'tx-2', walletId: 'w-1' })),
 }))
 vi.mock('./crash.service.js', () => ({ getHouseEdge: vi.fn(async () => 1) }))
+vi.mock('./dice-seed.service.js', () => ({
+  nextDiceRoll: vi.fn(async () => ({
+    serverSeed: 'srv', serverSeedHash: 'hash', clientSeed: 'cli', nonce: 7,
+  })),
+}))
 
 import { pool } from '@betting/db'
 import { rollDiceResult } from '../lib/crash-rng.js'
 import { creditWinnings } from './wallet.service.js'
+import { nextDiceRoll } from './dice-seed.service.js'
 import { rollDice } from './dice.service.js'
 
 const mockConnect = vi.mocked(pool.connect)
@@ -24,18 +30,18 @@ function makeMockClient(rows: any[][] = []) {
   }
 }
 
+// Query sequence with nextDiceRoll/debitForBet/creditWinnings mocked:
+// BEGIN (idx 0), INSERT bets (idx 1), COMMIT (idx 2)
+function diceClient() {
+  return makeMockClient([[], [{ id: 'bet-1' }]])
+}
+
 beforeEach(() => vi.clearAllMocks())
 
 describe('rollDice', () => {
   it('wins and calls creditWinnings when result >= target (over)', async () => {
     mockRoll.mockReturnValue(60)
-    // BEGIN idx 0, SELECT nonce idx 1, INSERT bets idx 2, UPDATE locked idx 3
-    const client = makeMockClient([
-      [{ count: '0' }],  // BEGIN (ignored)
-      [{ count: '0' }],  // SELECT nonce
-      [{ id: 'bet-1' }], // INSERT bets
-      [{}],              // UPDATE locked_balance
-    ])
+    const client = diceClient()
     mockConnect.mockResolvedValueOnce(client as any)
 
     const result = await rollDice('p-1', 10000, 50, 'over')
@@ -44,9 +50,21 @@ describe('rollDice', () => {
     expect(creditWinnings).toHaveBeenCalled()
   })
 
+  it('exposes the committed hash + nonce, never the raw server seed', async () => {
+    mockRoll.mockReturnValue(60)
+    const client = diceClient()
+    mockConnect.mockResolvedValueOnce(client as any)
+
+    const result = await rollDice('p-1', 10000, 50, 'over') as Record<string, unknown>
+    expect(nextDiceRoll).toHaveBeenCalled()
+    expect(result.serverSeedHash).toBe('hash')
+    expect(result.nonce).toBe(7)
+    expect(result.serverSeed).toBeUndefined()
+  })
+
   it('loses and skips creditWinnings when result < target (over)', async () => {
     mockRoll.mockReturnValue(30)
-    const client = makeMockClient([[{ count: '3' }], [{ count: '3' }], [{ id: 'bet-1' }], [{}]])
+    const client = diceClient()
     mockConnect.mockResolvedValueOnce(client as any)
 
     const result = await rollDice('p-1', 10000, 50, 'over')
@@ -57,7 +75,7 @@ describe('rollDice', () => {
 
   it('wins for under direction when result < target', async () => {
     mockRoll.mockReturnValue(20)
-    const client = makeMockClient([[{ count: '0' }], [{ count: '0' }], [{ id: 'bet-1' }], [{}]])
+    const client = diceClient()
     mockConnect.mockResolvedValueOnce(client as any)
 
     const result = await rollDice('p-1', 10000, 50, 'under')
@@ -67,7 +85,7 @@ describe('rollDice', () => {
 
   it('calculates multiplier as (100 - houseEdge) / winCount', async () => {
     mockRoll.mockReturnValue(75)
-    const client = makeMockClient([[{ count: '0' }], [{ count: '0' }], [{ id: 'bet-1' }], [{}]])
+    const client = diceClient()
     mockConnect.mockResolvedValueOnce(client as any)
 
     const result = await rollDice('p-1', 10000, 50, 'over')
