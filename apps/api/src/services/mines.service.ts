@@ -89,13 +89,22 @@ export async function revealTile(
     const client = await pool.connect()
     try {
       await client.query('BEGIN')
-      await client.query(
-        `UPDATE wallets SET locked_balance = locked_balance - $1 WHERE player_id = $2`,
-        [state.effectiveStake, playerId],
+      // Lock the bet row and only settle if it is still active, so a mine-hit
+      // racing a cashout (or a duplicate reveal) can't double-release the stake.
+      const { rows } = await client.query<{ effective_stake: string }>(
+        `SELECT effective_stake FROM bets
+         WHERE id = $1 AND player_id = $2 AND status = 'active' FOR UPDATE`,
+        [state.betId, playerId],
       )
-      await client.query(
-        `UPDATE bets SET status = 'lost', settled_at = NOW() WHERE id = $1`, [state.betId],
-      )
+      if (rows.length > 0) {
+        await client.query(
+          `UPDATE wallets SET locked_balance = locked_balance - $1 WHERE player_id = $2`,
+          [Number(rows[0].effective_stake), playerId],
+        )
+        await client.query(
+          `UPDATE bets SET status = 'lost', settled_at = NOW() WHERE id = $1`, [state.betId],
+        )
+      }
       await client.query('COMMIT')
     } catch (err) {
       await client.query('ROLLBACK')
@@ -131,14 +140,27 @@ export async function cashoutMines(
     throw new AppError('NO_TILES_REVEALED', 'Reveal at least one tile before cashing out', 400)
   }
 
-  const winnings = Math.floor(state.effectiveStake * state.currentMultiplier)
   const client = await pool.connect()
+  let winnings = 0
   try {
     await client.query('BEGIN')
+    // Atomic guard: lock the bet and only pay out if it is still active. A
+    // second concurrent cashout (or a racing mine-hit) blocks here, then finds
+    // 0 rows and is rejected — closing the double-payout race.
+    const { rows } = await client.query<{ effective_stake: string }>(
+      `SELECT effective_stake FROM bets
+       WHERE id = $1 AND player_id = $2 AND status = 'active' FOR UPDATE`,
+      [state.betId, playerId],
+    )
+    if (rows.length === 0) throw new AppError('GAME_NOT_FOUND', 'No active mines game', 404)
+
+    const effectiveStake = Number(rows[0].effective_stake)
+    winnings = Math.floor(effectiveStake * state.currentMultiplier)
+
     await creditWinnings(client, playerId, winnings, { game: 'mines', gameId, multiplier: state.currentMultiplier })
     await client.query(
       `UPDATE wallets SET locked_balance = locked_balance - $1 WHERE player_id = $2`,
-      [state.effectiveStake, playerId],
+      [effectiveStake, playerId],
     )
     await client.query(
       `UPDATE bets SET status = 'won', cashout_multiplier = $1, winnings = $2, settled_at = NOW() WHERE id = $3`,

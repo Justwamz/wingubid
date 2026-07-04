@@ -68,8 +68,8 @@ describe('revealTile', () => {
 
   it('returns safe:false and mine positions when hitting a mine', async () => {
     mockRedis.get.mockResolvedValueOnce(JSON.stringify(activeGame))
-    // BEGIN at idx 0, UPDATE wallets at idx 1, UPDATE bets at idx 2
-    const client = makeMockClient([[{}], [{}]])
+    // BEGIN idx0, SELECT FOR UPDATE idx1 (active row), UPDATE wallets idx2, UPDATE bets idx3, COMMIT idx4
+    const client = makeMockClient([[], [{ effective_stake: '10000' }]])
     mockConnect.mockResolvedValueOnce(client as any)
     const result = await revealTile('p-1', 'g-1', 2)
     expect(result.safe).toBe(false)
@@ -82,12 +82,23 @@ describe('cashoutMines', () => {
   it('credits winnings and returns mine positions + serverSeed', async () => {
     const game = { ...activeGame, revealedTiles: [0, 1], currentMultiplier: 1.35 }
     mockRedis.get.mockResolvedValueOnce(JSON.stringify(game))
-    // BEGIN at idx 0, creditWinnings mocked, UPDATE locked_balance at idx 1, UPDATE bets at idx 2
-    const client = makeMockClient([[{}], [{}]])
+    // BEGIN idx0, SELECT FOR UPDATE idx1 (active row), creditWinnings mocked,
+    // UPDATE wallets idx2, UPDATE bets idx3, COMMIT idx4
+    const client = makeMockClient([[], [{ effective_stake: '10000' }]])
     mockConnect.mockResolvedValueOnce(client as any)
     const result = await cashoutMines('p-1', 'g-1')
     expect(result.winnings).toBe(13500)
     expect(result.minePositions).toEqual([2, 5])
     expect(creditWinnings).toHaveBeenCalled()
+  })
+
+  it('rejects a second concurrent cashout when the bet is no longer active', async () => {
+    const game = { ...activeGame, revealedTiles: [0, 1], currentMultiplier: 1.35 }
+    mockRedis.get.mockResolvedValueOnce(JSON.stringify(game))
+    // BEGIN idx0, SELECT FOR UPDATE idx1 returns no row (already settled) → throws
+    const client = makeMockClient([[], []])
+    mockConnect.mockResolvedValueOnce(client as any)
+    await expect(cashoutMines('p-1', 'g-1')).rejects.toMatchObject({ code: 'GAME_NOT_FOUND' })
+    expect(creditWinnings).not.toHaveBeenCalled()
   })
 })
