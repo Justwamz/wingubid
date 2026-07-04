@@ -76,11 +76,19 @@ export function handleCrashSocket(io: Server, socket: Socket): void {
       return
     }
 
+    // Snapshot the multiplier and refuse to settle at or above the crash point.
+    // (cashout() enforces this too; this avoids even attempting a doomed bet.)
+    const multiplier = round.multiplier
+    if (multiplier >= round.crashPoint) {
+      socket.emit('bet:error', { code: 'ROUND_NOT_RUNNING', message: 'Round not running' })
+      return
+    }
+
     try {
-      const { winnings } = await cashout(playerId, bet.betId, round.multiplier)
+      const { winnings } = await cashout(playerId, bet.betId, multiplier, round.crashPoint)
       removeBetFromRound(playerId)
-      socket.emit('cashout:confirmed', { multiplier: round.multiplier, winnings })
-      io.to('crash').emit('cashout:broadcast', { playerId, multiplier: round.multiplier, winnings })
+      socket.emit('cashout:confirmed', { multiplier, winnings })
+      io.to('crash').emit('cashout:broadcast', { playerId, multiplier, winnings })
     } catch (err: any) {
       socket.emit('bet:error', { code: err.code ?? 'CASHOUT_FAILED', message: err.message })
     }

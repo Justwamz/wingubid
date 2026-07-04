@@ -95,7 +95,7 @@ describe('bet:place', () => {
 describe('bet:cashout', () => {
   it('cashes out and emits cashout:confirmed + cashout:broadcast', async () => {
     vi.mocked(getCurrentRound).mockReturnValue({
-      status: 'running', multiplier: 2.50,
+      status: 'running', multiplier: 2.50, crashPoint: 5.00,
       bets: { 'player-1': { betId: 'bet-1', effectiveStake: 10000 } },
     } as any)
     vi.mocked(cashout).mockResolvedValueOnce({ winnings: 25000 })
@@ -105,13 +105,28 @@ describe('bet:cashout', () => {
     handleCrashSocket(io as any, socket as any)
     await socket._trigger('bet:cashout')
 
-    expect(cashout).toHaveBeenCalledWith('player-1', 'bet-1', 2.50)
+    expect(cashout).toHaveBeenCalledWith('player-1', 'bet-1', 2.50, 5.00)
     expect(socket.emit).toHaveBeenCalledWith('cashout:confirmed', { multiplier: 2.50, winnings: 25000 })
     expect(io._roomEmit).toHaveBeenCalledWith('cashout:broadcast', expect.objectContaining({ multiplier: 2.50 }))
   })
 
+  it('rejects a manual cashout at/above the crash point without touching the wallet', async () => {
+    // multiplier has reached the crash point in the race window before status flips
+    vi.mocked(getCurrentRound).mockReturnValue({
+      status: 'running', multiplier: 5.00, crashPoint: 5.00,
+      bets: { 'player-1': { betId: 'bet-1', effectiveStake: 10000 } },
+    } as any)
+
+    const socket = makeSocket()
+    handleCrashSocket(makeIo() as any, socket as any)
+    await socket._trigger('bet:cashout')
+
+    expect(cashout).not.toHaveBeenCalled()
+    expect(socket.emit).toHaveBeenCalledWith('bet:error', expect.objectContaining({ code: 'ROUND_NOT_RUNNING' }))
+  })
+
   it('emits bet:error when player has no active bet', async () => {
-    vi.mocked(getCurrentRound).mockReturnValue({ status: 'running', multiplier: 1.5, bets: {} } as any)
+    vi.mocked(getCurrentRound).mockReturnValue({ status: 'running', multiplier: 1.5, crashPoint: 5.00, bets: {} } as any)
 
     const socket = makeSocket()
     handleCrashSocket(makeIo() as any, socket as any)

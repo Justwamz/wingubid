@@ -62,8 +62,13 @@ describe('cashout', () => {
     ])
     mockConnect.mockResolvedValueOnce(client as any)
 
-    const result = await cashout('p-1', 'bet-1', 2.00)
+    const result = await cashout('p-1', 'bet-1', 2.00, 5.00)
     expect(result.winnings).toBe(20000)
+  })
+
+  it('throws ROUND_CRASHED when multiplier is at/above the crash point', async () => {
+    await expect(cashout('p-1', 'bet-1', 5.00, 5.00))
+      .rejects.toMatchObject({ code: 'ROUND_CRASHED' })
   })
 
   it('throws BET_NOT_FOUND when bet not active', async () => {
@@ -74,7 +79,7 @@ describe('cashout', () => {
     ])
     mockConnect.mockResolvedValueOnce(client as any)
 
-    await expect(cashout('p-1', 'bet-999', 2.00))
+    await expect(cashout('p-1', 'bet-999', 2.00, 5.00))
       .rejects.toMatchObject({ code: 'BET_NOT_FOUND' })
   })
 })

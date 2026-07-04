@@ -94,15 +94,29 @@ async function tick(io: Server): Promise<void> {
 
     if (currentRound.status === 'running') {
       const elapsedSec = (now - currentRound.startedAt) / 1000
-      const multiplier = Math.max(1.00, Math.floor(Math.exp(elapsedSec * 0.1) * 100) / 100)
+      const rawMultiplier = Math.max(1.00, Math.floor(Math.exp(elapsedSec * 0.1) * 100) / 100)
+      const crashPoint = currentRound.crashPoint
+      const crashed = rawMultiplier >= crashPoint
+
+      // The multiplier never displays or settles above the crash point. On the
+      // crashing tick the round is over, so cap the value at the crash point.
+      const multiplier = crashed ? crashPoint : rawMultiplier
       currentRound.multiplier = multiplier
 
+      // Flip status synchronously the instant we know the round crashed —
+      // before any await — so no manual cashout callback can interleave at an
+      // await boundary and be paid at or above the crash point.
+      if (crashed) currentRound.status = 'crashed'
+
+      // Auto-cashout: only players whose target is strictly below the crash
+      // point win, and they are paid at their target — never at the (possibly
+      // overshooting) tick multiplier.
       for (const [playerId, bet] of Object.entries(currentRound.bets)) {
-        if (bet.autoCashoutAt && multiplier >= bet.autoCashoutAt) {
+        if (bet.autoCashoutAt && bet.autoCashoutAt <= multiplier && bet.autoCashoutAt < crashPoint) {
           try {
-            const { winnings } = await cashout(playerId, bet.betId, multiplier)
+            const { winnings } = await cashout(playerId, bet.betId, bet.autoCashoutAt, crashPoint)
             removeBetFromRound(playerId)
-            io.to('crash').emit('cashout:broadcast', { playerId, multiplier, winnings })
+            io.to('crash').emit('cashout:broadcast', { playerId, multiplier: bet.autoCashoutAt, winnings })
           } catch (err) {
             console.error('[crash-loop] auto-cashout failed', err)
           }
@@ -111,7 +125,7 @@ async function tick(io: Server): Promise<void> {
 
       io.to('crash').emit('round:tick', { multiplier })
 
-      if (multiplier >= currentRound.crashPoint) {
+      if (crashed) {
         await transitionToCrashed(io)
       }
     }

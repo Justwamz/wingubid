@@ -39,7 +39,15 @@ export async function cashout(
   playerId: string,
   betId: string,
   multiplier: number,
+  crashPoint: number,
 ): Promise<{ winnings: number }> {
+  // Authoritative fairness guard: never pay at or above the round's crash
+  // point. The caller must not settle a bet on a round that has already busted,
+  // and we enforce it here rather than trusting the in-memory round status.
+  if (!(multiplier < crashPoint)) {
+    throw new AppError('ROUND_CRASHED', 'Round already crashed', 422)
+  }
+
   const client = await pool.connect()
   try {
     await client.query('BEGIN')
