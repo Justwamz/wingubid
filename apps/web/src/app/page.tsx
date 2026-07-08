@@ -5,6 +5,7 @@ import { isAuthenticated, saveToken } from '@/lib/auth'
 import { useRouter } from 'next/navigation'
 import { apiFetch } from '@/lib/api'
 import { X } from 'lucide-react'
+import { TermsContent } from '@/components/TermsContent'
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3001'
 
@@ -414,8 +415,9 @@ export default function LandingPage() {
           <img src="/wingubet-logo.png" alt="WinguBet" className="h-14 md:h-24 w-auto" />
           <p className="text-xs text-gray-600 text-center">18+ only · Please gamble responsibly · Demonstration platform</p>
           <div className="flex gap-6 text-xs text-gray-600">
-            <button onClick={() => setLoginOpen(true)} className="hover:text-gray-400 transition-colors">Log in</button>
-            <Link href="/register" className="hover:text-gray-400 transition-colors">Register</Link>
+            <button onClick={() => { setAuthTab('login'); setLoginOpen(true) }} className="hover:text-gray-400 transition-colors">Log in</button>
+            <button onClick={() => { setAuthTab('register'); setLoginOpen(true) }} className="hover:text-gray-400 transition-colors">Register</button>
+            <Link href="/terms" className="hover:text-gray-400 transition-colors">Terms &amp; Conditions</Link>
           </div>
         </div>
       </footer>
@@ -479,6 +481,7 @@ function LoginModal({ onClose, onSuccess, initialTab = 'login' }: { onClose: () 
   const [regStep, setRegStep] = useState<'form' | 'otp'>('form')
   const [otp, setOtp] = useState('')
   const [pendingToken, setPendingToken] = useState<string | null>(null)
+  const [showTerms, setShowTerms] = useState(false)
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
 
@@ -568,6 +571,7 @@ function LoginModal({ onClose, onSuccess, initialTab = 'login' }: { onClose: () 
   }
 
   return (
+    <>
     <div
       className="fixed inset-0 z-50 flex items-center justify-center p-4"
       style={{ background: 'rgba(0,0,0,0.75)', backdropFilter: 'blur(6px)' }}
@@ -660,7 +664,12 @@ function LoginModal({ onClose, onSuccess, initialTab = 'login' }: { onClose: () 
               </label>
               <label className="flex items-start gap-2.5 cursor-pointer text-sm text-gray-300">
                 <input type="checkbox" checked={acceptedTerms} onChange={e => setAcceptedTerms(e.target.checked)} className="mt-0.5 h-4 w-4 accent-cyan-400 flex-shrink-0" />
-                <span>I accept the <span className="text-cyan-400 font-semibold">Terms &amp; Conditions</span></span>
+                <span>
+                  I accept the{' '}
+                  <button type="button" onClick={() => setShowTerms(true)} className="text-cyan-400 font-semibold hover:text-cyan-300 underline underline-offset-2">
+                    Terms &amp; Conditions
+                  </button>
+                </span>
               </label>
 
               {error && <p className="text-red-400 text-xs bg-red-900/20 border border-red-700/30 rounded-lg px-3 py-2">{error}</p>}
@@ -672,5 +681,33 @@ function LoginModal({ onClose, onSuccess, initialTab = 'login' }: { onClose: () 
         </div>
       </div>
     </div>
+
+    {showTerms && (
+      <div
+        className="fixed inset-0 z-[60] flex items-center justify-center p-4"
+        style={{ background: 'rgba(0,0,0,0.8)', backdropFilter: 'blur(4px)' }}
+        onClick={e => { if (e.target === e.currentTarget) setShowTerms(false) }}
+      >
+        <div className="relative w-full max-w-lg max-h-[85vh] rounded-2xl flex flex-col overflow-hidden" style={{ background: CARD_BG, border: '1px solid rgba(255,255,255,0.18)' }}>
+          <div className="flex items-center justify-between px-5 py-4 border-b border-white/10 flex-shrink-0">
+            <h3 className="font-bold text-white">Terms &amp; Conditions</h3>
+            <button onClick={() => setShowTerms(false)} className="text-gray-400 hover:text-white transition-colors"><X size={18} /></button>
+          </div>
+          <div className="overflow-y-auto px-5 py-4">
+            <TermsContent />
+          </div>
+          <div className="px-5 py-4 border-t border-white/10 flex-shrink-0">
+            <button
+              onClick={() => { setAcceptedTerms(true); setShowTerms(false) }}
+              className="w-full py-3 rounded-xl font-extrabold text-sm tracking-widest transition-opacity hover:opacity-90"
+              style={{ background: '#22D3EE', color: '#0A0420' }}
+            >
+              ACCEPT &amp; CLOSE
+            </button>
+          </div>
+        </div>
+      </div>
+    )}
+    </>
   )
 }
