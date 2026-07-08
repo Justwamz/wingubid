@@ -464,12 +464,21 @@ function GameCard({ game }: { game: GameEntry }) {
 }
 
 function LoginModal({ onClose, onSuccess }: { onClose: () => void; onSuccess: () => void }) {
+  const [tab, setTab] = useState<'login' | 'register'>('login')
   const [phone, setPhone] = useState('')
   const [password, setPassword] = useState('')
+  const [name, setName] = useState('')
+  const [dob, setDob] = useState('')
+  const [country, setCountry] = useState('KE')
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
 
-  async function handleSubmit(e: React.FormEvent) {
+  function switchTab(t: 'login' | 'register') {
+    setTab(t)
+    setError('')
+  }
+
+  async function handleLogin(e: React.FormEvent) {
     e.preventDefault()
     setError('')
     setLoading(true)
@@ -483,64 +492,127 @@ function LoginModal({ onClose, onSuccess }: { onClose: () => void; onSuccess: ()
     onSuccess()
   }
 
+  async function handleRegister(e: React.FormEvent) {
+    e.preventDefault()
+    setError('')
+    setLoading(true)
+    const { data, error: err } = await apiFetch<{ access_token?: string }>('/auth/register', {
+      method: 'POST',
+      body: JSON.stringify({ phone, name, country, date_of_birth: dob, password }),
+    })
+    setLoading(false)
+    if (err) { setError(err.message); return }
+    if (data?.access_token) {
+      saveToken(data.access_token)
+      onSuccess()
+    } else {
+      window.location.href = `/verify?phone=${encodeURIComponent(phone)}`
+    }
+  }
+
+  // Shared visual tokens (match the provided design)
+  const CARD_BG = '#241549'
+  const INPUT_STYLE = { background: 'rgba(0,0,0,0.28)', border: '1px solid rgba(255,255,255,0.12)' }
+  const inputCls = 'w-full rounded-xl px-4 py-3 text-sm text-white placeholder-gray-600 focus:outline-none focus:ring-1 focus:ring-cyan-500'
+  const labelCls = 'block text-xs text-gray-300 mb-1.5 uppercase tracking-widest font-semibold'
+
+  const TabButton = ({ id, label }: { id: 'login' | 'register'; label: string }) => {
+    const active = tab === id
+    return (
+      <button
+        type="button"
+        onClick={() => switchTab(id)}
+        className="flex-1 py-3.5 rounded-t-2xl text-sm font-extrabold tracking-widest transition-colors"
+        style={{
+          background: active ? CARD_BG : '#0E0722',
+          color: active ? '#EDE9FB' : 'rgba(255,255,255,0.45)',
+          border: active ? '1px solid rgba(255,255,255,0.22)' : '1px solid transparent',
+          borderBottom: 'none',
+        }}
+      >
+        {label}
+      </button>
+    )
+  }
+
   return (
     <div
       className="fixed inset-0 z-50 flex items-center justify-center p-4"
       style={{ background: 'rgba(0,0,0,0.75)', backdropFilter: 'blur(6px)' }}
       onClick={e => { if (e.target === e.currentTarget) onClose() }}
     >
-      <div className="relative w-full max-w-sm rounded-2xl p-6 shadow-2xl" style={{ background: '#160B2E', border: '1px solid rgba(255,255,255,0.1)' }}>
-        {/* Close */}
-        <button onClick={onClose} className="absolute top-4 right-4 text-gray-500 hover:text-white transition-colors">
-          <X size={18} />
-        </button>
-
-        {/* Logo */}
-        <div className="flex justify-center mb-6">
-          <img src="/wingubet-logo.png" alt="WinguBet" className="h-16 w-auto" />
+      <div className="relative w-full max-w-sm">
+        {/* Tabs */}
+        <div className="flex gap-2 px-1">
+          <TabButton id="login" label="LOGIN" />
+          <TabButton id="register" label="REGISTER" />
         </div>
 
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div>
-            <label className="block text-xs text-gray-400 mb-1 uppercase tracking-wide">Phone</label>
-            <input
-              type="tel"
-              value={phone}
-              onChange={e => setPhone(e.target.value)}
-              placeholder="+254700000000"
-              required
-              className="w-full rounded-xl px-4 py-3 text-sm text-white placeholder-gray-600 focus:outline-none focus:ring-1 focus:ring-cyan-500"
-              style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)' }}
-            />
-          </div>
-          <div>
-            <label className="block text-xs text-gray-400 mb-1 uppercase tracking-wide">Password</label>
-            <input
-              type="password"
-              value={password}
-              onChange={e => setPassword(e.target.value)}
-              required
-              className="w-full rounded-xl px-4 py-3 text-sm text-white placeholder-gray-600 focus:outline-none focus:ring-1 focus:ring-cyan-500"
-              style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)' }}
-            />
-          </div>
-
-          {error && <p className="text-red-400 text-xs bg-red-900/20 border border-red-700/30 rounded-lg px-3 py-2">{error}</p>}
-
-          <button
-            type="submit"
-            disabled={loading}
-            className="w-full py-3 rounded-xl font-bold text-sm tracking-wide transition-opacity hover:opacity-90 disabled:opacity-50"
-            style={{ background: '#00E5FF', color: '#050010' }}
-          >
-            {loading ? 'Logging in…' : 'LOG IN'}
+        {/* Card */}
+        <div
+          className="relative rounded-2xl rounded-tl-none p-6 shadow-2xl"
+          style={{ background: CARD_BG, border: '1px solid rgba(255,255,255,0.18)' }}
+        >
+          <button onClick={onClose} className="absolute top-4 right-4 text-gray-400 hover:text-white transition-colors">
+            <X size={18} />
           </button>
-        </form>
 
-        <p className="mt-4 text-center text-xs text-gray-500">
-          No account?{' '}
-          <Link href="/register" className="text-cyan-400 hover:text-cyan-300 transition-colors">Register now</Link>
-        </p>
+          {/* Logo */}
+          <div className="flex justify-center my-4">
+            <img src="/wingubet-logo.png" alt="WinguBet" className="h-14 w-auto" />
+          </div>
+
+          {tab === 'login' ? (
+            <form onSubmit={handleLogin} className="space-y-4">
+              <div>
+                <label className={labelCls}>Phone</label>
+                <input type="tel" value={phone} onChange={e => setPhone(e.target.value)} placeholder="+254700000000" required className={inputCls} style={INPUT_STYLE} />
+              </div>
+              <div>
+                <label className={labelCls}>Password</label>
+                <input type="password" value={password} onChange={e => setPassword(e.target.value)} required className={inputCls} style={INPUT_STYLE} />
+              </div>
+              {error && <p className="text-red-400 text-xs bg-red-900/20 border border-red-700/30 rounded-lg px-3 py-2">{error}</p>}
+              <button type="submit" disabled={loading} className="w-full py-3.5 rounded-xl font-extrabold text-sm tracking-widest transition-opacity hover:opacity-90 disabled:opacity-50" style={{ background: '#22D3EE', color: '#0A0420' }}>
+                {loading ? 'LOGGING IN…' : 'LOG IN'}
+              </button>
+            </form>
+          ) : (
+            <form onSubmit={handleRegister} className="space-y-4">
+              <div>
+                <label className={labelCls}>Phone</label>
+                <input type="tel" value={phone} onChange={e => setPhone(e.target.value)} placeholder="+254700000000" required className={inputCls} style={INPUT_STYLE} />
+              </div>
+              <div>
+                <label className={labelCls}>Full Name</label>
+                <input type="text" value={name} onChange={e => setName(e.target.value)} required className={inputCls} style={INPUT_STYLE} />
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className={labelCls}>Date of Birth</label>
+                  <input type="date" value={dob} onChange={e => setDob(e.target.value)} required className={inputCls} style={INPUT_STYLE} />
+                </div>
+                <div>
+                  <label className={labelCls}>Country</label>
+                  <select value={country} onChange={e => setCountry(e.target.value)} className={inputCls} style={INPUT_STYLE}>
+                    <option value="KE">Kenya</option>
+                    <option value="UG">Uganda</option>
+                    <option value="TZ">Tanzania</option>
+                    <option value="RW">Rwanda</option>
+                  </select>
+                </div>
+              </div>
+              <div>
+                <label className={labelCls}>Password</label>
+                <input type="password" value={password} onChange={e => setPassword(e.target.value)} placeholder="Min 8 characters" required className={inputCls} style={INPUT_STYLE} />
+              </div>
+              {error && <p className="text-red-400 text-xs bg-red-900/20 border border-red-700/30 rounded-lg px-3 py-2">{error}</p>}
+              <button type="submit" disabled={loading} className="w-full py-3.5 rounded-xl font-extrabold text-sm tracking-widest transition-opacity hover:opacity-90 disabled:opacity-50" style={{ background: '#22D3EE', color: '#0A0420' }}>
+                {loading ? 'CREATING…' : 'CREATE ACCOUNT'}
+              </button>
+            </form>
+          )}
+        </div>
       </div>
     </div>
   )
