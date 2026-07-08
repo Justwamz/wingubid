@@ -469,7 +469,6 @@ function LoginModal({ onClose, onSuccess }: { onClose: () => void; onSuccess: ()
   const [password, setPassword] = useState('')
   const [name, setName] = useState('')
   const [dob, setDob] = useState('')
-  const [country, setCountry] = useState('KE')
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
 
@@ -498,7 +497,7 @@ function LoginModal({ onClose, onSuccess }: { onClose: () => void; onSuccess: ()
     setLoading(true)
     const { data, error: err } = await apiFetch<{ access_token?: string }>('/auth/register', {
       method: 'POST',
-      body: JSON.stringify({ phone, name, country, date_of_birth: dob, password }),
+      body: JSON.stringify({ phone, name, country: 'KE', date_of_birth: dob, password }),
     })
     setLoading(false)
     if (err) { setError(err.message); return }
@@ -515,6 +514,7 @@ function LoginModal({ onClose, onSuccess }: { onClose: () => void; onSuccess: ()
   const INPUT_STYLE = { background: 'rgba(0,0,0,0.28)', border: '1px solid rgba(255,255,255,0.12)' }
   const inputCls = 'w-full rounded-xl px-4 py-3 text-sm text-white placeholder-gray-600 focus:outline-none focus:ring-1 focus:ring-cyan-500'
   const labelCls = 'block text-xs text-gray-300 mb-1.5 uppercase tracking-widest font-semibold'
+  const labelCasual = 'block text-sm text-gray-200 mb-1.5 font-semibold'
 
   const TabButton = ({ id, label }: { id: 'login' | 'register'; label: string }) => {
     const active = tab === id
@@ -548,9 +548,10 @@ function LoginModal({ onClose, onSuccess }: { onClose: () => void; onSuccess: ()
           <TabButton id="register" label="REGISTER" />
         </div>
 
-        {/* Card */}
+        {/* Card — the top corner under the active tab stays square so the tab
+            reads as connected to the card. */}
         <div
-          className="relative rounded-2xl rounded-tl-none p-6 shadow-2xl"
+          className={`relative rounded-2xl p-6 shadow-2xl ${tab === 'login' ? 'rounded-tl-none' : 'rounded-tr-none'}`}
           style={{ background: CARD_BG, border: '1px solid rgba(255,255,255,0.18)' }}
         >
           <button onClick={onClose} className="absolute top-4 right-4 text-gray-400 hover:text-white transition-colors">
@@ -580,35 +581,24 @@ function LoginModal({ onClose, onSuccess }: { onClose: () => void; onSuccess: ()
           ) : (
             <form onSubmit={handleRegister} className="space-y-4">
               <div>
-                <label className={labelCls}>Phone</label>
+                <label className={labelCasual}>Phone</label>
                 <input type="tel" value={phone} onChange={e => setPhone(e.target.value)} placeholder="+254700000000" required className={inputCls} style={INPUT_STYLE} />
               </div>
               <div>
-                <label className={labelCls}>Full Name</label>
+                <label className={labelCasual}>Full name</label>
                 <input type="text" value={name} onChange={e => setName(e.target.value)} required className={inputCls} style={INPUT_STYLE} />
               </div>
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className={labelCls}>Date of Birth</label>
-                  <input type="date" value={dob} onChange={e => setDob(e.target.value)} required className={inputCls} style={INPUT_STYLE} />
-                </div>
-                <div>
-                  <label className={labelCls}>Country</label>
-                  <select value={country} onChange={e => setCountry(e.target.value)} className={inputCls} style={INPUT_STYLE}>
-                    <option value="KE">Kenya</option>
-                    <option value="UG">Uganda</option>
-                    <option value="TZ">Tanzania</option>
-                    <option value="RW">Rwanda</option>
-                  </select>
-                </div>
+              <div>
+                <label className={labelCasual}>Date of birth</label>
+                <input type="date" value={dob} onChange={e => setDob(e.target.value)} required className={inputCls} style={INPUT_STYLE} />
               </div>
               <div>
-                <label className={labelCls}>Password</label>
-                <input type="password" value={password} onChange={e => setPassword(e.target.value)} placeholder="Min 8 characters" required className={inputCls} style={INPUT_STYLE} />
+                <label className={labelCasual}>Password (min 4 characters)</label>
+                <input type="password" value={password} onChange={e => setPassword(e.target.value)} required minLength={4} className={inputCls} style={INPUT_STYLE} />
               </div>
               {error && <p className="text-red-400 text-xs bg-red-900/20 border border-red-700/30 rounded-lg px-3 py-2">{error}</p>}
               <button type="submit" disabled={loading} className="w-full py-3.5 rounded-xl font-extrabold text-sm tracking-widest transition-opacity hover:opacity-90 disabled:opacity-50" style={{ background: '#22D3EE', color: '#0A0420' }}>
-                {loading ? 'CREATING…' : 'CREATE ACCOUNT'}
+                {loading ? 'CREATING…' : 'REGISTER'}
               </button>
             </form>
           )}

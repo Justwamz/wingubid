@@ -10,7 +10,7 @@ const body = z.object({
     const age = (Date.now() - new Date(dob).getTime()) / (365.25 * 24 * 60 * 60 * 1000)
     return age >= 18
   }, 'Must be 18 or older'),
-  password: z.string().min(8),
+  password: z.string().min(4),
 })
 
 export async function registerRoutes(app: FastifyInstance) {

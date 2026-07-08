@@ -52,7 +52,7 @@ export default function RegisterPage() {
             ['phone', 'tel', 'Phone (+254700000000)'],
             ['name', 'text', 'Full name'],
             ['date_of_birth', 'date', 'Date of birth'],
-            ['password', 'password', 'Password (min 8 chars)'],
+            ['password', 'password', 'Password (min 4 chars)'],
           ] as [keyof typeof form, string, string][]).map(([field, type, placeholder]) => (
             <div key={field}>
               <label className="block text-sm text-gray-400 mb-1">{placeholder}</label>
