@@ -254,9 +254,8 @@ export default function GamesLobby() {
                     <img
                       src={g.image}
                       alt={g.name}
-                      className="w-full h-full object-cover opacity-90"
+                      className="w-full h-full object-contain p-3 opacity-95"
                     />
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
                     <div className="absolute top-2 left-2">
                       <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${g.badgeColor}`}>{g.badge}</span>
                     </div>
@@ -308,13 +307,12 @@ export default function GamesLobby() {
                 <div key={g.providerSlug} className={`bg-gray-900 bg-gradient-to-br ${g.gradient} border ${g.border} rounded-2xl overflow-hidden flex flex-col`}>
                   {/* Game image */}
                   {g.image && (
-                    <div className="relative w-full h-36 overflow-hidden">
+                    <div className="relative w-full h-36 overflow-hidden bg-gray-950">
                       <img
                         src={g.image}
                         alt={g.name}
-                        className={`w-full h-full object-cover transition-opacity duration-300 ${isActive ? 'opacity-90' : 'opacity-40 grayscale'}`}
+                        className={`w-full h-full object-contain p-3 transition-opacity duration-300 ${isActive ? 'opacity-95' : 'opacity-40 grayscale'}`}
                       />
-                      <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
                       <div className="absolute top-2 left-2">
                         {isActive ? (
                           <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${g.badgeColor}`}>LIVE</span>
