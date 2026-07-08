@@ -237,13 +237,18 @@ export default function LandingPage() {
   const [banner, setBanner] = useState<Banner | null>(null)
   const [availableSlugs, setAvailableSlugs] = useState<Set<string>>(new Set())
   const [loginOpen, setLoginOpen] = useState(false)
+  const [authTab, setAuthTab] = useState<'login' | 'register'>('login')
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null)
 
   useEffect(() => {
     if (isAuthenticated()) { router.replace('/games'); return }
-    if (typeof window !== 'undefined' && window.location.search.includes('login=true')) {
-      setLoginOpen(true)
-      window.history.replaceState(null, '', '/')
+    if (typeof window !== 'undefined') {
+      const search = window.location.search
+      if (search.includes('register=true')) {
+        setAuthTab('register'); setLoginOpen(true); window.history.replaceState(null, '', '/')
+      } else if (search.includes('login=true')) {
+        setAuthTab('login'); setLoginOpen(true); window.history.replaceState(null, '', '/')
+      }
     }
     fetch(`${API_URL}/banners/landing`)
       .then(r => r.ok ? r.json() : null)
@@ -287,12 +292,12 @@ export default function LandingPage() {
             <img src="/wingubet-logo.png" alt="WinguBet" className="h-16 md:h-24 w-auto" />
           </Link>
           <div className="flex items-center gap-2 flex-shrink-0">
-            <button onClick={() => setLoginOpen(true)} className="px-3 py-1.5 text-xs font-bold border border-white/30 rounded text-white hover:bg-white/10 transition-colors tracking-wide">
+            <button onClick={() => { setAuthTab('login'); setLoginOpen(true) }} className="px-3 py-1.5 text-xs font-bold border border-white/30 rounded text-white hover:bg-white/10 transition-colors tracking-wide">
               LOGIN
             </button>
-            <Link href="/register" className="px-3 py-1.5 text-xs font-bold rounded tracking-wide transition-opacity hover:opacity-90" style={{ background: '#00E5FF', color: '#050010' }}>
+            <button onClick={() => { setAuthTab('register'); setLoginOpen(true) }} className="px-3 py-1.5 text-xs font-bold rounded tracking-wide transition-opacity hover:opacity-90" style={{ background: '#00E5FF', color: '#050010' }}>
               REGISTER
-            </Link>
+            </button>
           </div>
         </div>
       </nav>
@@ -416,7 +421,7 @@ export default function LandingPage() {
       </footer>
 
       {/* ── Login Modal ── */}
-      {loginOpen && <LoginModal onClose={() => setLoginOpen(false)} onSuccess={() => router.push('/games')} />}
+      {loginOpen && <LoginModal initialTab={authTab} onClose={() => setLoginOpen(false)} onSuccess={() => router.push('/games')} />}
     </div>
   )
 }
@@ -463,18 +468,25 @@ function GameCard({ game }: { game: GameEntry }) {
   return game.active ? <Link href={game.href}>{inner}</Link> : <div>{inner}</div>
 }
 
-function LoginModal({ onClose, onSuccess }: { onClose: () => void; onSuccess: () => void }) {
-  const [tab, setTab] = useState<'login' | 'register'>('login')
+function LoginModal({ onClose, onSuccess, initialTab = 'login' }: { onClose: () => void; onSuccess: () => void; initialTab?: 'login' | 'register' }) {
+  const [tab, setTab] = useState<'login' | 'register'>(initialTab)
   const [phone, setPhone] = useState('')
   const [password, setPassword] = useState('')
   const [name, setName] = useState('')
   const [dob, setDob] = useState('')
+  const [over18, setOver18] = useState(false)
+  const [acceptedTerms, setAcceptedTerms] = useState(false)
+  const [regStep, setRegStep] = useState<'form' | 'otp'>('form')
+  const [otp, setOtp] = useState('')
+  const [pendingToken, setPendingToken] = useState<string | null>(null)
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
 
   function switchTab(t: 'login' | 'register') {
     setTab(t)
     setError('')
+    setRegStep('form')
+    setOtp('')
   }
 
   async function handleLogin(e: React.FormEvent) {
@@ -493,6 +505,10 @@ function LoginModal({ onClose, onSuccess }: { onClose: () => void; onSuccess: ()
 
   async function handleRegister(e: React.FormEvent) {
     e.preventDefault()
+    if (!over18 || !acceptedTerms) {
+      setError('Please confirm you are 18+ and accept the Terms & Conditions')
+      return
+    }
     setError('')
     setLoading(true)
     const { data, error: err } = await apiFetch<{ access_token?: string }>('/auth/register', {
@@ -501,10 +517,26 @@ function LoginModal({ onClose, onSuccess }: { onClose: () => void; onSuccess: ()
     })
     setLoading(false)
     if (err) { setError(err.message); return }
-    if (data?.access_token) {
-      saveToken(data.access_token)
+    // Move to the OTP verification step. The account is created; we simulate the
+    // phone-verification code before completing sign-in.
+    setPendingToken(data?.access_token ?? null)
+    setOtp('')
+    setRegStep('otp')
+  }
+
+  function handleVerifyOtp(e: React.FormEvent) {
+    e.preventDefault()
+    setError('')
+    // Simulated verification — accept any 6-digit code for now.
+    if (!/^\d{6}$/.test(otp)) {
+      setError('Enter the 6-digit code')
+      return
+    }
+    if (pendingToken) {
+      saveToken(pendingToken)
       onSuccess()
     } else {
+      // No token from registration (real OTP flow) — hand off to the verify page.
       window.location.href = `/verify?phone=${encodeURIComponent(phone)}`
     }
   }
@@ -578,6 +610,31 @@ function LoginModal({ onClose, onSuccess }: { onClose: () => void; onSuccess: ()
                 {loading ? 'LOGGING IN…' : 'LOG IN'}
               </button>
             </form>
+          ) : regStep === 'otp' ? (
+            <form onSubmit={handleVerifyOtp} className="space-y-4">
+              <div className="text-center">
+                <h3 className="text-lg font-bold text-white">Verify your phone</h3>
+                <p className="text-sm text-gray-400 mt-1">Enter the 6-digit code we sent to <span className="text-gray-200">{phone || 'your number'}</span></p>
+              </div>
+              <input
+                type="text"
+                inputMode="numeric"
+                value={otp}
+                onChange={e => setOtp(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                placeholder="______"
+                required
+                className="w-full rounded-xl px-4 py-3 text-center text-2xl tracking-[0.5em] font-mono text-white placeholder-gray-700 focus:outline-none focus:ring-1 focus:ring-cyan-500"
+                style={INPUT_STYLE}
+              />
+              <p className="text-center text-xs text-gray-500">Demo mode — enter any 6 digits to continue</p>
+              {error && <p className="text-red-400 text-xs bg-red-900/20 border border-red-700/30 rounded-lg px-3 py-2">{error}</p>}
+              <button type="submit" className="w-full py-3.5 rounded-xl font-extrabold text-sm tracking-widest transition-opacity hover:opacity-90" style={{ background: '#22D3EE', color: '#0A0420' }}>
+                VERIFY & CONTINUE
+              </button>
+              <button type="button" onClick={() => { setRegStep('form'); setError('') }} className="w-full text-xs text-gray-400 hover:text-white transition-colors">
+                ← Back to edit details
+              </button>
+            </form>
           ) : (
             <form onSubmit={handleRegister} className="space-y-4">
               <div>
@@ -596,8 +653,18 @@ function LoginModal({ onClose, onSuccess }: { onClose: () => void; onSuccess: ()
                 <label className={labelCasual}>Password (min 4 characters)</label>
                 <input type="password" value={password} onChange={e => setPassword(e.target.value)} required minLength={4} className={inputCls} style={INPUT_STYLE} />
               </div>
+
+              <label className="flex items-start gap-2.5 cursor-pointer text-sm text-gray-300">
+                <input type="checkbox" checked={over18} onChange={e => setOver18(e.target.checked)} className="mt-0.5 h-4 w-4 accent-cyan-400 flex-shrink-0" />
+                <span>I confirm I am 18 years or older</span>
+              </label>
+              <label className="flex items-start gap-2.5 cursor-pointer text-sm text-gray-300">
+                <input type="checkbox" checked={acceptedTerms} onChange={e => setAcceptedTerms(e.target.checked)} className="mt-0.5 h-4 w-4 accent-cyan-400 flex-shrink-0" />
+                <span>I accept the <span className="text-cyan-400 font-semibold">Terms &amp; Conditions</span></span>
+              </label>
+
               {error && <p className="text-red-400 text-xs bg-red-900/20 border border-red-700/30 rounded-lg px-3 py-2">{error}</p>}
-              <button type="submit" disabled={loading} className="w-full py-3.5 rounded-xl font-extrabold text-sm tracking-widest transition-opacity hover:opacity-90 disabled:opacity-50" style={{ background: '#22D3EE', color: '#0A0420' }}>
+              <button type="submit" disabled={loading || !over18 || !acceptedTerms} className="w-full py-3.5 rounded-xl font-extrabold text-sm tracking-widest transition-opacity hover:opacity-90 disabled:opacity-40 disabled:cursor-not-allowed" style={{ background: '#22D3EE', color: '#0A0420' }}>
                 {loading ? 'CREATING…' : 'REGISTER'}
               </button>
             </form>
