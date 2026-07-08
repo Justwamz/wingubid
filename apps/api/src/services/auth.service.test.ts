@@ -24,9 +24,10 @@ vi.mock('../lib/hash.js', () => ({
 vi.mock('../lib/jwt.js', () => ({
   signPlayerAccessToken: vi.fn((id: string) => `access:${id}`),
 }))
-// These tests exercise the OTP/verification flow, so run them with SMS enabled
-// and demo mode off (rather than relying on the ambient env defaults).
+// These tests exercise the OTP/verification flow, so run with SMS enabled
+// (the gate now lives in the sms-config service) and demo mode off.
 vi.mock('../env.js', () => ({ env: { SMS_ENABLED: true, DEMO_MODE: false } }))
+vi.mock('./sms-config.service.js', () => ({ smsEnabled: vi.fn(async () => true) }))
 
 import { pool } from '@betting/db'
 import {

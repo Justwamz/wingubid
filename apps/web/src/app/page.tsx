@@ -531,21 +531,30 @@ function LoginModal({ onClose, onSuccess, initialTab = 'login' }: { onClose: () 
     setRegStep('otp')
   }
 
-  function handleVerifyOtp(e: React.FormEvent) {
+  async function handleVerifyOtp(e: React.FormEvent) {
     e.preventDefault()
     setError('')
-    // Simulated verification — accept any 6-digit code for now.
     if (!/^\d{6}$/.test(otp)) {
       setError('Enter the 6-digit code')
       return
     }
+    // SMS disabled (demo): registration already returned a token — accept any
+    // 6-digit code and sign in.
     if (pendingToken) {
       saveToken(pendingToken)
       onSuccess()
-    } else {
-      // No token from registration (real OTP flow) — hand off to the verify page.
-      window.location.href = `/verify?phone=${encodeURIComponent(phone)}`
+      return
     }
+    // SMS live: verify the code against the server.
+    setLoading(true)
+    const { data, error: err } = await apiFetch<{ access_token: string }>('/auth/verify-otp', {
+      method: 'POST',
+      body: JSON.stringify({ phone, code: otp }),
+    })
+    setLoading(false)
+    if (err) { setError(err.message); return }
+    saveToken(data!.access_token)
+    onSuccess()
   }
 
   // Shared visual tokens (match the provided design)
@@ -634,7 +643,7 @@ function LoginModal({ onClose, onSuccess, initialTab = 'login' }: { onClose: () 
                 className="w-full rounded-xl px-4 py-3 text-center text-2xl tracking-[0.5em] font-mono text-white placeholder-gray-700 focus:outline-none focus:ring-1 focus:ring-cyan-500"
                 style={INPUT_STYLE}
               />
-              <p className="text-center text-xs text-gray-500">Demo mode — enter any 6 digits to continue</p>
+              <p className="text-center text-xs text-gray-500">{pendingToken ? 'Demo mode — enter any 6 digits to continue' : 'Enter the code sent to your phone'}</p>
               {error && <p className="text-red-400 text-xs bg-red-900/20 border border-red-700/30 rounded-lg px-3 py-2">{error}</p>}
               <button type="submit" className="w-full py-3.5 rounded-xl font-extrabold text-sm tracking-widest transition-opacity hover:opacity-90" style={{ background: '#22D3EE', color: '#0A0420' }}>
                 VERIFY & CONTINUE

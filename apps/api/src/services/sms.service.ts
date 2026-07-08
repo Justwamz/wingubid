@@ -1,24 +1,19 @@
 import AfricasTalking from 'africastalking'
-import { env } from '../env.js'
+import { getSmsConfig } from './sms-config.service.js'
 
-let _sms: ReturnType<typeof AfricasTalking>['SMS'] | null = null
-
-function getSms() {
-  if (!_sms) {
-    const at = AfricasTalking({
-      apiKey: env.AT_API_KEY,
-      username: env.AT_USERNAME,
-    })
-    _sms = at.SMS
-  }
-  return _sms
-}
-
+/**
+ * Send an SMS using the admin-configured provider. When SMS is disabled or the
+ * credentials are missing, the message is simulated (logged) — so the demo and
+ * local dev keep working without a live provider.
+ */
 export async function sendSms(to: string, message: string): Promise<void> {
-  if (!env.SMS_ENABLED) {
+  const cfg = await getSmsConfig()
+
+  if (!cfg.enabled || !cfg.apiKey || !cfg.username) {
     console.log(`[SMS SIMULATION] To: ${to} | ${message}`)
     return
   }
 
-  await getSms().send({ to: [to], message, from: '' })
+  const at = AfricasTalking({ apiKey: cfg.apiKey, username: cfg.username })
+  await at.SMS.send({ to: [to], message, from: cfg.senderId || '' })
 }

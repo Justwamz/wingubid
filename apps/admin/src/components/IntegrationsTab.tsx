@@ -1,7 +1,7 @@
 'use client'
 import { useEffect, useState, useCallback } from 'react'
 import { apiFetch } from '@/lib/api'
-import { RefreshCw, Plus, Trash2, ChevronDown, ChevronUp } from 'lucide-react'
+import { RefreshCw, Plus, Trash2, ChevronDown, ChevronUp, MessageSquare } from 'lucide-react'
 
 // ---------------------------------------------------------------------------
 // Types
@@ -439,6 +439,123 @@ function SlotCard({
 }
 
 // ---------------------------------------------------------------------------
+// SMS / OTP provider config
+// ---------------------------------------------------------------------------
+
+function SmsProviderCard() {
+  const [enabled, setEnabled] = useState(false)
+  const [username, setUsername] = useState('')
+  const [senderId, setSenderId] = useState('')
+  const [apiKey, setApiKey] = useState('')       // only sent if the admin types a new one
+  const [maskedKey, setMaskedKey] = useState('')  // masked existing key, display only
+  const [loading, setLoading] = useState(true)
+  const [saving, setSaving] = useState(false)
+  const [saved, setSaved] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+
+  const load = useCallback(async () => {
+    setLoading(true)
+    const { data } = await apiFetch<{ config: { enabled: boolean; config: Record<string, string> } }>('/admin/sms-config')
+    if (data) {
+      setEnabled(data.config.enabled)
+      setUsername(data.config.config.username ?? '')
+      setSenderId(data.config.config.senderId ?? '')
+      setMaskedKey(data.config.config.apiKey ?? '')
+      setApiKey('')
+    }
+    setLoading(false)
+  }, [])
+
+  useEffect(() => { load() }, [load])
+
+  async function handleSave(e: React.FormEvent) {
+    e.preventDefault()
+    setSaving(true); setError(null); setSaved(false)
+    const config: Record<string, string> = { username: username.trim(), senderId: senderId.trim() }
+    if (apiKey.trim()) config.apiKey = apiKey.trim()  // omit when unchanged so we don't clobber the stored key
+    const { error: err } = await apiFetch('/admin/sms-config', {
+      method: 'PUT',
+      body: JSON.stringify({ enabled, config }),
+    })
+    setSaving(false)
+    if (err) { setError(err.message); return }
+    setSaved(true)
+    load()
+  }
+
+  return (
+    <div className="space-y-3">
+      <div className="flex items-center gap-2">
+        <MessageSquare size={16} className="text-cyan-400" />
+        <h2 className="text-lg font-semibold">SMS / OTP Provider</h2>
+        {enabled ? (
+          <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-cyan-900/40 text-cyan-400 border border-cyan-700/40">Live</span>
+        ) : (
+          <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-gray-800 text-gray-500 border border-gray-700">Disabled</span>
+        )}
+      </div>
+      <p className="text-xs text-gray-500">
+        Wire the SMS gateway that sends registration OTPs. While disabled, OTPs are simulated and phones auto-verify.
+        Turning this on makes registration send a real OTP and require verification before login.
+      </p>
+
+      <form onSubmit={handleSave} className="bg-gray-900 border border-gray-800 rounded-xl p-4 space-y-3 max-w-md">
+        <div>
+          <label className="text-xs text-gray-400 block mb-1">Provider</label>
+          <input value="Africa's Talking" disabled className="w-full bg-gray-800/60 border border-gray-700 rounded-lg px-3 py-2 text-sm text-gray-400" />
+        </div>
+        <div>
+          <label className="text-xs text-gray-400 block mb-1">Username</label>
+          <input
+            type="text"
+            value={username}
+            onChange={e => setUsername(e.target.value)}
+            placeholder="e.g. winguBet"
+            className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-cyan-600"
+          />
+        </div>
+        <div>
+          <label className="text-xs text-gray-400 block mb-1">API Key</label>
+          <input
+            type="password"
+            value={apiKey}
+            onChange={e => setApiKey(e.target.value)}
+            placeholder={maskedKey ? `Saved: ${maskedKey} — type to replace` : 'atsk_…'}
+            className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-cyan-600 font-mono"
+          />
+        </div>
+        <div>
+          <label className="text-xs text-gray-400 block mb-1">Sender ID <span className="text-gray-600">(optional)</span></label>
+          <input
+            type="text"
+            value={senderId}
+            onChange={e => setSenderId(e.target.value)}
+            placeholder="e.g. WINGUBET"
+            className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-cyan-600"
+          />
+        </div>
+
+        <label className="flex items-center gap-2.5 cursor-pointer text-sm text-gray-300 pt-1">
+          <input type="checkbox" checked={enabled} onChange={e => setEnabled(e.target.checked)} className="h-4 w-4 accent-cyan-400" />
+          <span>Enabled — send live OTPs and require phone verification</span>
+        </label>
+
+        {error && <p className="text-xs text-red-400 bg-red-900/20 border border-red-700/30 rounded px-3 py-2">{error}</p>}
+        {saved && !error && <p className="text-xs text-green-400">Saved.</p>}
+
+        <button
+          type="submit"
+          disabled={saving || loading}
+          className="w-full bg-cyan-600 hover:bg-cyan-500 disabled:opacity-50 text-white font-semibold text-sm py-2 rounded-lg transition-colors"
+        >
+          {saving ? 'Saving…' : 'Save SMS Configuration'}
+        </button>
+      </form>
+    </div>
+  )
+}
+
+// ---------------------------------------------------------------------------
 // IntegrationsTab
 // ---------------------------------------------------------------------------
 
@@ -475,6 +592,11 @@ export function IntegrationsTab() {
 
   return (
     <div className="space-y-6">
+      {/* SMS / OTP provider */}
+      <SmsProviderCard />
+
+      <div className="border-t border-gray-800" />
+
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>

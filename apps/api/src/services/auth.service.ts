@@ -4,6 +4,7 @@ import { hashPassword, verifyPassword } from '../lib/hash.js'
 import { signPlayerAccessToken } from '../lib/jwt.js'
 import { generateOtp, verifyOtp } from './otp.service.js'
 import { sendSms } from './sms.service.js'
+import { smsEnabled } from './sms-config.service.js'
 import { env } from '../env.js'
 
 export class AppError extends Error {
@@ -35,6 +36,9 @@ const CURRENCY_BY_COUNTRY: Record<string, string> = {
 export async function registerPlayer(
   input: RegisterInput,
 ): Promise<{ accessToken: string; refreshToken: string } | null> {
+  // Live OTP is controlled by the admin SMS config, not an env flag. When off,
+  // we auto-verify the phone and sign the player in immediately (demo).
+  const smsOn = await smsEnabled()
   const client = await pool.connect()
   let committed = false
   let playerId: string
@@ -53,8 +57,8 @@ export async function registerPlayer(
     const currency = CURRENCY_BY_COUNTRY[input.country] ?? input.currency
 
     const { rows } = await client.query<{ id: string }>(
-      `INSERT INTO players (phone, name, country, currency, date_of_birth, password_hash${env.SMS_ENABLED ? '' : ', phone_verified_at'})
-       VALUES ($1, $2, $3, $4, $5, $6${env.SMS_ENABLED ? '' : ', NOW()'})
+      `INSERT INTO players (phone, name, country, currency, date_of_birth, password_hash${smsOn ? '' : ', phone_verified_at'})
+       VALUES ($1, $2, $3, $4, $5, $6${smsOn ? '' : ', NOW()'})
        RETURNING id`,
       [input.phone, input.name, input.country, currency, input.date_of_birth, passwordHash],
     )
@@ -83,7 +87,7 @@ export async function registerPlayer(
     client.release()
   }
 
-  if (!env.SMS_ENABLED) {
+  if (!smsOn) {
     return issueTokens(playerId)
   }
 
@@ -140,7 +144,7 @@ export async function loginPlayer(
     throw new AppError('INVALID_CREDENTIALS', 'Invalid phone or password', 401)
   }
 
-  if (!player.phone_verified_at && env.SMS_ENABLED) {
+  if (!player.phone_verified_at && await smsEnabled()) {
     throw new AppError('PHONE_NOT_VERIFIED', 'Phone not verified — check your OTP', 403)
   }
 

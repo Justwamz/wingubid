@@ -35,6 +35,7 @@ import { adminTransactionsRoutes } from './routes/admin/transactions.js'
 import { adminGameProviderRoutes } from './routes/admin/game-providers.js'
 import { adminGameSlotRoutes } from './routes/admin/game-slots.js'
 import { adminPaymentConfigRoutes } from './routes/admin/payment-configs.js'
+import { adminSmsConfigRoutes } from './routes/admin/sms-config.js'
 import { adminWithdrawalRoutes } from './routes/admin/withdrawals.js'
 import { providerGameRoutes } from './routes/games/provider-games.js'
 
@@ -95,6 +96,7 @@ export function buildServer() {
   app.register(adminGameProviderRoutes)
   app.register(adminGameSlotRoutes)
   app.register(adminPaymentConfigRoutes)
+  app.register(adminSmsConfigRoutes)
   app.register(adminWithdrawalRoutes)
   app.register(providerGameRoutes)
 
