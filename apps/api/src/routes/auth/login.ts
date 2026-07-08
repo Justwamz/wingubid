@@ -1,9 +1,12 @@
 import { z } from 'zod'
 import type { FastifyInstance } from 'fastify'
 import { loginPlayer, AppError } from '../../services/auth.service.js'
+import { normalizeKePhone } from '../../lib/phone.js'
 
 const body = z.object({
-  phone: z.string().regex(/^\+\d{9,15}$/),
+  // Normalize the format so it matches the stored +254 number regardless of how
+  // it was typed (login doesn't enforce the Safaricom prefix — that's registration).
+  phone: z.string().min(1).transform(s => normalizeKePhone(s) ?? s),
   password: z.string().min(1),
 })
 

@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation'
 import { apiFetch } from '@/lib/api'
 import { X } from 'lucide-react'
 import { TermsContent } from '@/components/TermsContent'
+import { normalizeKePhone, validateSafaricomPhone } from '@/lib/phone'
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3001'
 
@@ -498,7 +499,7 @@ function LoginModal({ onClose, onSuccess, initialTab = 'login' }: { onClose: () 
     setLoading(true)
     const { data, error: err } = await apiFetch<{ access_token: string }>('/auth/login', {
       method: 'POST',
-      body: JSON.stringify({ phone, password }),
+      body: JSON.stringify({ phone: normalizeKePhone(phone) ?? phone, password }),
     })
     setLoading(false)
     if (err) { setError(err.message); return }
@@ -512,11 +513,14 @@ function LoginModal({ onClose, onSuccess, initialTab = 'login' }: { onClose: () 
       setError('Please confirm you are 18+ and accept the Terms & Conditions')
       return
     }
+    const check = validateSafaricomPhone(phone)
+    if (!check.ok) { setError(check.error); return }
+    setPhone(check.e164)
     setError('')
     setLoading(true)
     const { data, error: err } = await apiFetch<{ access_token?: string }>('/auth/register', {
       method: 'POST',
-      body: JSON.stringify({ phone, name, country: 'KE', date_of_birth: dob, password }),
+      body: JSON.stringify({ phone: check.e164, name, country: 'KE', date_of_birth: dob, password }),
     })
     setLoading(false)
     if (err) { setError(err.message); return }

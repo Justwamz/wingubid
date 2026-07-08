@@ -1,9 +1,14 @@
 import { z } from 'zod'
 import type { FastifyInstance } from 'fastify'
 import { registerPlayer, AppError } from '../../services/auth.service.js'
+import { normalizeKePhone, isSafaricom } from '../../lib/phone.js'
 
 const body = z.object({
-  phone: z.string().regex(/^\+\d{9,15}$/, 'Must be E.164 format, e.g. +254700000000'),
+  // Accept any supported input format; normalize to +254 E.164 and require an
+  // approved Safaricom prefix.
+  phone: z.string()
+    .refine(s => { const n = normalizeKePhone(s); return n != null && isSafaricom(n) }, 'Enter a valid Safaricom number')
+    .transform(s => normalizeKePhone(s)!),
   name: z.string().min(2),
   country: z.enum(['KE', 'UG', 'TZ', 'RW']),
   date_of_birth: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).refine((dob) => {
