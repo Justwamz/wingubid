@@ -6,8 +6,8 @@ import { normalizeKePhone } from '../../lib/phone.js'
 const body = z.object({
   // Normalize the format so it matches the stored +254 number regardless of how
   // it was typed (login doesn't enforce the Safaricom prefix — that's registration).
-  phone: z.string().min(1, 'Please enter your phone number.').transform(s => normalizeKePhone(s) ?? s),
-  password: z.string().min(1, 'Please enter your password.'),
+  phone: z.string({ required_error: 'Please enter your phone number.' }).min(1, 'Please enter your phone number.').transform(s => normalizeKePhone(s) ?? s),
+  password: z.string({ required_error: 'Please enter your password.' }).min(1, 'Please enter your password.'),
 })
 
 export async function loginRoutes(app: FastifyInstance) {

@@ -3,8 +3,8 @@ import type { FastifyInstance } from 'fastify'
 import { verifyPlayerOtp, AppError } from '../../services/auth.service.js'
 
 const body = z.object({
-  phone: z.string().regex(/^\+\d{9,15}$/, 'Please enter your phone number.'),
-  code: z.string().regex(/^\d{6}$/, 'Enter the 6-digit verification code we sent you.'),
+  phone: z.string({ required_error: 'Please enter your phone number.' }).regex(/^\+\d{9,15}$/, 'Please enter your phone number.'),
+  code: z.string({ required_error: 'Enter the 6-digit verification code we sent you.' }).regex(/^\d{6}$/, 'Enter the 6-digit verification code we sent you.'),
 })
 
 export async function verifyOtpRoutes(app: FastifyInstance) {

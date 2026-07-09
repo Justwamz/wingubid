@@ -6,16 +6,16 @@ import { normalizeKePhone, isSafaricom } from '../../lib/phone.js'
 const body = z.object({
   // Accept any supported input format; normalize to +254 E.164 and require an
   // approved Safaricom prefix.
-  phone: z.string()
+  phone: z.string({ required_error: 'Please enter your phone number.' })
     .refine(s => { const n = normalizeKePhone(s); return n != null && isSafaricom(n) }, 'Please enter a valid Safaricom number.')
     .transform(s => normalizeKePhone(s)!),
-  name: z.string().min(2, 'Please enter your full name.'),
+  name: z.string({ required_error: 'Please enter your full name.' }).min(2, 'Please enter your full name.'),
   country: z.enum(['KE', 'UG', 'TZ', 'RW'], { errorMap: () => ({ message: 'Please choose your country.' }) }),
-  date_of_birth: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Please enter your date of birth.').refine((dob) => {
+  date_of_birth: z.string({ required_error: 'Please enter your date of birth.' }).regex(/^\d{4}-\d{2}-\d{2}$/, 'Please enter your date of birth.').refine((dob) => {
     const age = (Date.now() - new Date(dob).getTime()) / (365.25 * 24 * 60 * 60 * 1000)
     return age >= 18
   }, 'You must be at least 18 years old to register.'),
-  password: z.string().min(4, 'Your password must be at least 4 characters.'),
+  password: z.string({ required_error: 'Please create a password.' }).min(4, 'Your password must be at least 4 characters.'),
 })
 
 export async function registerRoutes(app: FastifyInstance) {
