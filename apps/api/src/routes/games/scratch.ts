@@ -6,7 +6,7 @@ import { getScratchCommitment, rotateScratchSeed } from '../../services/scratch-
 import { AppError } from '../../lib/errors.js'
 
 const buyBody = z.object({
-  stake: z.number().int().positive(),
+  stake: z.number({ invalid_type_error: 'Please choose a valid stake.' }).int('Please choose a valid stake.').positive('Please choose a stake greater than zero.'),
 })
 
 const rotateBody = z.object({

@@ -36,12 +36,12 @@ export async function startGame(
   const redis = getRedis()
   const existing = await redis.get(redisKey(playerId))
   if (existing && (JSON.parse(existing) as MinesGameState).status === 'active') {
-    throw new AppError('GAME_ALREADY_ACTIVE', 'You already have an active mines game', 422)
+    throw new AppError('GAME_ALREADY_ACTIVE', 'You already have a mines game in progress. Please finish it first.', 422)
   }
 
   const totalTiles = gridSize * gridSize
   if (mineCount < 1 || mineCount >= totalTiles) {
-    throw new AppError('INVALID_MINE_COUNT', 'Invalid mine count', 400)
+    throw new AppError('INVALID_MINE_COUNT', 'Please choose a valid number of mines for the grid.', 400)
   }
 
   const serverSeed = randomBytes(32).toString('hex')
@@ -83,14 +83,14 @@ export async function revealTile(
 ): Promise<{ safe: boolean; multiplier?: number; minePositions?: number[] }> {
   const redis = getRedis()
   const raw = await redis.get(redisKey(playerId))
-  if (!raw) throw new AppError('GAME_NOT_FOUND', 'No active mines game', 404)
+  if (!raw) throw new AppError('GAME_NOT_FOUND', "You don't have a mines game in progress.", 404)
 
   const state = JSON.parse(raw) as MinesGameState
   if (state.gameId !== gameId || state.status !== 'active') {
-    throw new AppError('GAME_NOT_FOUND', 'No active mines game', 404)
+    throw new AppError('GAME_NOT_FOUND', "You don't have a mines game in progress.", 404)
   }
   if (state.revealedTiles.includes(tileIndex)) {
-    throw new AppError('TILE_ALREADY_REVEALED', 'Tile already revealed', 400)
+    throw new AppError('TILE_ALREADY_REVEALED', "You've already revealed that tile.", 400)
   }
 
   if (state.minePositions.includes(tileIndex)) {
@@ -138,11 +138,11 @@ export async function cashoutMines(
 ): Promise<{ winnings: number; minePositions: number[]; serverSeed: string }> {
   const redis = getRedis()
   const raw = await redis.get(redisKey(playerId))
-  if (!raw) throw new AppError('GAME_NOT_FOUND', 'No active mines game', 404)
+  if (!raw) throw new AppError('GAME_NOT_FOUND', "You don't have a mines game in progress.", 404)
 
   const state = JSON.parse(raw) as MinesGameState
   if (state.gameId !== gameId || state.status !== 'active') {
-    throw new AppError('GAME_NOT_FOUND', 'No active mines game', 404)
+    throw new AppError('GAME_NOT_FOUND', "You don't have a mines game in progress.", 404)
   }
   if (state.revealedTiles.length === 0) {
     throw new AppError('NO_TILES_REVEALED', 'Reveal at least one tile before cashing out', 400)
@@ -160,7 +160,7 @@ export async function cashoutMines(
        WHERE id = $1 AND player_id = $2 AND status = 'active' FOR UPDATE`,
       [state.betId, playerId],
     )
-    if (rows.length === 0) throw new AppError('GAME_NOT_FOUND', 'No active mines game', 404)
+    if (rows.length === 0) throw new AppError('GAME_NOT_FOUND', "You don't have a mines game in progress.", 404)
 
     const effectiveStake = Number(rows[0].effective_stake)
     const paidMultiplier = payoutMultiplier(state.currentMultiplier)

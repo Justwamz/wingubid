@@ -56,7 +56,7 @@ export async function providerGameRoutes(app: FastifyInstance) {
     )
 
     if (rows.length === 0) {
-      throw new AppError('NOT_FOUND', 'Game not available', 404)
+      throw new AppError('NOT_FOUND', "This game isn't available right now. Please try another.", 404)
     }
 
     const row = rows[0]

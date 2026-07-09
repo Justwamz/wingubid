@@ -67,16 +67,16 @@ export async function buyTicket(
   pickedNumbers: number[],
 ): Promise<{ ticketId: string; drawId: string; scheduledAt: string; ticketPrice: number }> {
   if (!['hourly', 'daily', 'weekly'].includes(drawType)) {
-    throw new AppError('INVALID_DRAW_TYPE', 'Invalid draw type', 400)
+    throw new AppError('INVALID_DRAW_TYPE', "That lottery draw isn't available.", 400)
   }
   if (pickedNumbers.length !== 3) {
-    throw new AppError('INVALID_NUMBERS', 'Must pick exactly 3 numbers', 400)
+    throw new AppError('INVALID_NUMBERS', 'Please pick exactly 3 numbers.', 400)
   }
   if (pickedNumbers.some(n => n < 1 || n > 36 || !Number.isInteger(n))) {
-    throw new AppError('INVALID_NUMBERS', 'Numbers must be integers between 1 and 36', 400)
+    throw new AppError('INVALID_NUMBERS', 'Your numbers must be whole numbers between 1 and 36.', 400)
   }
   if (new Set(pickedNumbers).size !== 3) {
-    throw new AppError('INVALID_NUMBERS', 'Numbers must be unique', 400)
+    throw new AppError('INVALID_NUMBERS', 'Your 3 numbers must all be different.', 400)
   }
 
   const { rows: drawRows } = await pool.query<{ id: string; scheduled_at: string; ticket_price: string }>(
@@ -87,7 +87,7 @@ export async function buyTicket(
   )
 
   if (drawRows.length === 0) {
-    throw new AppError('DRAW_NOT_FOUND', 'No upcoming draw available for this type', 404)
+    throw new AppError('DRAW_NOT_FOUND', "There's no upcoming draw for this game right now. Please check back soon.", 404)
   }
 
   const draw = drawRows[0]

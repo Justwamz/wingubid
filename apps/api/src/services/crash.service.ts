@@ -33,7 +33,7 @@ export async function placeBet(
     // for the same round. The rollback undid this duplicate's debit, so surface a
     // clean already-placed error instead of a 500.
     if ((err as { code?: string }).code === '23505') {
-      throw new AppError('BET_ALREADY_PLACED', 'Already bet this round', 409)
+      throw new AppError('BET_ALREADY_PLACED', "You've already placed a bet this round.", 409)
     }
     throw err
   } finally {
@@ -51,7 +51,7 @@ export async function cashout(
   // point. The caller must not settle a bet on a round that has already busted,
   // and we enforce it here rather than trusting the in-memory round status.
   if (!(multiplier < crashPoint)) {
-    throw new AppError('ROUND_CRASHED', 'Round already crashed', 422)
+    throw new AppError('ROUND_CRASHED', 'Too late — the round already crashed.', 422)
   }
 
   const client = await pool.connect()
@@ -62,7 +62,7 @@ export async function cashout(
        WHERE id = $1 AND player_id = $2 AND status = 'active' FOR UPDATE`,
       [betId, playerId],
     )
-    if (rows.length === 0) throw new AppError('BET_NOT_FOUND', 'Active bet not found', 404)
+    if (rows.length === 0) throw new AppError('BET_NOT_FOUND', "We couldn't find an active bet to cash out.", 404)
 
     const effectiveStake = Number(rows[0].effective_stake)
     const winnings = Math.floor(effectiveStake * multiplier)

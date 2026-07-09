@@ -102,7 +102,7 @@ export async function verifyPlayerOtp(
 ): Promise<{ accessToken: string; refreshToken: string }> {
   const valid = await verifyOtp(phone, code, 'registration')
   if (!valid) {
-    throw new AppError('INVALID_OTP', 'Invalid or expired OTP', 400)
+    throw new AppError('INVALID_OTP', 'That verification code is incorrect or has expired. Please request a new one.', 400)
   }
 
   const { rows } = await pool.query<{ id: string }>(
@@ -112,7 +112,7 @@ export async function verifyPlayerOtp(
     [phone],
   )
   if (rows.length === 0) {
-    throw new AppError('INVALID_OTP', 'Invalid or expired OTP', 400)
+    throw new AppError('INVALID_OTP', 'That verification code is incorrect or has expired. Please request a new one.', 400)
   }
 
   const playerId = rows[0].id
@@ -145,11 +145,11 @@ export async function loginPlayer(
   }
 
   if (!player.phone_verified_at && await smsEnabled()) {
-    throw new AppError('PHONE_NOT_VERIFIED', 'Phone not verified — check your OTP', 403)
+    throw new AppError('PHONE_NOT_VERIFIED', "Your phone number isn't verified yet. Please enter the verification code we sent you.", 403)
   }
 
   if (player.status === 'suspended') {
-    throw new AppError('ACCOUNT_SUSPENDED', 'Account is suspended', 403)
+    throw new AppError('ACCOUNT_SUSPENDED', 'Your account has been suspended. Please contact support.', 403)
   }
 
   return issueTokens(player.id)
@@ -167,7 +167,7 @@ export async function refreshPlayerTokens(
   )
 
   if (rows.length === 0 || rows[0].expires_at < new Date()) {
-    throw new AppError('INVALID_REFRESH_TOKEN', 'Invalid or expired refresh token', 401)
+    throw new AppError('INVALID_REFRESH_TOKEN', 'Your session has expired. Please log in again.', 401)
   }
 
   const { id: tokenId, player_id: playerId } = rows[0]

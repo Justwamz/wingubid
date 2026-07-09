@@ -7,12 +7,12 @@ import { env } from '../../env.js'
 import { pool } from '@betting/db'
 
 const body = z.object({
-  amount: z.number().int().positive(),
-  provider: z.enum(['mpesa', 'mtn', 'airtel']),
+  amount: z.number({ invalid_type_error: 'Please enter a valid amount.' }).int('Please enter a valid amount.').positive('Please enter an amount greater than zero.'),
+  provider: z.enum(['mpesa', 'mtn', 'airtel'], { errorMap: () => ({ message: 'Please choose a payment method.' }) }),
 })
 
 const demoBody = z.object({
-  amount: z.number().int().positive(),
+  amount: z.number({ invalid_type_error: 'Please enter a valid amount.' }).int('Please enter a valid amount.').positive('Please enter an amount greater than zero.'),
 })
 
 const MIN_WITHDRAWAL = 10000 // KES 100 in cents

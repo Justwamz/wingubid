@@ -29,7 +29,7 @@ export default function DepositPage() {
     )
     setLoading(false)
     if (apiError) {
-      setError(apiError.message ?? 'Top-up failed')
+      setError(apiError.message ?? "We couldn't start your top-up. Please try again.")
       return
     }
     if (data) {

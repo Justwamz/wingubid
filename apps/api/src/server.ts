@@ -2,6 +2,7 @@ import Fastify from 'fastify'
 import cookie from '@fastify/cookie'
 import cors from '@fastify/cors'
 import rateLimit from '@fastify/rate-limit'
+import { AppError } from './lib/errors.js'
 import { healthRoutes } from './routes/health.js'
 import { registerRoutes } from './routes/auth/register.js'
 import { verifyOtpRoutes } from './routes/auth/verify-otp.js'
@@ -57,7 +58,31 @@ export function buildServer() {
   // Rate limiting is opt-in per route (global: false); auth endpoints set their
   // own limits via `config.rateLimit`. In-memory store is fine for a single
   // instance; use the Redis store if the API is scaled horizontally.
-  app.register(rateLimit, { global: false })
+  app.register(rateLimit, {
+    global: false,
+    errorResponseBuilder: () => ({
+      error: { code: 'TOO_MANY_REQUESTS', message: "You're doing that too fast. Please wait a minute and try again." },
+    }),
+  })
+
+  // Plain-English fallbacks so users never see a raw status code or stack trace.
+  app.setNotFoundHandler((_req, reply) => {
+    reply.status(404).send({ error: { code: 'NOT_FOUND', message: "We couldn't find what you were looking for." } })
+  })
+
+  app.setErrorHandler((err, req, reply) => {
+    // Our own, user-safe errors carry a friendly message already.
+    if (err instanceof AppError) {
+      return reply.status(err.statusCode).send({ error: { code: err.code, message: err.message } })
+    }
+    // Malformed body / schema validation.
+    if ((err as { validation?: unknown }).validation || (err as { statusCode?: number }).statusCode === 400) {
+      return reply.status(400).send({ error: { code: 'VALIDATION_ERROR', message: "Some of the details you entered don't look right. Please check them and try again." } })
+    }
+    // Anything unexpected: log the real cause, show a calm message.
+    req.log.error(err)
+    return reply.status(500).send({ error: { code: 'SERVER_ERROR', message: 'Something went wrong on our end. Please try again in a moment.' } })
+  })
 
   app.register(healthRoutes)
   app.register(registerRoutes)

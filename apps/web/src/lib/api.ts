@@ -18,26 +18,34 @@ export async function apiFetch<T>(
 ): Promise<{ data?: T; error?: { code: string; message: string } }> {
   if (typeof window === 'undefined') return {}
 
-  let token = localStorage.getItem('access_token')
-  let res = await doFetch(path, options, token)
+  const NETWORK_ERROR = { code: 'NETWORK_ERROR', message: "We couldn't reach the server. Please check your internet connection and try again." }
 
-  if (res.status === 401 && path !== '/auth/refresh') {
-    const refresh = await doFetch('/auth/refresh', { method: 'POST' }, null)
-    if (refresh.ok) {
-      const refreshJson = await refresh.json().catch(() => null)
-      if (refreshJson?.access_token) {
-        localStorage.setItem('access_token', refreshJson.access_token)
-        token = refreshJson.access_token
-        res = await doFetch(path, options, token)
+  let token = localStorage.getItem('access_token')
+  let res: Response
+  try {
+    res = await doFetch(path, options, token)
+
+    if (res.status === 401 && path !== '/auth/refresh') {
+      const refresh = await doFetch('/auth/refresh', { method: 'POST' }, null)
+      if (refresh.ok) {
+        const refreshJson = await refresh.json().catch(() => null)
+        if (refreshJson?.access_token) {
+          localStorage.setItem('access_token', refreshJson.access_token)
+          token = refreshJson.access_token
+          res = await doFetch(path, options, token)
+        }
+      } else {
+        localStorage.removeItem('access_token')
+        window.location.href = '/login'
+        return {}
       }
-    } else {
-      localStorage.removeItem('access_token')
-      window.location.href = '/login'
-      return {}
     }
+  } catch {
+    return { error: NETWORK_ERROR }
   }
 
   const json = await res.json().catch(() => null)
-  if (!res.ok) return { error: json?.error ?? { code: 'ERROR', message: 'Request failed' } }
+  // Non-JSON error body (gateway/timeout page) → a plain message, never a status code.
+  if (!res.ok) return { error: json?.error ?? { code: 'SERVER_ERROR', message: 'Something went wrong. Please try again in a moment.' } }
   return { data: json as T }
 }

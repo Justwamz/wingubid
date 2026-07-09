@@ -219,7 +219,7 @@ export default function WinguScratchPage() {
         ].slice(0, 5),
       )
     } catch (e: unknown) {
-      setError(e instanceof Error ? e.message : 'Purchase failed')
+      setError(e instanceof Error ? e.message : "We couldn't buy your scratch card. Please try again.")
     } finally {
       setBuying(false)
     }

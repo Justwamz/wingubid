@@ -53,7 +53,7 @@ export default function WinguDicePage() {
       setHistory(prev => [data, ...prev].slice(0, 10))
       refreshBalance()
     } catch (e: unknown) {
-      setError(e instanceof Error ? e.message : 'Roll failed')
+      setError(e instanceof Error ? e.message : "Your roll couldn't be completed. Please try again.")
     } finally {
       setRolling(false)
     }

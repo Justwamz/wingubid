@@ -77,7 +77,7 @@ export async function buyScratchCard(
   serverSeedHash: string; clientSeed: string; nonce: number
 }> {
   if (!VALID_STAKES.has(stakeCents)) {
-    throw new AppError('INVALID_STAKE', 'Stake must be 2000, 5000, 10000, or 20000 cents', 400)
+    throw new AppError('INVALID_STAKE', 'Please choose a stake of KES 20, 50, 100, or 200.', 400)
   }
 
   const client = await pool.connect()

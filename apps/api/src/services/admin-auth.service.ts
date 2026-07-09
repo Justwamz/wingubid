@@ -36,7 +36,7 @@ export async function loginAdmin(
   }
 
   if (admin.status === 'suspended') {
-    throw new AppError('ACCOUNT_SUSPENDED', 'Admin account is suspended', 403)
+    throw new AppError('ACCOUNT_SUSPENDED', 'This admin account has been suspended. Please contact the system owner.', 403)
   }
 
   const accessToken = signAdminAccessToken(admin.id, admin.role)

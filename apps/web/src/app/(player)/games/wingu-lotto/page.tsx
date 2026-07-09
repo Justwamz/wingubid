@@ -348,7 +348,7 @@ export default function WinguLottoPage() {
       refreshBalance()
       loadTickets()
     } catch (e: unknown) {
-      setBuyError(e instanceof Error ? e.message : 'Purchase failed')
+      setBuyError(e instanceof Error ? e.message : "We couldn't buy your ticket. Please try again.")
     } finally {
       setBuying(false)
     }

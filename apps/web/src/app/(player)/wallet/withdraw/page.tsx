@@ -51,7 +51,7 @@ export default function WithdrawPage() {
     )
     setLoading(false)
     if (apiError) {
-      setError(apiError.message ?? 'Withdrawal failed')
+      setError(apiError.message ?? "We couldn't process your withdrawal. Please try again.")
       return
     }
     if (data) {

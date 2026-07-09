@@ -20,7 +20,7 @@ async function selectWalletForUpdate(
     `SELECT id, balance, currency FROM wallets WHERE player_id = $1 FOR UPDATE`,
     [playerId],
   )
-  if (rows.length === 0) throw new AppError('WALLET_NOT_FOUND', 'Wallet not found', 404)
+  if (rows.length === 0) throw new AppError('WALLET_NOT_FOUND', "We couldn't find your wallet. Please contact support.", 404)
   return rows[0]
 }
 
@@ -61,7 +61,7 @@ export async function debitForBet(
     !Number.isInteger(effectiveStake) || effectiveStake < 0 ||
     effectiveStake > grossStake
   ) {
-    throw new AppError('INVALID_STAKE', 'Invalid stake amount', 400)
+    throw new AppError('INVALID_STAKE', "That bet amount isn't valid.", 400)
   }
 
   // Only games that settle in a LATER request (crash cashout, mines reveal,
@@ -73,7 +73,7 @@ export async function debitForBet(
 
   const wallet = await selectWalletForUpdate(client, playerId)
   if (Number(wallet.balance) < grossStake) {
-    throw new AppError('INSUFFICIENT_FUNDS', 'Insufficient balance', 422)
+    throw new AppError('INSUFFICIENT_FUNDS', "You don't have enough balance for this.", 422)
   }
 
   const { rows: updated } = await client.query<{ balance: string }>(
@@ -125,7 +125,7 @@ export async function lockForWithdrawal(
 ): Promise<{ walletId: string }> {
   const wallet = await selectWalletForUpdate(client, playerId)
   if (Number(wallet.balance) < amount) {
-    throw new AppError('INSUFFICIENT_FUNDS', 'Insufficient balance', 422)
+    throw new AppError('INSUFFICIENT_FUNDS', "You don't have enough balance for this.", 422)
   }
 
   await client.query(

@@ -8,13 +8,13 @@ import { env } from '../../env.js'
 import { pool } from '@betting/db'
 
 const body = z.object({
-  amount: z.number().int().positive(),
-  provider: z.enum(['mpesa', 'mtn', 'airtel']),
+  amount: z.number({ invalid_type_error: 'Please enter a valid amount.' }).int('Please enter a valid amount.').positive('Please enter an amount greater than zero.'),
+  provider: z.enum(['mpesa', 'mtn', 'airtel'], { errorMap: () => ({ message: 'Please choose a payment method.' }) }),
 })
 
 const DEMO_TOPUP_MAX = 10_000_000 // KES 100,000 in cents
 const demoBody = z.object({
-  amount: z.number().int().positive().max(DEMO_TOPUP_MAX),
+  amount: z.number({ invalid_type_error: 'Please enter a valid amount.' }).int('Please enter a valid amount.').positive('Please enter an amount greater than zero.').max(DEMO_TOPUP_MAX, 'That amount is too large.'),
 })
 
 export async function walletDepositRoutes(app: FastifyInstance) {

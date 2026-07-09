@@ -34,10 +34,10 @@ export async function initiateDeposit(
   if (limitRows.length > 0) {
     const { min_deposit, max_deposit } = limitRows[0]
     if (amount < Number(min_deposit)) {
-      throw new AppError('LIMIT_EXCEEDED', `Minimum deposit is ${min_deposit}`, 422)
+      throw new AppError('LIMIT_EXCEEDED', `The smallest deposit you can make is KES ${(Number(min_deposit) / 100).toLocaleString('en-KE')}.`, 422)
     }
     if (max_deposit != null && amount > Number(max_deposit)) {
-      throw new AppError('LIMIT_EXCEEDED', `Maximum deposit is ${max_deposit}`, 422)
+      throw new AppError('LIMIT_EXCEEDED', `The largest deposit you can make is KES ${(Number(max_deposit) / 100).toLocaleString('en-KE')}.`, 422)
     }
   }
 
@@ -195,10 +195,10 @@ export async function initiateWithdrawal(
   if (limitRows.length > 0) {
     const { min_withdrawal, max_withdrawal, daily_withdrawal_limit } = limitRows[0]
     if (amount < Number(min_withdrawal)) {
-      throw new AppError('LIMIT_EXCEEDED', `Minimum withdrawal is ${min_withdrawal}`, 422)
+      throw new AppError('LIMIT_EXCEEDED', `The smallest withdrawal you can make is KES ${(Number(min_withdrawal) / 100).toLocaleString('en-KE')}.`, 422)
     }
     if (max_withdrawal != null && amount > Number(max_withdrawal)) {
-      throw new AppError('LIMIT_EXCEEDED', `Maximum withdrawal is ${max_withdrawal}`, 422)
+      throw new AppError('LIMIT_EXCEEDED', `The largest withdrawal you can make is KES ${(Number(max_withdrawal) / 100).toLocaleString('en-KE')}.`, 422)
     }
     if (daily_withdrawal_limit != null) {
       const { rows: dailyRows } = await pool.query<{ total: string }>(
@@ -209,7 +209,7 @@ export async function initiateWithdrawal(
       )
       const dailyTotal = Number(dailyRows[0].total)
       if (dailyTotal + amount > Number(daily_withdrawal_limit)) {
-        throw new AppError('LIMIT_EXCEEDED', 'Daily withdrawal limit exceeded', 422)
+        throw new AppError('LIMIT_EXCEEDED', "You've reached your withdrawal limit for today. Please try again tomorrow.", 422)
       }
     }
   }
