@@ -108,6 +108,7 @@ const GAMES = [
     accent: '#F43F5E',
     badge: 'INSTANT',
     badgeColor: 'bg-pink-500/20 text-pink-300',
+    image: '/games/wingu-scratch-logo.webp',
     visual: (
       <svg viewBox="0 0 80 50" className="w-20 h-12 opacity-80">
         <rect x="5" y="8" width="70" height="34" rx="5" fill="#272422" stroke="#F43F5E" strokeWidth="1.5"/>

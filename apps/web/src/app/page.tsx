@@ -226,7 +226,7 @@ const CASINO_GAMES = [
     name: 'Wingu Scratch',
     active: true,
     href: '/games/wingu-scratch',
-    artwork: '',
+    artwork: '/games/wingu-scratch.webp',
     placeholderBg: 'linear-gradient(135deg,#1a0830 0%,#4d1060 60%,#3d0a50 100%)',
     placeholderLabel: 'WINGU SCRATCH',
     labelColor: '#ff9de2',
