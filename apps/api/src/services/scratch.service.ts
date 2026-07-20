@@ -6,16 +6,19 @@ import { AppError } from '../lib/errors.js'
 
 export const SYMBOLS_EMOJI = ['💎', '🌟', '🍀', '🔥', '💰', '❌']
 
-// Cumulative weights summing to 100: 💎=2, 🌟=5, 🍀=8, 🔥=15, 💰=15, ❌=55
-export const CUMULATIVE_WEIGHTS = [2, 7, 15, 30, 45, 100]
+// Cumulative weights summing to 100: 💎=2, 🌟=5, 🍀=8, 🔥=13, 💰=13, ❌=59.
+// Tuned together with the multipliers below to a ~24% house edge (RTP ~76%);
+// the common 🔥/💰 symbols are the dominant lever, so they sit at 13% each.
+export const CUMULATIVE_WEIGHTS = [2, 7, 15, 28, 41, 100]
 
-// Multipliers: [symbol][matchCount] — matchCount clamped to 5
+// Multipliers: [symbol][matchCount] — matchCount clamped to 5. Scaled down from
+// the original table (which paid out ~232% RTP — a house loss) to a ~24% edge.
 export const PRIZE_MULTIPLIERS: Record<number, Record<number, number>> = {
-  0: { 3: 50,  4: 150, 5: 500 }, // 💎
-  1: { 3: 20,  4: 60,  5: 200 }, // 🌟
-  2: { 3: 10,  4: 30,  5: 100 }, // 🍀
-  3: { 3: 4,   4: 10,  5: 30  }, // 🔥
-  4: { 3: 4,   4: 10,  5: 30  }, // 💰
+  0: { 3: 19,  4: 57,  5: 190 }, // 💎
+  1: { 3: 8,   4: 23,  5: 76  }, // 🌟
+  2: { 3: 4,   4: 11,  5: 38  }, // 🍀
+  3: { 3: 2,   4: 4,   5: 11  }, // 🔥
+  4: { 3: 2,   4: 4,   5: 11  }, // 💰
 }
 
 function symbolForByte(byte: number): number | null {

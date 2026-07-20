@@ -34,24 +34,24 @@ describe('calculatePrize', () => {
     expect(calculatePrize(grid, 10000)).toBe(0)
   })
 
-  it('returns stake * 50 for 3 matching 💎 (symbol 0)', () => {
+  it('returns stake * 19 for 3 matching 💎 (symbol 0)', () => {
     const grid = [0, 0, 0, 1, 2, 3, 4, 5, 5]
-    expect(calculatePrize(grid, 10000)).toBe(10000 * 50)
+    expect(calculatePrize(grid, 10000)).toBe(10000 * 19)
   })
 
-  it('returns stake * 150 for 4 matching 💎 (symbol 0)', () => {
+  it('returns stake * 57 for 4 matching 💎 (symbol 0)', () => {
     const grid = [0, 0, 0, 0, 1, 2, 3, 4, 5]
-    expect(calculatePrize(grid, 10000)).toBe(10000 * 150)
+    expect(calculatePrize(grid, 10000)).toBe(10000 * 57)
   })
 
-  it('returns stake * 500 for 5 matching 💎 (symbol 0)', () => {
+  it('returns stake * 190 for 5 matching 💎 (symbol 0)', () => {
     const grid = [0, 0, 0, 0, 0, 1, 2, 3, 4]
-    expect(calculatePrize(grid, 10000)).toBe(10000 * 500)
+    expect(calculatePrize(grid, 10000)).toBe(10000 * 190)
   })
 
-  it('returns stake * 4 for 3 matching 🔥 (symbol 3)', () => {
+  it('returns stake * 2 for 3 matching 🔥 (symbol 3)', () => {
     const grid = [3, 3, 3, 0, 1, 2, 4, 5, 5]
-    expect(calculatePrize(grid, 5000)).toBe(5000 * 4)
+    expect(calculatePrize(grid, 5000)).toBe(5000 * 2)
   })
 
   it('returns 0 when only ❌ matches 3+', () => {
@@ -60,9 +60,9 @@ describe('calculatePrize', () => {
   })
 
   it('returns best prize when multiple symbols match 3+', () => {
-    // 3x 💎 (×50) and 3x 🔥 (×4) — should return 💎 prize
+    // 3x 💎 (×19) and 3x 🔥 (×2) — should return 💎 prize
     const grid = [0, 0, 0, 3, 3, 3, 1, 2, 4]
-    expect(calculatePrize(grid, 10000)).toBe(10000 * 50)
+    expect(calculatePrize(grid, 10000)).toBe(10000 * 19)
   })
 })
 
