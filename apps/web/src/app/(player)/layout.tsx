@@ -4,7 +4,7 @@ import { useRouter, usePathname } from 'next/navigation'
 import Link from 'next/link'
 import { isAuthenticated, clearToken } from '@/lib/auth'
 import { apiFetch } from '@/lib/api'
-import { Gamepad2, CreditCard, ArrowUpFromLine, User, LogOut } from 'lucide-react'
+import { Gamepad2, CreditCard, User, LogOut } from 'lucide-react'
 
 interface PlayerProfile {
   name: string
@@ -48,7 +48,6 @@ export default function PlayerLayout({ children }: { children: React.ReactNode }
   const navLinks: { href: string; label: string; icon: React.ReactNode; match: (p: string) => boolean }[] = [
     { href: '/games', label: 'Games', icon: <Gamepad2 size={18} />, match: (p: string) => p.startsWith('/games') },
     { href: '/wallet/deposit', label: 'Deposit', icon: <CreditCard size={18} />, match: (p: string) => p === '/wallet/deposit' },
-    { href: '/wallet/withdraw', label: 'Withdraw', icon: <ArrowUpFromLine size={18} />, match: (p: string) => p === '/wallet/withdraw' },
     { href: '/dashboard', label: 'Profile', icon: <User size={18} />, match: (p: string) => p === '/dashboard' },
   ]
 

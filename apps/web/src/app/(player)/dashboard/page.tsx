@@ -3,7 +3,7 @@ import { useEffect, useState } from 'react'
 import { apiFetch } from '@/lib/api'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
-import { TrendingUp, Gem, Dice6 } from 'lucide-react'
+import { TrendingUp, Gem, Dice6, ArrowUpFromLine, ChevronRight } from 'lucide-react'
 
 interface PlayerProfile {
   name: string
@@ -36,9 +36,15 @@ export default function DashboardPage() {
 
       {/* Balance cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-        <div className="bg-gradient-to-br from-cyan-500/10 to-blue-600/5 border border-cyan-500/20 rounded-2xl p-5">
+        <div className="bg-gradient-to-br from-cyan-500/10 to-blue-600/5 border border-cyan-500/20 rounded-2xl p-5 flex flex-col">
           <p className="text-xs text-gray-500 uppercase tracking-widest mb-1">Balance</p>
           <p className="text-3xl font-extrabold font-mono text-white">{player.currency} {balance}</p>
+          <Link
+            href="/wallet/withdraw"
+            className="mt-3 inline-flex items-center gap-1 self-start text-xs font-semibold text-gray-400 hover:text-white transition-colors"
+          >
+            Withdraw <ChevronRight size={14} />
+          </Link>
         </div>
         <div className="bg-gradient-to-br from-violet-500/10 to-purple-700/5 border border-violet-500/20 rounded-2xl p-5">
           <p className="text-xs text-gray-500 uppercase tracking-widest mb-1">Bonus</p>
@@ -48,6 +54,21 @@ export default function DashboardPage() {
           <p className="text-xs text-gray-500 uppercase tracking-widest mb-1">Account</p>
           <p className="text-sm text-gray-300 mt-1">{player.phone}</p>
           <p className="text-sm text-gray-500">{player.country}</p>
+        </div>
+      </div>
+
+      {/* Account actions */}
+      <div>
+        <p className="text-xs text-gray-500 uppercase tracking-widest mb-3">Account</p>
+        <div className="bg-game-card border border-game-border rounded-xl divide-y divide-game-border overflow-hidden">
+          <Link
+            href="/wallet/withdraw"
+            className="flex items-center gap-3 px-4 py-3.5 text-sm text-gray-300 hover:bg-white/5 transition-colors"
+          >
+            <ArrowUpFromLine size={18} className="text-gray-500" />
+            <span className="flex-1 font-medium">Withdraw</span>
+            <ChevronRight size={16} className="text-gray-600" />
+          </Link>
         </div>
       </div>
 
