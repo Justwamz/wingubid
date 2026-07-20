@@ -4,6 +4,7 @@ import React, { useState, useEffect } from 'react'
 import { useCrashGame } from '@/hooks/useCrashGame'
 import { BetPanel } from '@/components/game/BetPanel'
 import { RoundHistory } from '@/components/game/RoundHistory'
+import { GameBetHistory } from '@/components/game/GameBetHistory'
 import { LiveLeaderboard } from '@/components/game/LiveLeaderboard'
 import { CrashChart } from '@/components/game/CrashChart'
 import { HowToPlay } from '@/components/game/HowToPlay'
@@ -83,6 +84,7 @@ export default function WinguCrashPage() {
         <div className="space-y-4">
           <RoundHistory crashes={recentCrashes} />
           <LiveLeaderboard feed={feed} />
+          <GameBetHistory game="crash" />
         </div>
       </div>
     </div>

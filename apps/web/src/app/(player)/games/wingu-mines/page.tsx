@@ -1,8 +1,8 @@
 'use client'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useMinesGame } from '@/hooks/useMinesGame'
 import { MinesGrid } from '@/components/game/MinesGrid'
-import { MinesHistory } from '@/components/game/MinesHistory'
+import { GameBetHistory } from '@/components/game/GameBetHistory'
 import { HowToPlay } from '@/components/game/HowToPlay'
 import { QuickStakes } from '@/components/game/QuickStakes'
 import { DEFAULT_STAKE_KES } from '@/lib/gameConfig'
@@ -22,6 +22,10 @@ export default function WinguMinesPage() {
 
   const isActive = game?.status === 'active'
   const isOver = game?.status === 'won' || game?.status === 'lost'
+
+  // Reload bet history each time a game settles.
+  const [settledCount, setSettledCount] = useState(0)
+  useEffect(() => { if (isOver) setSettledCount(c => c + 1) }, [isOver])
 
   return (
     <div className="max-w-7xl mx-auto px-4 py-6 space-y-4">
@@ -140,7 +144,7 @@ export default function WinguMinesPage() {
 
         {/* History sidebar */}
         <div>
-          <MinesHistory />
+          <GameBetHistory game="mines" title="Recent Games" refreshKey={settledCount} />
         </div>
       </div>
     </div>

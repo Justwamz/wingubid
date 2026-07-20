@@ -20,4 +20,36 @@ export async function gameHistoryRoutes(app: FastifyInstance) {
       createdAt: r.created_at,
     })))
   })
+
+  // Combined history across every game (bets + scratch cards + lottery tickets),
+  // normalized to a single shape for the "My Bets" page.
+  app.get('/games/history/all', { preHandler: authenticate }, async (req, reply) => {
+    const { rows } = await pool.query(
+      `SELECT id::text AS id, game_type::text AS game, gross_stake AS stake,
+              cashout_multiplier AS multiplier, COALESCE(winnings, 0) AS payout,
+              status::text AS status, created_at
+         FROM bets WHERE player_id = $1
+       UNION ALL
+       SELECT id::text, 'scratch', stake_cents, NULL::numeric,
+              COALESCE(prize_cents, 0),
+              CASE WHEN prize_cents > 0 THEN 'won' ELSE 'lost' END, created_at
+         FROM scratch_cards WHERE player_id = $1
+       UNION ALL
+       SELECT id::text, 'lotto', ticket_price, NULL::numeric,
+              COALESCE(prize_cents, 0), status::text, created_at
+         FROM lottery_tickets WHERE player_id = $1
+       ORDER BY created_at DESC
+       LIMIT 50`,
+      [req.playerId],
+    )
+    return reply.send(rows.map(r => ({
+      id: r.id,
+      game: r.game,
+      stake: Number(r.stake),
+      multiplier: r.multiplier != null ? Number(r.multiplier) : null,
+      payout: Number(r.payout),
+      status: r.status,
+      createdAt: r.created_at,
+    })))
+  })
 }

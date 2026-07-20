@@ -3,7 +3,7 @@ import { useEffect, useState } from 'react'
 import { apiFetch } from '@/lib/api'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
-import { TrendingUp, Gem, Dice6, ArrowUpFromLine, ChevronRight } from 'lucide-react'
+import { TrendingUp, Gem, Dice6, ArrowUpFromLine, ChevronRight, Receipt } from 'lucide-react'
 
 interface PlayerProfile {
   name: string
@@ -61,6 +61,14 @@ export default function DashboardPage() {
       <div>
         <p className="text-xs text-gray-500 uppercase tracking-widest mb-3">Account</p>
         <div className="bg-game-card border border-game-border rounded-xl divide-y divide-game-border overflow-hidden">
+          <Link
+            href="/history"
+            className="flex items-center gap-3 px-4 py-3.5 text-sm text-gray-300 hover:bg-white/5 transition-colors"
+          >
+            <Receipt size={18} className="text-gray-500" />
+            <span className="flex-1 font-medium">My Bets</span>
+            <ChevronRight size={16} className="text-gray-600" />
+          </Link>
           <Link
             href="/wallet/withdraw"
             className="flex items-center gap-3 px-4 py-3.5 text-sm text-gray-300 hover:bg-white/5 transition-colors"

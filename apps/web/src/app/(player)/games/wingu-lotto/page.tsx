@@ -42,7 +42,7 @@ interface Ticket {
   ticketPrice: number
   matchedCount: number | null
   prizeCents: number | null
-  status: 'pending' | 'settled'
+  status: 'pending' | 'won' | 'lost'
   scheduledAt: string
   winningNumbers: number[] | null
   createdAt: string
@@ -358,7 +358,7 @@ export default function WinguLottoPage() {
   const canBuy = selectedDrawType !== null && pickedNumbers.length === 3
 
   const pendingTickets = tickets.filter(t => t.status === 'pending')
-  const settledTickets = tickets.filter(t => t.status === 'settled')
+  const settledTickets = tickets.filter(t => t.status !== 'pending')
 
   return (
     <div className="max-w-7xl mx-auto px-4 py-6 space-y-6">

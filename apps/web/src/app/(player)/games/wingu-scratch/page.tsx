@@ -4,6 +4,7 @@ import React, { useState, useEffect } from 'react'
 import { apiFetch } from '@/lib/apiFetch'
 import { refreshBalance } from '@/lib/auth'
 import { HowToPlay } from '@/components/game/HowToPlay'
+import { BetHistory, type BetHistoryEntry } from '@/components/game/BetHistory'
 import { DEFAULT_STAKE_KES } from '@/lib/gameConfig'
 import { DollarSign, Ticket, Trophy } from 'lucide-react'
 
@@ -120,40 +121,17 @@ function Tile({ symbolIndex, revealed, delayMs }: TileProps) {
   )
 }
 
-// ─── History row ─────────────────────────────────────────────────────────────
+// ─── History mapping ─────────────────────────────────────────────────────────
 
-function HistoryRow({ card }: { card: HistoryCard }) {
-  const won = card.prizeCents > 0
-  return (
-    <div
-      className={`rounded-xl px-3 py-2.5 border space-y-1.5 ${
-        won
-          ? 'bg-yellow-500/5 border-yellow-500/15'
-          : 'bg-red-500/5 border-red-500/15'
-      }`}
-    >
-      {/* Mini 3×3 grid */}
-      <div className="grid grid-cols-9 gap-0.5">
-        {card.grid.map((sym, i) => (
-          <span key={i} className="text-xs text-center leading-none">
-            {symbolOf(sym)}
-          </span>
-        ))}
-      </div>
-      <div className="flex items-center justify-between">
-        <span className="text-xs text-gray-500 font-mono">
-          KES {(card.stakeCents / 100).toFixed(0)}
-        </span>
-        <span
-          className={`text-xs font-bold font-mono ${
-            won ? 'text-yellow-400' : 'text-red-400'
-          }`}
-        >
-          {won ? `+KES ${(card.prizeCents / 100).toFixed(0)}` : 'No win'}
-        </span>
-      </div>
-    </div>
-  )
+function cardToEntry(card: HistoryCard): BetHistoryEntry {
+  return {
+    id: card.id,
+    stake: card.stakeCents,
+    status: card.prizeCents > 0 ? 'won' : 'lost',
+    payout: card.prizeCents,
+    multiplier: null,
+    createdAt: card.createdAt,
+  }
 }
 
 // ─── Page ─────────────────────────────────────────────────────────────────────
@@ -367,22 +345,12 @@ export default function WinguScratchPage() {
 
         {/* History sidebar */}
         <div className="space-y-3">
-          <div className="bg-game-card border border-game-border rounded-2xl p-4 space-y-3">
-            <p className="text-xs text-gray-500 font-mono font-bold uppercase tracking-widest">
-              Recent Cards
-            </p>
-            {historyLoaded && history.length === 0 && (
-              <p className="text-gray-600 text-sm text-center py-4">No cards played yet</p>
-            )}
-            {!historyLoaded && (
-              <p className="text-gray-600 text-sm text-center py-4">Loading…</p>
-            )}
-            <div className="space-y-2">
-              {history.map(c => (
-                <HistoryRow key={c.id} card={c} />
-              ))}
-            </div>
-          </div>
+          <BetHistory
+            title="Recent Cards"
+            entries={history.map(cardToEntry)}
+            loading={!historyLoaded}
+            emptyText="No cards played yet"
+          />
         </div>
       </div>
     </div>

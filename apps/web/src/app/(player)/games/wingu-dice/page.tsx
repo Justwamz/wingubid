@@ -4,6 +4,7 @@ import React, { useState } from 'react'
 import { DiceSlider } from '@/components/game/DiceSlider'
 import { DiceFace } from '@/components/game/DiceFace'
 import { HowToPlay } from '@/components/game/HowToPlay'
+import { GameBetHistory } from '@/components/game/GameBetHistory'
 import { QuickStakes } from '@/components/game/QuickStakes'
 import { DEFAULT_STAKE_KES } from '@/lib/gameConfig'
 import { apiFetch } from '@/lib/apiFetch'
@@ -36,7 +37,7 @@ export default function WinguDicePage() {
   const [result, setResult] = useState<RollResult | null>(null)
   const [rolling, setRolling] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const [history, setHistory] = useState<RollResult[]>([])
+  const [rollCount, setRollCount] = useState(0)
 
   const winChance = direction === 'over' ? 100 - target : target
   const multiplier = winChance > 0 ? parseFloat((99 / winChance).toFixed(4)) : 0
@@ -52,7 +53,7 @@ export default function WinguDicePage() {
         body: JSON.stringify({ grossStake: Math.floor(stake * 100), target, direction }),
       })
       setResult(data)
-      setHistory(prev => [data, ...prev].slice(0, 10))
+      setRollCount(c => c + 1)
       refreshBalance()
     } catch (e: unknown) {
       setError(e instanceof Error ? e.message : "Your roll couldn't be completed. Please try again.")
@@ -149,21 +150,7 @@ export default function WinguDicePage() {
 
         {/* History sidebar */}
         <div>
-          {history.length > 0 && (
-            <div className="bg-game-card border border-game-border rounded-2xl p-4 space-y-3">
-              <p className="text-gray-400 text-xs font-mono font-bold uppercase tracking-widest">Recent Rolls</p>
-              <div className="space-y-2">
-                {history.map((r, i) => (
-                  <div key={i} className={`flex items-center justify-between px-3 py-2 rounded-lg ${r.won ? 'bg-cyan-500/5 border border-cyan-500/15' : 'bg-red-500/5 border border-red-500/15'}`}>
-                    <span className={`font-mono font-bold text-lg ${r.won ? 'text-accent-cyan' : 'text-warning-coral'}`}>{r.roll}</span>
-                    <span className={`text-sm font-semibold ${r.won ? 'text-accent-cyan' : 'text-warning-coral'}`}>
-                      {r.won ? `+KES ${(r.winnings / 100).toFixed(0)}` : '-'}
-                    </span>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
+          <GameBetHistory game="dice" title="Recent Rolls" refreshKey={rollCount} />
         </div>
       </div>
     </div>
