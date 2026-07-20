@@ -32,7 +32,7 @@ export async function adminSmsConfigRoutes(app: FastifyInstance) {
     })
   })
 
-  // PUT — update the SMS provider config (partial merge so credentials aren't wiped)
+  // PUT - update the SMS provider config (partial merge so credentials aren't wiped)
   app.put('/admin/sms-config', { preHandler: authenticateAdmin }, async (req, reply) => {
     const { enabled, config } = req.body as {
       enabled?: boolean

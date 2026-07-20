@@ -47,7 +47,7 @@ describe('settleTickets idempotency (M4)', () => {
     const client = {
       query: vi.fn()
         .mockResolvedValueOnce({})              // BEGIN
-        .mockResolvedValueOnce({ rowCount: 0 }) // claim UPDATE — already settled
+        .mockResolvedValueOnce({ rowCount: 0 }) // claim UPDATE - already settled
         .mockResolvedValueOnce({}),             // COMMIT
       release: vi.fn(),
     }
@@ -63,7 +63,7 @@ describe('settleTickets idempotency (M4)', () => {
     const client = {
       query: vi.fn()
         .mockResolvedValueOnce({})              // BEGIN
-        .mockResolvedValueOnce({ rowCount: 1 }) // claim UPDATE — freshly settled
+        .mockResolvedValueOnce({ rowCount: 1 }) // claim UPDATE - freshly settled
         .mockResolvedValueOnce({})              // UPDATE locked_balance
         .mockResolvedValueOnce({}),             // COMMIT
       release: vi.fn(),

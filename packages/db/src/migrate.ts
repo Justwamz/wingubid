@@ -63,7 +63,7 @@ export async function runMigrations(): Promise<void> {
         // but before recording the migration. Treat as idempotent.
         const code = (sqlErr as { code?: string }).code
         if (code !== '42P07' && code !== '42710') throw sqlErr
-        console.warn(`  warn  ${file}: relation already exists — recording as applied`)
+        console.warn(`  warn  ${file}: relation already exists - recording as applied`)
         await client.query('ROLLBACK')
         inTransaction = false
         await client.query('BEGIN')

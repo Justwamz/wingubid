@@ -12,7 +12,7 @@ const HOW_TO_PLAY = [
   { icon: <Trophy size={16} />, text: 'Match 3 numbers to win the jackpot. Match 2 for a bonus, match 1 to break even. Results appear in My Tickets.' },
 ]
 
-// ─── Types ────────────────────────────────────────────────────────────────────
+// --- Types --------------------------------------------------------------------
 
 type DrawType = 'hourly' | 'daily' | 'weekly'
 
@@ -52,7 +52,7 @@ interface TicketsResponse {
   tickets: Ticket[]
 }
 
-// ─── Helpers ──────────────────────────────────────────────────────────────────
+// --- Helpers ------------------------------------------------------------------
 
 const DRAW_COLORS: Record<DrawType, { accent: string; border: string; bg: string; badge: string; badgeBg: string; ring: string }> = {
   hourly: {
@@ -102,7 +102,7 @@ function computeCountdown(scheduledAt: string): string {
   return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`
 }
 
-// ─── Countdown component ──────────────────────────────────────────────────────
+// --- Countdown component ------------------------------------------------------
 
 function Countdown({ scheduledAt }: { scheduledAt: string }) {
   const [display, setDisplay] = useState(() => computeCountdown(scheduledAt))
@@ -115,7 +115,7 @@ function Countdown({ scheduledAt }: { scheduledAt: string }) {
   return <span className="font-mono tabular-nums">{display}</span>
 }
 
-// ─── Tier Card ────────────────────────────────────────────────────────────────
+// --- Tier Card ----------------------------------------------------------------
 
 interface TierCardProps {
   draw: Draw
@@ -166,7 +166,7 @@ function TierCard({ draw, selected, onSelect }: TierCardProps) {
   )
 }
 
-// ─── Number Picker ────────────────────────────────────────────────────────────
+// --- Number Picker ------------------------------------------------------------
 
 interface NumberPickerProps {
   selected: number[]
@@ -200,7 +200,7 @@ function NumberPicker({ selected, onToggle }: NumberPickerProps) {
   )
 }
 
-// ─── Ticket Row ───────────────────────────────────────────────────────────────
+// --- Ticket Row ---------------------------------------------------------------
 
 function TicketRow({ ticket }: { ticket: Ticket }) {
   const c = DRAW_COLORS[ticket.drawType]
@@ -275,7 +275,7 @@ function TicketRow({ ticket }: { ticket: Ticket }) {
   )
 }
 
-// ─── Main Page ────────────────────────────────────────────────────────────────
+// --- Main Page ----------------------------------------------------------------
 
 export default function WinguLottoPage() {
   const [draws, setDraws] = useState<Draw[]>([])

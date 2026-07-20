@@ -146,7 +146,7 @@ export async function settleTickets(drawId: string, drawType: string, winningNum
         await client.query('BEGIN')
         // Atomically claim the ticket: only settle if it is still pending. If a
         // concurrent/re-fired settlement (restart, double-fire, >1 instance)
-        // already settled it, 0 rows come back and we skip the credit — this
+        // already settled it, 0 rows come back and we skip the credit - this
         // makes settlement idempotent and prevents double payouts.
         const { rowCount } = await client.query(
           `UPDATE lottery_tickets SET matched_count = $1, prize_cents = $2, status = $3
@@ -158,7 +158,7 @@ export async function settleTickets(drawId: string, drawType: string, winningNum
           continue
         }
         // Release the stake reserved at buy time (buyTicket locks it). This runs
-        // for every claimed ticket — won or lost — to keep locked_balance accurate.
+        // for every claimed ticket - won or lost - to keep locked_balance accurate.
         await client.query(
           `UPDATE wallets SET locked_balance = locked_balance - $1 WHERE player_id = $2`,
           [ticketPrice, ticket.player_id],

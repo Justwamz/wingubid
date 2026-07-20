@@ -287,7 +287,7 @@ export default function LandingPage() {
   return (
     <div className="min-h-screen text-white overflow-x-hidden" style={{ background: '#160B2E' }}>
 
-      {/* ── Main Nav ── */}
+      {/* -- Main Nav -- */}
       <nav className="sticky top-0 z-50 w-full" style={{ background: '#160B2E', borderBottom: '1px solid rgba(255,255,255,0.07)' }}>
         <div className="max-w-7xl mx-auto px-3 h-20 md:h-28 flex items-center justify-between gap-3">
           <Link href="/" className="flex-shrink-0">
@@ -304,7 +304,7 @@ export default function LandingPage() {
         </div>
       </nav>
 
-      {/* ── Secondary Nav (always horizontal scroll) ── */}
+      {/* -- Secondary Nav (always horizontal scroll) -- */}
       <div className="sticky top-20 md:top-28 z-40 border-b border-white/10" style={{ background: '#0F0720' }}>
         <div className="max-w-7xl mx-auto flex overflow-x-auto scrollbar-hide">
           {SECONDARY_NAV.map((item, i) => (
@@ -320,7 +320,7 @@ export default function LandingPage() {
         </div>
       </div>
 
-      {/* ── Hero Carousel - same width as game sections ── */}
+      {/* -- Hero Carousel - same width as game sections -- */}
       <div className="max-w-7xl mx-auto px-3 pt-3">
       <section className="relative overflow-hidden rounded-xl h-64 md:h-72">
         {/* Background */}
@@ -374,7 +374,7 @@ export default function LandingPage() {
       </section>
       </div>
 
-      {/* ── Quick Game Cards ── */}
+      {/* -- Quick Game Cards -- */}
       <section className="px-3 pt-4 pb-2 max-w-7xl mx-auto">
         <div className="grid grid-cols-3 gap-2">
           {QUICK_GAMES.map(g => (
@@ -394,7 +394,7 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* ── Crash Games ── */}
+      {/* -- Crash Games -- */}
       <section className="px-3 pt-5 pb-2 max-w-7xl mx-auto">
         <SectionHeader title="CRASH GAMES" />
         <div className="grid grid-cols-2 gap-2 mt-3">
@@ -402,7 +402,7 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* ── Casino ── */}
+      {/* -- Casino -- */}
       <section className="px-3 pt-5 pb-6 max-w-7xl mx-auto">
         <SectionHeader title="CASINO" />
         <div className="grid grid-cols-2 gap-2 mt-3">
@@ -410,7 +410,7 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* ── Footer ── */}
+      {/* -- Footer -- */}
       <footer style={{ borderTop: '1px solid rgba(255,255,255,0.06)' }}>
         <div className="max-w-7xl mx-auto px-4 py-6 flex flex-col md:flex-row items-center justify-between gap-4">
           <img src="/wingubet-logo.png" alt="WinguBet" className="h-14 md:h-24 w-auto" />
@@ -424,7 +424,7 @@ export default function LandingPage() {
         </div>
       </footer>
 
-      {/* ── Login Modal ── */}
+      {/* -- Login Modal -- */}
       {loginOpen && <LoginModal initialTab={authTab} onClose={() => setLoginOpen(false)} onSuccess={() => router.push('/games')} />}
     </div>
   )

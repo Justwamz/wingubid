@@ -117,7 +117,7 @@ describe('confirmDeposit', () => {
     )
   })
 
-  it('is idempotent — does nothing if already completed', async () => {
+  it('is idempotent - does nothing if already completed', async () => {
     const client = makeMockClient()
     mockConnect.mockResolvedValueOnce(client as any)
 

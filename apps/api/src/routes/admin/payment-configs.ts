@@ -40,7 +40,7 @@ export async function adminPaymentConfigRoutes(app: FastifyInstance) {
     return reply.send({ configs })
   })
 
-  // PUT — update a provider's config (full replace of credential fields)
+  // PUT - update a provider's config (full replace of credential fields)
   app.put('/admin/payment-configs/:provider', { preHandler: authenticateAdmin }, async (req, reply) => {
     const { provider } = req.params as { provider: string }
     if (!PROVIDERS.includes(provider as Provider)) {

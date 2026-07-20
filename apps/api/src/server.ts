@@ -43,7 +43,7 @@ import { adminWithdrawalRoutes } from './routes/admin/withdrawals.js'
 import { providerGameRoutes } from './routes/games/provider-games.js'
 
 export function buildServer() {
-  // trustProxy so req.ip is the real client IP behind Render's proxy — required
+  // trustProxy so req.ip is the real client IP behind Render's proxy - required
   // for per-IP rate limiting to bucket by client rather than by the proxy.
   const app = Fastify({ logger: process.env.NODE_ENV !== 'test', trustProxy: true })
 

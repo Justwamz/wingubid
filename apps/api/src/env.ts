@@ -10,7 +10,7 @@ const schema = z.object({
   ADMIN_JWT_SECRET:   z.string().min(32),
   SMS_ENABLED:        z.enum(['true', 'false']).default('false').transform(v => v === 'true'),
   // Enables demo/simulated money: demo top-up & withdraw endpoints and the
-  // signup balance grant. Fails closed — defaults to off, so forgetting to set
+  // signup balance grant. Fails closed - defaults to off, so forgetting to set
   // it can never leave self-service crediting enabled in a money environment.
   // Kept separate from SMS_ENABLED so real payments/OTP don't re-enable minting.
   DEMO_MODE:          z.enum(['true', 'false']).default('false').transform(v => v === 'true'),
@@ -34,7 +34,7 @@ export const env = parsed.data
 
 if (env.DEMO_MODE) {
   console.warn(
-    '[SECURITY] DEMO_MODE is ON — demo top-up/withdraw and the signup balance grant are enabled. ' +
+    '[SECURITY] DEMO_MODE is ON - demo top-up/withdraw and the signup balance grant are enabled. ' +
     'This must be OFF for any real-money deployment.',
   )
 }

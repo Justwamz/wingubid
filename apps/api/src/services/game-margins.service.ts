@@ -9,7 +9,7 @@ import {
   SYMBOLS_EMOJI,
 } from './scratch.service.js'
 
-// These games have no single "house edge" knob — their margin is structural,
+// These games have no single "house edge" knob - their margin is structural,
 // set by fixed prize tables (and match odds). We derive the effective RTP /
 // house edge from the same constants the games use, so the admin read-out is
 // always truthful (no drift from hardcoded numbers).

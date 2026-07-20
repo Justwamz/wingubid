@@ -65,7 +65,7 @@ export async function debitForBet(
   }
 
   // Only games that settle in a LATER request (crash cashout, mines reveal,
-  // lottery draw) should reserve locked_balance — they must release it on
+  // lottery draw) should reserve locked_balance - they must release it on
   // settlement. Instant/externally-settled bets (dice, scratch, provider
   // debit) settle in this same transaction, so they must NOT lock, otherwise
   // locked_balance grows forever (nothing ever releases it).

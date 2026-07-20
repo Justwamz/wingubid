@@ -18,7 +18,7 @@ const demoBody = z.object({
 const MIN_WITHDRAWAL = 10000 // KES 100 in cents
 
 export async function walletWithdrawRoutes(app: FastifyInstance) {
-  // Real withdrawal — calls payment provider (production)
+  // Real withdrawal - calls payment provider (production)
   app.post('/wallet/withdraw', { preHandler: authenticate }, async (req, reply) => {
     const parsed = body.safeParse(req.body)
     if (!parsed.success) {
@@ -38,7 +38,7 @@ export async function walletWithdrawRoutes(app: FastifyInstance) {
     }
   })
 
-  // Demo withdrawal — only available when DEMO_MODE is explicitly enabled
+  // Demo withdrawal - only available when DEMO_MODE is explicitly enabled
   app.post('/wallet/demo-withdraw', { preHandler: authenticate }, async (req, reply) => {
     if (!env.DEMO_MODE) {
       return reply.status(403).send({ error: { code: 'NOT_AVAILABLE', message: 'Demo withdrawal is disabled' } })

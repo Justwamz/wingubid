@@ -12,7 +12,7 @@ function maskName(name: string | null): string {
 export async function gameLeaderboardRoutes(app: FastifyInstance) {
   app.get('/games/leaderboard', async (_req, reply) => {
     // Join wallets on the exact wallet used for the bet (b.wallet_id), not on
-    // player_id — the latter multiplies rows for players with >1 currency wallet.
+    // player_id - the latter multiplies rows for players with >1 currency wallet.
     const { rows } = await pool.query<{
       player_name: string | null; game: string; multiplier: string
       winnings: string; currency: string; won_at: string

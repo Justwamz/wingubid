@@ -62,7 +62,7 @@ export async function providerDebitRoutes(app: FastifyInstance) {
       }
 
       // Provider settlement is external (credit/rollback are separate calls),
-      // so this debit does not reserve locked_balance — there is no later
+      // so this debit does not reserve locked_balance - there is no later
       // in-house settlement step to release it. The idempotency key is written
       // inside the INSERT so a concurrent duplicate hits the UNIQUE constraint.
       const { transactionId } = await debitForBet(
@@ -84,7 +84,7 @@ export async function providerDebitRoutes(app: FastifyInstance) {
       return reply.send({ balance: Number(wRows[0].balance), transactionId })
     } catch (err) {
       await client.query('ROLLBACK')
-      // Lost a concurrent-duplicate race — return the winner's cached result.
+      // Lost a concurrent-duplicate race - return the winner's cached result.
       if ((err as { code?: string }).code === '23505') {
         const { rows } = await pool.query<{ id: string; balance_after: number }>(
           `SELECT id, balance_after FROM transactions WHERE idempotency_key = $1`,

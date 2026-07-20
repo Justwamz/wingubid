@@ -5,7 +5,7 @@ import { getProvider } from './providers/index.js'
 import { creditDeposit, lockForWithdrawal, settleWithdrawal } from './wallet.service.js'
 import { calculateTax } from './tax.service.js'
 
-// ─── Deposit ────────────────────────────────────────────────────────────────
+// --- Deposit ----------------------------------------------------------------
 
 export async function initiateDeposit(
   playerId: string,
@@ -45,7 +45,7 @@ export async function initiateDeposit(
     ? `deposit:${playerId}:${clientIdempotencyKey}`
     : `deposit:${playerId}:${Date.now()}:${crypto.randomBytes(4).toString('hex')}`
 
-  // Insert payment_transactions — handle duplicate key (idempotency)
+  // Insert payment_transactions - handle duplicate key (idempotency)
   let paymentTxId: string
   let providerRef: string
 
@@ -60,7 +60,7 @@ export async function initiateDeposit(
     paymentTxId = rows[0].id
   } catch (err: any) {
     if (err.code === '23505') {
-      // Unique constraint — return existing record
+      // Unique constraint - return existing record
       const { rows } = await pool.query<{ id: string; provider_ref: string }>(
         `SELECT id, provider_ref FROM payment_transactions WHERE idempotency_key = $1`,
         [idempotencyKey],
@@ -97,7 +97,7 @@ export async function confirmDeposit(
   success: boolean,
   failureReason?: string,
   // What the provider says was actually collected. When supplied, it MUST match
-  // the amount/currency we recorded at initiation before we credit — otherwise a
+  // the amount/currency we recorded at initiation before we credit - otherwise a
   // partial/mismatched payment could credit the full requested amount.
   confirmed?: { amount?: number; currency?: string },
 ): Promise<void> {
@@ -127,7 +127,7 @@ export async function confirmDeposit(
     }
 
     // Reject a "successful" callback whose confirmed amount/currency doesn't
-    // match what we recorded — never credit the requested amount for a partial
+    // match what we recorded - never credit the requested amount for a partial
     // or wrong-currency payment.
     const amountMismatch = confirmed?.amount != null && confirmed.amount !== Number(pt.amount)
     const currencyMismatch = confirmed?.currency != null && confirmed.currency !== pt.currency
@@ -135,7 +135,7 @@ export async function confirmDeposit(
       const reason = amountMismatch
         ? `amount mismatch: provider ${confirmed?.amount} vs expected ${pt.amount}`
         : `currency mismatch: provider ${confirmed?.currency} vs expected ${pt.currency}`
-      console.warn(`[payment] confirmDeposit rejected — ${reason} (ref ${providerRef})`)
+      console.warn(`[payment] confirmDeposit rejected - ${reason} (ref ${providerRef})`)
       await client.query(
         `UPDATE payment_transactions SET status = 'failed', failure_reason = $1, updated_at = NOW() WHERE id = $2`,
         [reason, pt.id],
@@ -168,7 +168,7 @@ export async function confirmDeposit(
   }
 }
 
-// ─── Withdrawal ─────────────────────────────────────────────────────────────
+// --- Withdrawal -------------------------------------------------------------
 
 export async function initiateWithdrawal(
   playerId: string,

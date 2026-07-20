@@ -11,8 +11,8 @@ export const SYMBOLS_EMOJI = ['💎', '🌟', '🍀', '🔥', '💰', '❌']
 // the common 🔥/💰 symbols are the dominant lever, so they sit at 13% each.
 export const CUMULATIVE_WEIGHTS = [2, 7, 15, 28, 41, 100]
 
-// Multipliers: [symbol][matchCount] — matchCount clamped to 5. Scaled down from
-// the original table (which paid out ~232% RTP — a house loss) to a ~24% edge.
+// Multipliers: [symbol][matchCount] - matchCount clamped to 5. Scaled down from
+// the original table (which paid out ~232% RTP - a house loss) to a ~24% edge.
 export const PRIZE_MULTIPLIERS: Record<number, Record<number, number>> = {
   0: { 3: 19,  4: 57,  5: 190 }, // 💎
   1: { 3: 8,   4: 23,  5: 76  }, // 🌟

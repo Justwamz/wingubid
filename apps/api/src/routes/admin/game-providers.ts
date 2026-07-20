@@ -121,7 +121,7 @@ export async function adminGameProviderRoutes(app: FastifyInstance) {
     if (!rowCount) {
       return reply.status(400).send({ error: { code: 'VALIDATION_ERROR', message: `Unknown game slot: ${gameSlug}` } })
     }
-    // Upsert — if the game_slug is already mapped to another provider, replace it
+    // Upsert - if the game_slug is already mapped to another provider, replace it
     await pool.query(
       `INSERT INTO provider_games (provider_id, game_slug, provider_game_id, launch_url_template, active)
        VALUES ($1,$2,$3,$4,$5)

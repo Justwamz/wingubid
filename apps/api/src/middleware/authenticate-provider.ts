@@ -77,7 +77,7 @@ export async function authenticateProvider(
   // Single-use guard: a valid signature can otherwise be replayed within the
   // 60s timestamp window. Claim the signature in Redis (SET NX) with a TTL
   // longer than the window; a second use is rejected. Fail open on a Redis
-  // error so a cache blip doesn't break provider calls — the HMAC + timestamp
+  // error so a cache blip doesn't break provider calls - the HMAC + timestamp
   // window remain the primary protection.
   try {
     const claimed = await getRedis().set(`provider-nonce:${providerId}:${signature}`, '1', 'EX', 120, 'NX')

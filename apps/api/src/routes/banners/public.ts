@@ -22,12 +22,12 @@ async function getActiveBanner(placement: string) {
 }
 
 export async function bannerPublicRoutes(app: FastifyInstance) {
-  // Landing banner — no auth (public)
+  // Landing banner - no auth (public)
   app.get('/banners/landing', async (_req, reply) => {
     return reply.send({ banner: await getActiveBanner('landing') })
   })
 
-  // Lobby banner — requires player JWT
+  // Lobby banner - requires player JWT
   app.get('/banners/lobby', { preHandler: authenticate }, async (_req, reply) => {
     return reply.send({ banner: await getActiveBanner('lobby') })
   })

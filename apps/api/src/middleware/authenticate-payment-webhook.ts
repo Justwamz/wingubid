@@ -8,7 +8,7 @@ import { env } from '../env.js'
  * This is a shared-secret guard that FAILS CLOSED: callers must present the
  * configured secret in the `x-webhook-secret` header, and if no secret is
  * configured the endpoint rejects everything. That closes the forged-callback
- * hole while no real provider is connected — these routes are unused until a
+ * hole while no real provider is connected - these routes are unused until a
  * provider is wired up and a secret is set.
  *
  * IMPORTANT: before going live with a real provider you MUST additionally

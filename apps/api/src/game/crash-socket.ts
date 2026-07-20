@@ -4,7 +4,7 @@ import { verifyPlayerAccessToken } from '../lib/jwt.js'
 import { placeBet, cashout } from '../services/crash.service.js'
 import { addBetToRound, removeBetFromRound, getCurrentRound, sendCurrentStateTo } from './crash-loop.js'
 
-// Socket payloads are untrusted input just like HTTP bodies — validate with the
+// Socket payloads are untrusted input just like HTTP bodies - validate with the
 // same rules the HTTP game routes use. Without this, a negative grossStake would
 // credit the wallet (balance - (-x) = balance + x) instead of debiting it.
 const betPlaceSchema = z.object({

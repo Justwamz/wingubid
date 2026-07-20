@@ -60,7 +60,7 @@ describe('calculatePrize', () => {
   })
 
   it('returns best prize when multiple symbols match 3+', () => {
-    // 3x 💎 (×19) and 3x 🔥 (×2) — should return 💎 prize
+    // 3x 💎 (×19) and 3x 🔥 (×2) - should return 💎 prize
     const grid = [0, 0, 0, 3, 3, 3, 1, 2, 4]
     expect(calculatePrize(grid, 10000)).toBe(10000 * 19)
   })

@@ -49,7 +49,7 @@ describe('registerPlayer', () => {
   it('inserts a player and wallet then sends OTP', async () => {
     mockClientQuery
       .mockResolvedValueOnce({ rows: [] } as any)              // BEGIN
-      .mockResolvedValueOnce({ rows: [] } as any)              // phone check — not taken
+      .mockResolvedValueOnce({ rows: [] } as any)              // phone check - not taken
       .mockResolvedValueOnce({ rows: [{ id: 'new-id' }] } as any) // insert player
       .mockResolvedValueOnce({ rows: [] } as any)              // insert wallet
       .mockResolvedValueOnce({ rows: [] } as any)              // COMMIT

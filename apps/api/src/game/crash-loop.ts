@@ -103,13 +103,13 @@ async function tick(io: Server): Promise<void> {
       const multiplier = crashed ? crashPoint : rawMultiplier
       currentRound.multiplier = multiplier
 
-      // Flip status synchronously the instant we know the round crashed —
-      // before any await — so no manual cashout callback can interleave at an
+      // Flip status synchronously the instant we know the round crashed -
+      // before any await - so no manual cashout callback can interleave at an
       // await boundary and be paid at or above the crash point.
       if (crashed) currentRound.status = 'crashed'
 
       // Auto-cashout: only players whose target is strictly below the crash
-      // point win, and they are paid at their target — never at the (possibly
+      // point win, and they are paid at their target - never at the (possibly
       // overshooting) tick multiplier.
       for (const [playerId, bet] of Object.entries(currentRound.bets)) {
         if (bet.autoCashoutAt && bet.autoCashoutAt <= multiplier && bet.autoCashoutAt < crashPoint) {

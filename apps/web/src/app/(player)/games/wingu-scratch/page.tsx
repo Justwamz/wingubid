@@ -60,7 +60,7 @@ function detectWin(grid: number[]): boolean {
   return Object.values(counts).some(c => c >= 3)
 }
 
-// ─── Tile component ─────────────────────────────────────────────────────────
+// --- Tile component ---------------------------------------------------------
 
 interface TileProps {
   symbolIndex: number
@@ -121,7 +121,7 @@ function Tile({ symbolIndex, revealed, delayMs }: TileProps) {
   )
 }
 
-// ─── History mapping ─────────────────────────────────────────────────────────
+// --- History mapping ---------------------------------------------------------
 
 function cardToEntry(card: HistoryCard): BetHistoryEntry {
   return {
@@ -134,7 +134,7 @@ function cardToEntry(card: HistoryCard): BetHistoryEntry {
   }
 }
 
-// ─── Page ─────────────────────────────────────────────────────────────────────
+// --- Page ---------------------------------------------------------------------
 
 export default function WinguScratchPage() {
   const [selectedStake, setSelectedStake] = useState(DEFAULT_STAKE_CENTS)

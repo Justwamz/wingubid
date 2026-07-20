@@ -38,7 +38,7 @@ export function getPool(): Pool {
   return _pool
 }
 
-/** Convenience export — use getPool() if you need lazy initialisation in tests */
+/** Convenience export - use getPool() if you need lazy initialisation in tests */
 export const pool = {
   query: (...args: Parameters<Pool['query']>) => getPool().query(...(args as unknown as [any])),
   connect: () => getPool().connect(),

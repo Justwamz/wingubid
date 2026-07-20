@@ -2,7 +2,7 @@
 //
 // Safaricom subscriber prefixes (first 3 digits of the 9-digit subscriber
 // number, i.e. after +254). Derived from the national-format list:
-//   0110–0115, 0700–0729, 0740–0743, 0745–0748, 0757–0759, 0768–0769, 0790–0799
+//   0110-0115, 0700-0729, 0740-0743, 0745-0748, 0757-0759, 0768-0769, 0790-0799
 const SAFARICOM_PREFIXES: ReadonlySet<string> = (() => {
   const s = new Set<string>()
   const addRange = (a: number, b: number) => { for (let n = a; n <= b; n++) s.add(String(n)) }
@@ -19,7 +19,7 @@ const SAFARICOM_PREFIXES: ReadonlySet<string> = (() => {
 /**
  * Normalize a Kenyan mobile number to E.164 (+254 + 9 subscriber digits),
  * accepting `+254XXXXXXXXX`, `254XXXXXXXXX`, `0XXXXXXXXX`, or a bare 9-digit
- * `XXXXXXXXX` — with any spaces/dashes/parentheses. Returns null if it can't be
+ * `XXXXXXXXX` - with any spaces/dashes/parentheses. Returns null if it can't be
  * parsed to exactly 9 subscriber digits.
  */
 export function normalizeKePhone(input: string): string | null {

@@ -58,7 +58,7 @@ export async function adminWithdrawalRoutes(app: FastifyInstance) {
       await client.query('BEGIN')
 
       // Re-read and lock the withdrawal row; only proceed if it is still
-      // 'failed'. This makes concurrent/duplicate retries idempotent — the
+      // 'failed'. This makes concurrent/duplicate retries idempotent - the
       // loser sees a non-failed status and is rejected instead of double-debiting.
       const { rows: locked } = await client.query<{
         status: string; amount: number; player_id: string; wallet_id: string
@@ -74,7 +74,7 @@ export async function adminWithdrawalRoutes(app: FastifyInstance) {
       const amount = Number(locked[0].amount)
 
       // Lock the wallet and check funds. The balance was refunded when the
-      // withdrawal failed, so retrying debits it again — but the player may have
+      // withdrawal failed, so retrying debits it again - but the player may have
       // since spent it, so verify sufficiency and return a clean error.
       const { rows: wrows } = await client.query<{ balance: number }>(
         `SELECT balance FROM wallets WHERE player_id = $1 FOR UPDATE`,

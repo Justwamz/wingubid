@@ -65,7 +65,7 @@ export async function providerCreditRoutes(app: FastifyInstance) {
       return reply.send({ balance: Number(balRows[0].balance), transactionId })
     } catch (err) {
       await client.query('ROLLBACK')
-      // Lost a concurrent-duplicate race — return the winner's cached result.
+      // Lost a concurrent-duplicate race - return the winner's cached result.
       if ((err as { code?: string }).code === '23505') {
         const { rows } = await pool.query<{ id: string; balance_after: number }>(
           `SELECT id, balance_after FROM transactions WHERE idempotency_key = $1`,

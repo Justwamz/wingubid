@@ -178,7 +178,7 @@ export async function cashoutMines(
     await client.query('BEGIN')
     // Atomic guard: lock the bet and only pay out if it is still active. A
     // second concurrent cashout (or a racing mine-hit) blocks here, then finds
-    // 0 rows and is rejected — closing the double-payout race.
+    // 0 rows and is rejected - closing the double-payout race.
     const { rows } = await client.query<{ effective_stake: string }>(
       `SELECT effective_stake FROM bets
        WHERE id = $1 AND player_id = $2 AND status = 'active' FOR UPDATE`,
