@@ -2,6 +2,8 @@
 import { useState, useEffect } from 'react'
 import type { RoundStatus, MyBet } from '@/hooks/useCrashGame'
 import { CheckCircle2 } from 'lucide-react'
+import { DEFAULT_STAKE_KES } from '@/lib/gameConfig'
+import { QuickStakes } from '@/components/game/QuickStakes'
 
 interface Props {
   status: RoundStatus
@@ -15,7 +17,7 @@ interface Props {
 }
 
 export function BetPanel({ status, myBet, multiplier = 1, waitingEndsAt, error, connected, onPlaceBet, onCashout }: Props) {
-  const [stake, setStake] = useState('')
+  const [stake, setStake] = useState(String(DEFAULT_STAKE_KES))
   const [autoCashout, setAutoCashout] = useState('')
   const [showAuto, setShowAuto] = useState(false)
   const [secondsLeft, setSecondsLeft] = useState<number | null>(null)
@@ -61,18 +63,11 @@ export function BetPanel({ status, myBet, multiplier = 1, waitingEndsAt, error, 
         />
       </div>
 
-      <div className="flex gap-2">
-        {[100, 500, 1000].map(v => (
-          <button
-            key={v}
-            onClick={() => setStake(String(v))}
-            disabled={!canBet}
-            className="flex-1 bg-game-bg border border-game-border rounded-lg py-1 text-sm text-gray-300 hover:border-accent-cyan disabled:opacity-40"
-          >
-            +{v}
-          </button>
-        ))}
-      </div>
+      <QuickStakes
+        onSelect={v => setStake(String(v))}
+        disabled={!canBet}
+        activeValue={parseInt(stake) || undefined}
+      />
 
       <button
         onClick={() => setShowAuto(!showAuto)}

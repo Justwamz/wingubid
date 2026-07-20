@@ -4,6 +4,7 @@ import React, { useState, useEffect } from 'react'
 import { apiFetch } from '@/lib/apiFetch'
 import { refreshBalance } from '@/lib/auth'
 import { HowToPlay } from '@/components/game/HowToPlay'
+import { DEFAULT_STAKE_KES } from '@/lib/gameConfig'
 import { DollarSign, Ticket, Trophy } from 'lucide-react'
 
 const HOW_TO_PLAY = [
@@ -21,6 +22,10 @@ const STAKES = [
   { label: 'KES 100', cents: 10000 },
   { label: 'KES 200', cents: 20000 },
 ]
+
+// Default to the tile matching the shared default stake, else the first tile.
+const DEFAULT_STAKE_CENTS =
+  (STAKES.find(s => s.cents === DEFAULT_STAKE_KES * 100) ?? STAKES[0]).cents
 
 interface BuyResponse {
   cardId: string
@@ -154,7 +159,7 @@ function HistoryRow({ card }: { card: HistoryCard }) {
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
 export default function WinguScratchPage() {
-  const [selectedStake, setSelectedStake] = useState(STAKES[0].cents)
+  const [selectedStake, setSelectedStake] = useState(DEFAULT_STAKE_CENTS)
   const [buying, setBuying] = useState(false)
   const [error, setError] = useState<string | null>(null)
 

@@ -4,6 +4,8 @@ import React, { useState } from 'react'
 import { DiceSlider } from '@/components/game/DiceSlider'
 import { DiceFace } from '@/components/game/DiceFace'
 import { HowToPlay } from '@/components/game/HowToPlay'
+import { QuickStakes } from '@/components/game/QuickStakes'
+import { DEFAULT_STAKE_KES } from '@/lib/gameConfig'
 import { apiFetch } from '@/lib/apiFetch'
 import { refreshBalance } from '@/lib/auth'
 import { Target, ArrowUp, Dice6 } from 'lucide-react'
@@ -30,7 +32,7 @@ const HOW_TO_PLAY = [
 export default function WinguDicePage() {
   const [target, setTarget] = useState(50)
   const [direction, setDirection] = useState<Direction>('over')
-  const [grossStake, setGrossStake] = useState('')
+  const [grossStake, setGrossStake] = useState(String(DEFAULT_STAKE_KES))
   const [result, setResult] = useState<RollResult | null>(null)
   const [rolling, setRolling] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -127,6 +129,11 @@ export default function WinguDicePage() {
               value={grossStake}
               onChange={e => setGrossStake(e.target.value)}
               className="w-full bg-game-bg border border-game-border rounded-xl px-4 py-3 text-white placeholder-gray-600 focus:outline-none focus:border-accent-cyan text-sm"
+            />
+            <QuickStakes
+              onSelect={v => setGrossStake(String(v))}
+              disabled={rolling}
+              activeValue={parseInt(grossStake) || undefined}
             />
             {error && <p className="text-warning-coral text-sm">{error}</p>}
             <button

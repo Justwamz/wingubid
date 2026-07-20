@@ -4,6 +4,8 @@ import { useMinesGame } from '@/hooks/useMinesGame'
 import { MinesGrid } from '@/components/game/MinesGrid'
 import { MinesHistory } from '@/components/game/MinesHistory'
 import { HowToPlay } from '@/components/game/HowToPlay'
+import { QuickStakes } from '@/components/game/QuickStakes'
+import { DEFAULT_STAKE_KES } from '@/lib/gameConfig'
 import { Gem, Search, DollarSign } from 'lucide-react'
 
 const HOW_TO_PLAY = [
@@ -14,7 +16,7 @@ const HOW_TO_PLAY = [
 
 export default function WinguMinesPage() {
   const { game, loading, error, startGame, revealTile, cashout } = useMinesGame()
-  const [stake, setStake] = useState('')
+  const [stake, setStake] = useState(String(DEFAULT_STAKE_KES))
   const [gridSize, setGridSize] = useState(3)
   const [mineCount, setMineCount] = useState(2)
 
@@ -41,6 +43,10 @@ export default function WinguMinesPage() {
                 value={stake}
                 onChange={e => setStake(e.target.value)}
                 className="w-full bg-game-bg border border-game-border rounded-xl px-4 py-3 text-white font-mono focus:outline-none focus:border-accent-violet text-sm"
+              />
+              <QuickStakes
+                onSelect={v => setStake(String(v))}
+                activeValue={parseInt(stake) || undefined}
               />
               <div>
                 <p className="text-xs text-gray-500 mb-2 uppercase tracking-wide">Grid size</p>
