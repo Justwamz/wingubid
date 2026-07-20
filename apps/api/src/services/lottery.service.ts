@@ -9,11 +9,16 @@ export const TICKET_PRICES: Record<string, number> = {
   weekly: 50000,  // KES 500
 }
 
-const PRIZE_MULTIPLIERS: Record<string, Record<number, number>> = {
+export const PRIZE_MULTIPLIERS: Record<string, Record<number, number>> = {
   hourly: { 3: 100, 2: 5,  1: 1, 0: 0 },
   daily:  { 3: 300, 2: 8,  1: 1, 0: 0 },
   weekly: { 3: 1000, 2: 15, 1: 1, 0: 0 },
 }
+
+// Number pool players pick from (3 distinct numbers of 1..36). Used to derive
+// the fixed match odds for the read-only margin readout.
+export const LOTTERY_POOL = 36
+export const LOTTERY_PICK = 3
 
 export function draw3Numbers(): number[] {
   const numbers = new Set<number>()

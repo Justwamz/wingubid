@@ -7,10 +7,10 @@ import { AppError } from '../lib/errors.js'
 export const SYMBOLS_EMOJI = ['💎', '🌟', '🍀', '🔥', '💰', '❌']
 
 // Cumulative weights summing to 100: 💎=2, 🌟=5, 🍀=8, 🔥=15, 💰=15, ❌=55
-const CUMULATIVE_WEIGHTS = [2, 7, 15, 30, 45, 100]
+export const CUMULATIVE_WEIGHTS = [2, 7, 15, 30, 45, 100]
 
 // Multipliers: [symbol][matchCount] — matchCount clamped to 5
-const PRIZE_MULTIPLIERS: Record<number, Record<number, number>> = {
+export const PRIZE_MULTIPLIERS: Record<number, Record<number, number>> = {
   0: { 3: 50,  4: 150, 5: 500 }, // 💎
   1: { 3: 20,  4: 60,  5: 200 }, // 🌟
   2: { 3: 10,  4: 30,  5: 100 }, // 🍀

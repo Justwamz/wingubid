@@ -2,6 +2,7 @@ import { z } from 'zod'
 import type { FastifyInstance } from 'fastify'
 import { authenticateAdmin } from '../../middleware/authenticateAdmin.js'
 import { getHouseEdges, setHouseEdge } from '../../services/game-settings.service.js'
+import { getLotteryMargins, getScratchMargin } from '../../services/game-margins.service.js'
 
 // House edge is a percentage; bound it to a sane range so a typo can't make a
 // game unplayable or run at a loss.
@@ -10,7 +11,12 @@ const bodySchema = z.object({ crash: edge, mines: edge, dice: edge })
 
 export async function adminGameSettingsRoutes(app: FastifyInstance) {
   app.get('/admin/game-settings', { preHandler: authenticateAdmin }, async (_req, reply) => {
-    return reply.send({ houseEdge: await getHouseEdges() })
+    return reply.send({
+      houseEdge: await getHouseEdges(),
+      // Read-only: lotto and scratch margins are structural (fixed prize tables).
+      lottery: getLotteryMargins(),
+      scratch: getScratchMargin(),
+    })
   })
 
   app.put('/admin/game-settings', { preHandler: authenticateAdmin }, async (req, reply) => {
