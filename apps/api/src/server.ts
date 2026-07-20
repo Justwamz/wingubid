@@ -25,6 +25,7 @@ import { providerCreditRoutes } from './routes/provider/credit.js'
 import { providerRollbackRoutes } from './routes/provider/rollback.js'
 import { gameLeaderboardRoutes } from './routes/games/leaderboard.js'
 import { gameHistoryRoutes } from './routes/games/history.js'
+import { gameConfigRoutes } from './routes/games/config.js'
 import { minesRoutes } from './routes/games/mines.js'
 import { diceRoutes } from './routes/games/dice.js'
 import { scratchRoutes } from './routes/games/scratch.js'
@@ -37,6 +38,7 @@ import { adminGameProviderRoutes } from './routes/admin/game-providers.js'
 import { adminGameSlotRoutes } from './routes/admin/game-slots.js'
 import { adminPaymentConfigRoutes } from './routes/admin/payment-configs.js'
 import { adminSmsConfigRoutes } from './routes/admin/sms-config.js'
+import { adminGameSettingsRoutes } from './routes/admin/game-settings.js'
 import { adminWithdrawalRoutes } from './routes/admin/withdrawals.js'
 import { providerGameRoutes } from './routes/games/provider-games.js'
 
@@ -110,6 +112,7 @@ export function buildServer() {
 
   app.register(gameLeaderboardRoutes)
   app.register(gameHistoryRoutes)
+  app.register(gameConfigRoutes)
   app.register(minesRoutes)
   app.register(diceRoutes)
   app.register(scratchRoutes)
@@ -122,6 +125,7 @@ export function buildServer() {
   app.register(adminGameSlotRoutes)
   app.register(adminPaymentConfigRoutes)
   app.register(adminSmsConfigRoutes)
+  app.register(adminGameSettingsRoutes)
   app.register(adminWithdrawalRoutes)
   app.register(providerGameRoutes)
 

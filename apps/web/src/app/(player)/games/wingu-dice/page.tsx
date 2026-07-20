@@ -34,12 +34,22 @@ export default function WinguDicePage() {
   const [spinValue, setSpinValue] = useState<number | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [rollCount, setRollCount] = useState(0)
+  const [houseEdge, setHouseEdge] = useState(5)
   const spinRef = useRef<ReturnType<typeof setInterval> | null>(null)
 
   useEffect(() => () => { if (spinRef.current) clearInterval(spinRef.current) }, [])
 
+  // Load the configured house edge so the displayed multiplier always matches
+  // what the server actually pays.
+  useEffect(() => {
+    apiFetch<{ houseEdge: { dice: number } }>('/games/config')
+      .then(d => { if (d?.houseEdge?.dice != null) setHouseEdge(d.houseEdge.dice) })
+      .catch(() => {})
+  }, [])
+
   const winChance = direction === 'over' ? 100 - target : target
-  const multiplier = winChance > 0 ? parseFloat((99 / winChance).toFixed(4)) : 0
+  // Mirror the server payout formula exactly (floored to 2 decimals).
+  const multiplier = winChance > 0 ? Math.floor(((100 - houseEdge) / winChance) * 100) / 100 : 0
   const potentialWin = Math.floor((parseFloat(grossStake) || 0) * multiplier)
 
   async function handleRoll() {
@@ -137,7 +147,7 @@ export default function WinguDicePage() {
               <div className="flex items-center gap-2 text-sm text-gray-400">
                 <span><span className="text-white font-bold">{winChance}%</span> chance</span>
                 <span className="text-gray-600">·</span>
-                <span>pays <span className="text-accent-cyan font-bold">{multiplier}×</span></span>
+                <span>pays <span className="text-accent-cyan font-bold">{multiplier.toFixed(2)}×</span></span>
               </div>
               <p className="text-xs text-gray-600">Smaller green zone = bigger payout</p>
             </div>
