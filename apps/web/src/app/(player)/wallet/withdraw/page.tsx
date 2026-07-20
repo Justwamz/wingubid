@@ -26,7 +26,7 @@ function statusBadge(status: string) {
 export default function WithdrawPage() {
   const [amount, setAmount] = useState('')
   const [loading, setLoading] = useState(false)
-  const [success, setSuccess] = useState<{ balance: number; withdrawn: number } | null>(null)
+  const [success, setSuccess] = useState<{ status: string; balance: number; withdrawn?: number } | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [history, setHistory] = useState<Withdrawal[]>([])
 
@@ -45,7 +45,7 @@ export default function WithdrawPage() {
     }
     setLoading(true)
     setError(null)
-    const { data, error: apiError } = await apiFetch<{ balance: number; withdrawn: number }>(
+    const { data, error: apiError } = await apiFetch<{ status: string; balance: number; withdrawn?: number }>(
       '/wallet/demo-withdraw',
       { method: 'POST', body: JSON.stringify({ amount: parsed * 100 }) },
     )
@@ -56,24 +56,30 @@ export default function WithdrawPage() {
     }
     if (data) {
       refreshBalance()
-      setSuccess(data)
+      setSuccess({ status: data.status, balance: data.balance, withdrawn: data.withdrawn ?? parsed * 100 })
       setAmount('')
       loadHistory()
     }
   }
 
   if (success) {
+    const pending = success.status === 'awaiting_approval'
     return (
       <div className="max-w-lg mx-auto px-4 py-16 flex flex-col items-center gap-6 text-center">
-        <div className="w-20 h-20 rounded-full bg-green-500/10 border border-green-500/30 flex items-center justify-center">
-          <CheckCircle2 size={48} className="text-green-400" />
+        <div className={`w-20 h-20 rounded-full flex items-center justify-center ${pending ? 'bg-yellow-500/10 border border-yellow-500/30' : 'bg-green-500/10 border border-green-500/30'}`}>
+          <CheckCircle2 size={48} className={pending ? 'text-yellow-400' : 'text-green-400'} />
         </div>
         <div>
-          <p className="text-gray-400 text-sm">Withdrawal submitted</p>
+          <p className="text-gray-400 text-sm">{pending ? 'Withdrawal pending approval' : 'Withdrawal submitted'}</p>
           <p className="text-4xl font-mono font-bold text-accent-cyan mt-1">
-            KES {(success.withdrawn / 100).toLocaleString('en-KE', { minimumFractionDigits: 2 })}
+            KES {((success.withdrawn ?? 0) / 100).toLocaleString('en-KE', { minimumFractionDigits: 2 })}
           </p>
         </div>
+        {pending && (
+          <p className="text-yellow-300/90 text-sm max-w-sm">
+            This amount is larger than usual, so it needs a quick review before it&apos;s sent. We&apos;ll process it shortly - the funds are held from your balance in the meantime.
+          </p>
+        )}
         <p className="text-gray-400 text-sm">
           Remaining balance:{' '}
           <span className="text-white font-mono">

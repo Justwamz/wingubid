@@ -1,6 +1,22 @@
-import type { FastifyInstance } from 'fastify'
+import { z } from 'zod'
+import type { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify'
 import { authenticateAdmin } from '../../middleware/authenticateAdmin.js'
 import { pool } from '@betting/db'
+import { approveWithdrawal, rejectWithdrawal } from '../../services/payment.service.js'
+import { getWithdrawalThreshold, setWithdrawalThreshold } from '../../services/game-settings.service.js'
+import { AppError } from '../../lib/errors.js'
+
+const APPROVER_ROLES = ['finance', 'super_admin']
+
+// Separation of duty: only finance/super_admin may approve/reject or change the
+// threshold. Returns true if the request may proceed; otherwise sends 403.
+function requireApprover(req: FastifyRequest, reply: FastifyReply): boolean {
+  if (!APPROVER_ROLES.includes(req.adminRole)) {
+    reply.status(403).send({ error: { code: 'FORBIDDEN', message: 'Only Finance or Super Admin can perform this action.' } })
+    return false
+  }
+  return true
+}
 
 export async function adminWithdrawalRoutes(app: FastifyInstance) {
   // List all withdrawals with player info
@@ -31,6 +47,53 @@ export async function adminWithdrawalRoutes(app: FastifyInstance) {
        LIMIT 200`,
     )
     return reply.send({ withdrawals: rows })
+  })
+
+  // Maker-checker approval threshold (cents).
+  app.get('/admin/withdrawal-config', { preHandler: authenticateAdmin }, async (_req, reply) => {
+    return reply.send({ approvalThreshold: await getWithdrawalThreshold() })
+  })
+
+  app.put('/admin/withdrawal-config', { preHandler: authenticateAdmin }, async (req, reply) => {
+    if (!requireApprover(req, reply)) return
+    const parsed = z.object({
+      approvalThreshold: z.number().int().min(0, 'Threshold cannot be negative.'),
+    }).safeParse(req.body)
+    if (!parsed.success) {
+      return reply.status(400).send({ error: { code: 'VALIDATION_ERROR', message: parsed.error.issues[0].message } })
+    }
+    await setWithdrawalThreshold(parsed.data.approvalThreshold)
+    return reply.send({ approvalThreshold: parsed.data.approvalThreshold })
+  })
+
+  // Approve an above-threshold withdrawal (finance/super_admin only).
+  app.post('/admin/withdrawals/:id/approve', { preHandler: authenticateAdmin }, async (req, reply) => {
+    if (!requireApprover(req, reply)) return
+    const { id } = req.params as { id: string }
+    try {
+      await approveWithdrawal(id, req.adminId)
+      return reply.send({ ok: true })
+    } catch (err) {
+      if (err instanceof AppError) return reply.status(err.statusCode).send({ error: { code: err.code, message: err.message } })
+      throw err
+    }
+  })
+
+  // Reject an above-threshold withdrawal and return the funds (finance/super_admin only).
+  app.post('/admin/withdrawals/:id/reject', { preHandler: authenticateAdmin }, async (req, reply) => {
+    if (!requireApprover(req, reply)) return
+    const { id } = req.params as { id: string }
+    const parsed = z.object({ reason: z.string().max(500).optional() }).safeParse(req.body ?? {})
+    if (!parsed.success) {
+      return reply.status(400).send({ error: { code: 'VALIDATION_ERROR', message: parsed.error.issues[0].message } })
+    }
+    try {
+      await rejectWithdrawal(id, req.adminId, parsed.data.reason)
+      return reply.send({ ok: true })
+    } catch (err) {
+      if (err instanceof AppError) return reply.status(err.statusCode).send({ error: { code: err.code, message: err.message } })
+      throw err
+    }
   })
 
   // Retry a failed withdrawal (simulated: mark as completed and refund nothing)

@@ -4,6 +4,8 @@ import { AppError } from '../lib/errors.js'
 import { getProvider } from './providers/index.js'
 import { creditDeposit, lockForWithdrawal, settleWithdrawal } from './wallet.service.js'
 import { calculateTax } from './tax.service.js'
+import { getWithdrawalThreshold } from './game-settings.service.js'
+import { notifyWithdrawal } from './email.service.js'
 
 // --- Deposit ----------------------------------------------------------------
 
@@ -174,11 +176,11 @@ export async function initiateWithdrawal(
   playerId: string,
   amount: number,
   providerName: string,
-): Promise<{ transactionId: string; providerRef: string }> {
+): Promise<{ transactionId: string; providerRef?: string; status: string }> {
   const { rows: pRows } = await pool.query<{
-    id: string; phone: string; currency: string; country: string
+    id: string; name: string; phone: string; currency: string; country: string
   }>(
-    `SELECT id, phone, currency, country FROM players WHERE id = $1`,
+    `SELECT id, name, phone, currency, country FROM players WHERE id = $1`,
     [playerId],
   )
   if (pRows.length === 0) throw new AppError('NOT_FOUND', 'Player not found', 404)
@@ -244,7 +246,21 @@ export async function initiateWithdrawal(
     client.release()
   }
 
-  // Call provider (outside transaction)
+  const notify = { id: paymentTxId, amount, phone: player.phone, player: player.name, provider: providerName }
+
+  // Maker-checker: withdrawals above the configured threshold are held for an
+  // admin decision (funds stay locked) instead of being paid out immediately.
+  const threshold = await getWithdrawalThreshold()
+  if (amount > threshold) {
+    await pool.query(
+      `UPDATE payment_transactions SET status = 'awaiting_approval', updated_at = NOW() WHERE id = $1`,
+      [paymentTxId],
+    )
+    await notifyWithdrawal('needs_approval', notify)
+    return { transactionId: paymentTxId, status: 'awaiting_approval' }
+  }
+
+  // Below threshold: proceed to the provider as usual.
   const provider = getProvider(providerName)
   const result = await provider.withdraw({
     playerId,
@@ -262,7 +278,8 @@ export async function initiateWithdrawal(
     [providerRef, paymentTxId],
   )
 
-  return { transactionId: paymentTxId, providerRef }
+  await notifyWithdrawal('initiated', notify)
+  return { transactionId: paymentTxId, providerRef, status: 'awaiting_callback' }
 }
 
 export async function confirmWithdrawal(
@@ -313,4 +330,99 @@ export async function confirmWithdrawal(
   } finally {
     client.release()
   }
+}
+
+// --- Maker-checker approval ------------------------------------------------
+
+/**
+ * Approve an awaiting_approval withdrawal. The payout is currently stubbed (no
+ * live provider), so approval settles the locked funds as completed - the same
+ * way the demo path and the failed-withdrawal retry already complete. When real
+ * Daraja B2C is wired, this is where the payout call goes.
+ */
+export async function approveWithdrawal(id: string, adminId: string): Promise<void> {
+  const client = await pool.connect()
+  let notifyCtx: { id: string; amount: number; phone: string; player: string; provider: string; adminId: string } | null = null
+  try {
+    await client.query('BEGIN')
+    const { rows } = await client.query<{
+      player_id: string; amount: string; net_amount: string | null; status: string; provider: string
+    }>(
+      `SELECT player_id, amount, net_amount, status, provider
+       FROM payment_transactions WHERE id = $1 AND type = 'withdrawal' FOR UPDATE`,
+      [id],
+    )
+    if (rows.length === 0) throw new AppError('NOT_FOUND', 'Withdrawal not found.', 404)
+    if (rows[0].status !== 'awaiting_approval') {
+      throw new AppError('INVALID_STATE', 'This withdrawal is not awaiting approval.', 422)
+    }
+    const amount = Number(rows[0].amount)
+    const netPayout = rows[0].net_amount != null ? Number(rows[0].net_amount) : amount
+    // Drain the locked funds and record the completed payout.
+    await settleWithdrawal(client, rows[0].player_id, amount, netPayout, true, { approved: true, adminId })
+    await client.query(
+      `UPDATE payment_transactions SET status = 'completed', updated_at = NOW() WHERE id = $1`,
+      [id],
+    )
+    await client.query(
+      `INSERT INTO admin_audit_log (admin_id, action, entity, entity_id, before, after)
+       VALUES ($1, 'withdrawal_approve', 'payment_transaction', $2, $3::jsonb, $4::jsonb)`,
+      [adminId, id, JSON.stringify({ status: 'awaiting_approval' }), JSON.stringify({ status: 'completed' })],
+    )
+    const { rows: pr } = await client.query<{ name: string; phone: string }>(
+      `SELECT name, phone FROM players WHERE id = $1`, [rows[0].player_id],
+    )
+    await client.query('COMMIT')
+    notifyCtx = { id, amount, phone: pr[0].phone, player: pr[0].name, provider: rows[0].provider, adminId }
+  } catch (err) {
+    await client.query('ROLLBACK')
+    throw err
+  } finally {
+    client.release()
+  }
+  if (notifyCtx) await notifyWithdrawal('approved', notifyCtx)
+}
+
+/** Reject an awaiting_approval withdrawal and return the locked funds. */
+export async function rejectWithdrawal(id: string, adminId: string, reason?: string): Promise<void> {
+  const client = await pool.connect()
+  let notifyCtx: { id: string; amount: number; phone: string; player: string; provider: string; adminId: string } | null = null
+  try {
+    await client.query('BEGIN')
+    const { rows } = await client.query<{
+      player_id: string; amount: string; net_amount: string | null; status: string; provider: string
+    }>(
+      `SELECT player_id, amount, net_amount, status, provider
+       FROM payment_transactions WHERE id = $1 AND type = 'withdrawal' FOR UPDATE`,
+      [id],
+    )
+    if (rows.length === 0) throw new AppError('NOT_FOUND', 'Withdrawal not found.', 404)
+    if (rows[0].status !== 'awaiting_approval') {
+      throw new AppError('INVALID_STATE', 'This withdrawal is not awaiting approval.', 422)
+    }
+    const amount = Number(rows[0].amount)
+    const netPayout = rows[0].net_amount != null ? Number(rows[0].net_amount) : amount
+    // Return the locked funds to the player's balance.
+    await settleWithdrawal(client, rows[0].player_id, amount, netPayout, false, { rejected: true, adminId, reason: reason ?? null })
+    await client.query(
+      `UPDATE payment_transactions SET status = 'rejected', failure_reason = $2, updated_at = NOW() WHERE id = $1`,
+      [id, reason ?? 'Rejected by admin'],
+    )
+    await client.query(
+      `INSERT INTO admin_audit_log (admin_id, action, entity, entity_id, before, after)
+       VALUES ($1, 'withdrawal_reject', 'payment_transaction', $2, $3::jsonb, $4::jsonb)`,
+      [adminId, id, JSON.stringify({ status: 'awaiting_approval' }), JSON.stringify({ status: 'rejected', reason: reason ?? null })],
+    )
+    const { rows: pr } = await client.query<{ name: string; phone: string }>(
+      `SELECT name, phone FROM players WHERE id = $1`, [rows[0].player_id],
+    )
+    await client.query('COMMIT')
+    notifyCtx = { id, amount, phone: pr[0].phone, player: pr[0].name, provider: rows[0].provider, adminId }
+  } catch (err) {
+    await client.query('ROLLBACK')
+    throw err
+  } finally {
+    client.release()
+  }
+  if (notifyCtx) await notifyWithdrawal('rejected', notifyCtx)
 }
