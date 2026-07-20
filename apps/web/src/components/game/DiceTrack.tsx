@@ -6,28 +6,31 @@ interface Props {
   direction: 'over' | 'under'
   result: number | null
   won: boolean | null
-  rolling?: boolean
+  // Live 0–100 value while the roll is spinning; drives the sweeping marker.
+  rollingValue?: number | null
 }
 
 const WIN = '#00C896'
 const LOSE = '#FF4E50'
+const NEUTRAL = '#e5e7eb'
 
 // The dice track IS the result surface: a green win zone and a red lose zone
 // split at the target, with the rolled number dropping onto the exact spot so a
 // player can see why they won or lost. Axis is 0–100; position(v) = v%.
-export function DiceTrack({ target, onChange, direction, result, won, rolling }: Props) {
+export function DiceTrack({ target, onChange, direction, result, won, rollingValue }: Props) {
   const winRight = direction === 'over' // win zone is to the RIGHT of the target
   const betText = direction === 'over'
     ? `Roll above ${target} to win`
     : `Roll below ${target} to win`
 
+  // Marker position + colour: while spinning, follow the live value in a neutral
+  // colour; once landed, sit on the result coloured by win/loss.
+  const isSpinning = rollingValue != null
+  const markerValue = isSpinning ? rollingValue! : result
+  const markerColor = isSpinning ? NEUTRAL : (won ? WIN : LOSE)
+
   return (
     <div className="space-y-3">
-      {/* Plain-language bet line */}
-      <p className="text-center text-sm text-gray-300">
-        {betText}
-      </p>
-
       {/* Track */}
       <div className="dice-track relative h-14 select-none">
         {/* Zones */}
@@ -70,23 +73,23 @@ export function DiceTrack({ target, onChange, direction, result, won, rolling }:
           </span>
         </div>
 
-        {/* Result marker */}
-        {result != null && (
+        {/* Result / rolling marker */}
+        {markerValue != null && (
           <div
-            className={`dice-marker absolute -bottom-1 flex flex-col items-center z-20 ${rolling ? 'opacity-60' : ''}`}
-            style={{ left: `${result}%`, transform: 'translateX(-50%)' }}
+            className={`${isSpinning ? 'dice-marker-spin' : 'dice-marker-land'} absolute -bottom-1 flex flex-col items-center z-20`}
+            style={{ left: `${markerValue}%`, transform: 'translateX(-50%)' }}
           >
             <span
-              className="text-sm font-mono font-extrabold rounded-md px-2 py-0.5 shadow-lg"
+              className="text-sm font-mono font-extrabold rounded-md px-2 py-0.5 shadow-lg tabular-nums"
               style={{
                 color: '#0a0a0a',
-                background: won ? WIN : LOSE,
-                boxShadow: `0 0 12px ${won ? WIN : LOSE}99`,
+                background: markerColor,
+                boxShadow: `0 0 12px ${markerColor}99`,
               }}
             >
-              {result}
+              {markerValue}
             </span>
-            <span style={{ color: won ? WIN : LOSE, lineHeight: 1 }}>▲</span>
+            <span style={{ color: markerColor, lineHeight: 1 }}>▲</span>
           </div>
         )}
 

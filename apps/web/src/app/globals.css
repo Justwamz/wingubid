@@ -16,5 +16,15 @@
 .dice-range { -webkit-appearance: none; appearance: none; background: transparent; }
 .dice-range::-webkit-slider-thumb { -webkit-appearance: none; appearance: none; width: 28px; height: 56px; cursor: grab; }
 .dice-range::-moz-range-thumb { width: 28px; height: 56px; border: none; background: transparent; cursor: grab; }
-.dice-marker { transition: left 0.6s cubic-bezier(0.22, 1, 0.36, 1); }
-@media (prefers-reduced-motion: reduce) { .dice-marker { transition: none; } }
+.dice-marker-spin { transition: left 0.09s linear; }
+.dice-marker-land { transition: left 0.6s cubic-bezier(0.22, 1, 0.36, 1); }
+@keyframes dice-pop {
+  0% { transform: scale(0.8); opacity: 0; }
+  60% { transform: scale(1.08); }
+  100% { transform: scale(1); opacity: 1; }
+}
+.dice-pop { animation: dice-pop 0.45s cubic-bezier(0.22, 1, 0.36, 1); }
+@media (prefers-reduced-motion: reduce) {
+  .dice-marker-spin, .dice-marker-land { transition: none; }
+  .dice-pop { animation: none; }
+}

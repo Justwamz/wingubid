@@ -4,14 +4,14 @@ import { render, screen } from '@testing-library/react'
 import { DiceTrack } from '../DiceTrack'
 
 describe('DiceTrack', () => {
-  it('describes the bet in plain language for HIGH', () => {
+  it('labels the target control with the bet, HIGH', () => {
     render(<DiceTrack target={50} onChange={vi.fn()} direction="over" result={null} won={null} />)
-    expect(screen.getByText(/roll above 50 to win/i)).toBeTruthy()
+    expect(screen.getByRole('slider', { name: /roll above 50 to win/i })).toBeTruthy()
   })
 
-  it('describes the bet in plain language for LOW', () => {
+  it('labels the target control with the bet, LOW', () => {
     render(<DiceTrack target={30} onChange={vi.fn()} direction="under" result={null} won={null} />)
-    expect(screen.getByText(/roll below 30 to win/i)).toBeTruthy()
+    expect(screen.getByRole('slider', { name: /roll below 30 to win/i })).toBeTruthy()
   })
 
   it('exposes an accessible target range control', () => {
@@ -22,8 +22,13 @@ describe('DiceTrack', () => {
     expect(slider.max).toBe('99')
   })
 
-  it('renders the rolled number on the track when there is a result', () => {
-    render(<DiceTrack target={50} onChange={vi.fn()} direction="over" result={73} won={true} />)
+  it('shows the live spinning value while rolling', () => {
+    render(<DiceTrack target={50} onChange={vi.fn()} direction="over" result={null} won={null} rollingValue={42} />)
+    expect(screen.getByText('42')).toBeTruthy()
+  })
+
+  it('shows the landed result number once rolling stops', () => {
+    render(<DiceTrack target={50} onChange={vi.fn()} direction="over" result={73} won={true} rollingValue={null} />)
     expect(screen.getByText('73')).toBeTruthy()
   })
 })

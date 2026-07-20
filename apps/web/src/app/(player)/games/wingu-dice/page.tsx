@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState } from 'react'
+import React, { useState, useRef, useEffect } from 'react'
 import { DiceTrack } from '@/components/game/DiceTrack'
 import { HowToPlay } from '@/components/game/HowToPlay'
 import { GameBetHistory } from '@/components/game/GameBetHistory'
@@ -31,26 +31,42 @@ export default function WinguDicePage() {
   const [grossStake, setGrossStake] = useState(String(DEFAULT_STAKE_KES))
   const [result, setResult] = useState<RollResult | null>(null)
   const [rolling, setRolling] = useState(false)
+  const [spinValue, setSpinValue] = useState<number | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [rollCount, setRollCount] = useState(0)
+  const spinRef = useRef<ReturnType<typeof setInterval> | null>(null)
+
+  useEffect(() => () => { if (spinRef.current) clearInterval(spinRef.current) }, [])
 
   const winChance = direction === 'over' ? 100 - target : target
   const multiplier = winChance > 0 ? parseFloat((99 / winChance).toFixed(4)) : 0
+  const potentialWin = Math.floor((parseFloat(grossStake) || 0) * multiplier)
 
   async function handleRoll() {
     const stake = parseFloat(grossStake)
     if (!stake || stake <= 0) return
     setRolling(true)
     setError(null)
+    setResult(null)
+    // Odometer spin: cycle random numbers so the roll clearly feels like it's
+    // happening, for at least ~1.4s of suspense before it lands.
+    setSpinValue(Math.floor(Math.random() * 101))
+    spinRef.current = setInterval(() => setSpinValue(Math.floor(Math.random() * 101)), 60)
+    const started = Date.now()
     try {
       const data = await apiFetch<RollResult>('/games/dice/roll', {
         method: 'POST',
         body: JSON.stringify({ grossStake: Math.floor(stake * 100), target, direction }),
       })
+      await new Promise(r => setTimeout(r, Math.max(0, 1400 - (Date.now() - started))))
+      if (spinRef.current) { clearInterval(spinRef.current); spinRef.current = null }
+      setSpinValue(null)
       setResult(data)
       setRollCount(c => c + 1)
       refreshBalance()
     } catch (e: unknown) {
+      if (spinRef.current) { clearInterval(spinRef.current); spinRef.current = null }
+      setSpinValue(null)
       setError(e instanceof Error ? e.message : "Your roll couldn't be completed. Please try again.")
     } finally {
       setRolling(false)
@@ -64,6 +80,10 @@ export default function WinguDicePage() {
         <span className="text-xs px-2 py-1 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 font-mono">INSTANT</span>
       </div>
 
+      <p className="text-sm text-gray-500">
+        A random number from 0–100 is rolled — you win if it lands in your green zone.
+      </p>
+
       <HowToPlay steps={HOW_TO_PLAY} />
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
@@ -71,41 +91,55 @@ export default function WinguDicePage() {
         <div className="lg:col-span-2 space-y-4">
           {/* Result display */}
           <div className="bg-game-card border border-game-border rounded-2xl p-6 flex flex-col items-center gap-4">
-            {result ? (
+            {rolling ? (
               <div className="text-center">
-                <p className="text-6xl font-extrabold tabular-nums" style={{ color: result.won ? '#00C896' : '#FF4E50' }}>
+                <p className="text-6xl font-extrabold tabular-nums text-white">{spinValue ?? 0}</p>
+                <p className="text-lg font-bold mt-1 text-gray-400 animate-pulse">Rolling…</p>
+              </div>
+            ) : result ? (
+              <div key={rollCount} className="text-center">
+                <p className="dice-pop text-6xl font-extrabold tabular-nums" style={{ color: result.won ? '#00C896' : '#FF4E50' }}>
                   {result.roll}
                 </p>
-                <p className={`text-lg font-bold mt-1 ${result.won ? 'text-accent-cyan' : 'text-warning-coral'}`}>
+                <p className={`dice-pop text-lg font-bold mt-1 ${result.won ? 'text-accent-cyan' : 'text-warning-coral'}`}>
                   {result.won ? `WIN · +KES ${(result.winnings / 100).toFixed(0)}` : 'LOSS'}
                 </p>
               </div>
             ) : (
-              <p className="text-gray-500 text-lg py-2">Set your target and roll</p>
+              <p className="text-gray-500 text-lg py-2">Set your bet and roll</p>
             )}
 
-            {/* Direction buttons */}
-            <div className="flex gap-3 w-full max-w-xs">
-              {(['over', 'under'] as Direction[]).map(d => (
-                <button
-                  key={d}
-                  onClick={() => setDirection(d)}
-                  className={`flex-1 py-2.5 rounded-xl font-bold text-sm transition-all ${
-                    direction === d
-                      ? 'bg-accent-violet text-white shadow-lg shadow-violet-900/30'
-                      : 'bg-game-bg text-gray-400 border border-game-border hover:border-gray-500'
-                  }`}
-                >
-                  {d === 'over' ? '⬆ HIGH' : '⬇ LOW'}
-                </button>
-              ))}
+            {/* One-sentence bet */}
+            <div className="flex flex-wrap items-center justify-center gap-2 text-base">
+              <span className="text-gray-400">Bet the roll lands</span>
+              <div className="inline-flex rounded-lg overflow-hidden border border-game-border">
+                {(['over', 'under'] as Direction[]).map(d => (
+                  <button
+                    key={d}
+                    onClick={() => setDirection(d)}
+                    disabled={rolling}
+                    className={`px-3 py-1.5 text-sm font-bold transition-colors disabled:opacity-50 ${
+                      direction === d ? 'text-black' : 'bg-game-bg text-gray-400 hover:text-white'
+                    }`}
+                    style={direction === d ? { background: '#00C896' } : undefined}
+                  >
+                    {d === 'over' ? 'OVER' : 'UNDER'}
+                  </button>
+                ))}
+              </div>
+              <span className="text-white font-extrabold text-lg tabular-nums">{target}</span>
+              <span className="text-gray-400">— win</span>
+              <span className="font-extrabold" style={{ color: '#00C896' }}>KES {potentialWin.toLocaleString('en-KE')}</span>
             </div>
 
-            {/* Stats */}
-            <div className="flex gap-8 text-center">
-              <div><p className="text-white font-bold text-lg">{target}</p><p className="text-gray-500 text-xs">Target</p></div>
-              <div><p className="text-white font-bold text-lg">{winChance}%</p><p className="text-gray-500 text-xs">Win Chance</p></div>
-              <div><p className="text-accent-cyan font-bold text-lg">{multiplier}×</p><p className="text-gray-500 text-xs">Multiplier</p></div>
+            {/* Chance / multiplier */}
+            <div className="flex flex-col items-center gap-1">
+              <div className="flex items-center gap-2 text-sm text-gray-400">
+                <span><span className="text-white font-bold">{winChance}%</span> chance</span>
+                <span className="text-gray-600">·</span>
+                <span>pays <span className="text-accent-cyan font-bold">{multiplier}×</span></span>
+              </div>
+              <p className="text-xs text-gray-600">Smaller green zone = bigger payout</p>
             </div>
           </div>
 
@@ -117,7 +151,7 @@ export default function WinguDicePage() {
               direction={direction}
               result={result?.roll ?? null}
               won={result?.won ?? null}
-              rolling={rolling}
+              rollingValue={spinValue}
             />
           </div>
 
