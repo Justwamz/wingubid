@@ -16,6 +16,7 @@ import { walletBalanceRoutes } from './routes/wallet/balance.js'
 import { walletDepositRoutes } from './routes/wallet/deposit.js'
 import { walletWithdrawRoutes } from './routes/wallet/withdraw.js'
 import { mpesaWebhookRoutes } from './routes/webhooks/mpesa.js'
+import { mpesaC2bRoutes } from './routes/webhooks/mpesa-c2b.js'
 import { mtnWebhookRoutes } from './routes/webhooks/mtn.js'
 import { airtelWebhookRoutes } from './routes/webhooks/airtel.js'
 import { stubWebhookRoutes } from './routes/webhooks/stub.js'
@@ -40,6 +41,7 @@ import { adminPaymentConfigRoutes } from './routes/admin/payment-configs.js'
 import { adminSmsConfigRoutes } from './routes/admin/sms-config.js'
 import { adminGameSettingsRoutes } from './routes/admin/game-settings.js'
 import { adminWithdrawalRoutes } from './routes/admin/withdrawals.js'
+import { adminC2bRoutes } from './routes/admin/c2b.js'
 import { providerGameRoutes } from './routes/games/provider-games.js'
 
 export function buildServer() {
@@ -101,6 +103,7 @@ export function buildServer() {
   app.register(walletWithdrawRoutes)
 
   app.register(mpesaWebhookRoutes)
+  app.register(mpesaC2bRoutes)
   app.register(mtnWebhookRoutes)
   app.register(airtelWebhookRoutes)
   app.register(stubWebhookRoutes)
@@ -127,6 +130,7 @@ export function buildServer() {
   app.register(adminSmsConfigRoutes)
   app.register(adminGameSettingsRoutes)
   app.register(adminWithdrawalRoutes)
+  app.register(adminC2bRoutes)
   app.register(providerGameRoutes)
 
   app.setErrorHandler((error, _req, reply) => {

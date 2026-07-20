@@ -20,10 +20,11 @@ interface PaymentConfig {
 // ---------------------------------------------------------------------------
 
 const MPESA_FIELDS = [
-  { key: 'consumerKey',    label: 'Consumer Key',          type: 'text',     placeholder: 'From Daraja portal' },
-  { key: 'consumerSecret', label: 'Consumer Secret',       type: 'password', placeholder: 'From Daraja portal' },
-  { key: 'shortCode',      label: 'Business Short Code',   type: 'text',     placeholder: '174379 (paybill or till)' },
-  { key: 'passkey',        label: 'Lipa Na M-Pesa Passkey',type: 'password', placeholder: 'From Daraja portal' },
+  { key: 'consumerKey',       label: 'Consumer Key',              type: 'text',     placeholder: 'From Daraja portal' },
+  { key: 'consumerSecret',    label: 'Consumer Secret',           type: 'password', placeholder: 'From Daraja portal' },
+  { key: 'depositShortCode',  label: 'Deposit Paybill (C2B)',     type: 'text',     placeholder: 'Paybill customers pay into' },
+  { key: 'withdrawShortCode', label: 'Withdrawal Shortcode (B2C)',type: 'text',     placeholder: 'Shortcode payouts are sent from' },
+  { key: 'passkey',           label: 'Lipa Na M-Pesa Passkey',    type: 'password', placeholder: 'From Daraja portal' },
 ]
 
 const AIRTEL_FIELDS = [
