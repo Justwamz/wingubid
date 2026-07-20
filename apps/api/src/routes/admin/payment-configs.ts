@@ -7,7 +7,7 @@ type Provider = typeof PROVIDERS[number]
 
 // Fields that should be masked in API responses
 const SENSITIVE_FIELDS: Record<Provider, string[]> = {
-  mpesa:  ['consumerSecret', 'passkey'],
+  mpesa:  ['consumerSecret', 'passkey', 'withdrawSecurityCredential'],
   airtel: ['clientSecret'],
 }
 

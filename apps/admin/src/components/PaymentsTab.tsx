@@ -19,19 +19,23 @@ interface PaymentConfig {
 // Field definitions per provider
 // ---------------------------------------------------------------------------
 
-const MPESA_FIELDS = [
-  { key: 'consumerKey',       label: 'Consumer Key',              type: 'text',     placeholder: 'From Daraja portal' },
-  { key: 'consumerSecret',    label: 'Consumer Secret',           type: 'password', placeholder: 'From Daraja portal' },
-  { key: 'depositShortCode',  label: 'Deposit Paybill (C2B)',     type: 'text',     placeholder: 'Paybill customers pay into' },
-  { key: 'withdrawShortCode', label: 'Withdrawal Shortcode (B2C)',type: 'text',     placeholder: 'Shortcode payouts are sent from' },
-  { key: 'passkey',           label: 'Lipa Na M-Pesa Passkey',    type: 'password', placeholder: 'From Daraja portal' },
+interface FieldDef { key: string; label: string; type: string; placeholder: string; group: string }
+
+const MPESA_FIELDS: FieldDef[] = [
+  { key: 'consumerKey',               label: 'Consumer Key',                type: 'text',     placeholder: 'From Daraja portal',            group: 'API credentials' },
+  { key: 'consumerSecret',            label: 'Consumer Secret',             type: 'password', placeholder: 'From Daraja portal',            group: 'API credentials' },
+  { key: 'depositShortCode',          label: 'Deposit Shortcode (STK + Paybill)', type: 'text', placeholder: 'Money-in shortcode',         group: 'Deposit (money in)' },
+  { key: 'passkey',                   label: 'STK Passkey',                 type: 'password', placeholder: 'Lipa Na M-Pesa Online passkey', group: 'Deposit (money in)' },
+  { key: 'withdrawShortCode',         label: 'Withdrawal Shortcode (B2C)',  type: 'text',     placeholder: 'Money-out shortcode',           group: 'Withdrawal (money out / B2C)' },
+  { key: 'withdrawInitiatorName',     label: 'Initiator Name',              type: 'text',     placeholder: 'B2C initiator username',        group: 'Withdrawal (money out / B2C)' },
+  { key: 'withdrawSecurityCredential',label: 'Security Credential',         type: 'password', placeholder: 'B2C encrypted credential',      group: 'Withdrawal (money out / B2C)' },
 ]
 
-const AIRTEL_FIELDS = [
-  { key: 'clientId',     label: 'Client ID',     type: 'text',     placeholder: 'From Airtel Money portal' },
-  { key: 'clientSecret', label: 'Client Secret', type: 'password', placeholder: 'From Airtel Money portal' },
-  { key: 'country',      label: 'Country Code',  type: 'text',     placeholder: 'KE' },
-  { key: 'currency',     label: 'Currency',      type: 'text',     placeholder: 'KES' },
+const AIRTEL_FIELDS: FieldDef[] = [
+  { key: 'clientId',     label: 'Client ID',     type: 'text',     placeholder: 'From Airtel Money portal', group: 'API credentials' },
+  { key: 'clientSecret', label: 'Client Secret', type: 'password', placeholder: 'From Airtel Money portal', group: 'API credentials' },
+  { key: 'country',      label: 'Country Code',  type: 'text',     placeholder: 'KE',                       group: 'API credentials' },
+  { key: 'currency',     label: 'Currency',      type: 'text',     placeholder: 'KES',                      group: 'API credentials' },
 ]
 
 const FIELD_MAP = { mpesa: MPESA_FIELDS, airtel: AIRTEL_FIELDS }
@@ -190,21 +194,26 @@ function ProviderCard({
           </div>
         )}
 
-        {/* Credential fields */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-          {fields.map(f => (
-            <div key={f.key}>
-              <label className="text-xs text-gray-400 block mb-1">{f.label}</label>
-              <input
-                type={f.type}
-                value={values[f.key]}
-                onChange={e => update(f.key, e.target.value)}
-                placeholder={values[f.key]?.includes('***') ? 'Already saved - enter new value to update' : f.placeholder}
-                className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-cyan-600 font-mono"
-              />
+        {/* Credential fields, grouped (e.g. Deposit / Withdrawal) */}
+        {[...new Set(fields.map(f => f.group))].map(group => (
+          <div key={group}>
+            <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-2">{group}</p>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              {fields.filter(f => f.group === group).map(f => (
+                <div key={f.key}>
+                  <label className="text-xs text-gray-400 block mb-1">{f.label}</label>
+                  <input
+                    type={f.type}
+                    value={values[f.key]}
+                    onChange={e => update(f.key, e.target.value)}
+                    placeholder={values[f.key]?.includes('***') ? 'Already saved - enter new value to update' : f.placeholder}
+                    className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-cyan-600 font-mono"
+                  />
+                </div>
+              ))}
             </div>
-          ))}
-        </div>
+          </div>
+        ))}
 
         {/* Webhook URL */}
         <div>
