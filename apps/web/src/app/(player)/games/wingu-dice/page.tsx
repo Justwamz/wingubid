@@ -1,8 +1,7 @@
 'use client'
 
 import React, { useState } from 'react'
-import { DiceSlider } from '@/components/game/DiceSlider'
-import { DiceFace } from '@/components/game/DiceFace'
+import { DiceTrack } from '@/components/game/DiceTrack'
 import { HowToPlay } from '@/components/game/HowToPlay'
 import { GameBetHistory } from '@/components/game/GameBetHistory'
 import { QuickStakes } from '@/components/game/QuickStakes'
@@ -20,14 +19,10 @@ interface RollResult {
   newBalance: number
 }
 
-function rollToFace(roll: number): 1 | 2 | 3 | 4 | 5 | 6 {
-  return (Math.ceil((roll / 100) * 6) || 1) as 1 | 2 | 3 | 4 | 5 | 6
-}
-
 const HOW_TO_PLAY = [
-  { icon: <Target size={16} />, text: 'Set your target number using the slider.' },
-  { icon: <ArrowUp size={16} />, text: 'Choose HIGH (roll above target) or LOW (roll below). Tighter range = bigger multiplier.' },
-  { icon: <Dice6 size={16} />, text: 'Enter your stake and roll. Win instantly if the result matches your prediction.' },
+  { icon: <Target size={16} />, text: 'Drag the target on the track. The green zone is where you win, red is where you lose.' },
+  { icon: <ArrowUp size={16} />, text: 'Choose HIGH (roll above target) or LOW (roll below). A smaller win zone pays a bigger multiplier.' },
+  { icon: <Dice6 size={16} />, text: 'Enter your stake and roll. The number lands on the track — green means you won.' },
 ]
 
 export default function WinguDicePage() {
@@ -62,8 +57,6 @@ export default function WinguDicePage() {
     }
   }
 
-  const faceValue = result ? rollToFace(result.roll) : 1
-
   return (
     <div className="max-w-7xl mx-auto px-4 py-6 space-y-4">
       <div className="flex items-center justify-between">
@@ -78,19 +71,18 @@ export default function WinguDicePage() {
         <div className="lg:col-span-2 space-y-4">
           {/* Result display */}
           <div className="bg-game-card border border-game-border rounded-2xl p-6 flex flex-col items-center gap-4">
-            <div className="flex gap-6 items-center">
-              <DiceFace value={faceValue} size={96} won={result?.won ?? false} />
-              {result ? (
-                <div className="text-center">
-                  <p className="text-5xl font-extrabold text-white tabular-nums">{result.roll}</p>
-                  <p className={`text-lg font-bold mt-1 ${result.won ? 'text-accent-cyan' : 'text-warning-coral'}`}>
-                    {result.won ? `+KES ${(result.winnings / 100).toFixed(0)} WON` : 'LOST'}
-                  </p>
-                </div>
-              ) : (
-                <p className="text-gray-500 text-lg">Roll to start</p>
-              )}
-            </div>
+            {result ? (
+              <div className="text-center">
+                <p className="text-6xl font-extrabold tabular-nums" style={{ color: result.won ? '#00C896' : '#FF4E50' }}>
+                  {result.roll}
+                </p>
+                <p className={`text-lg font-bold mt-1 ${result.won ? 'text-accent-cyan' : 'text-warning-coral'}`}>
+                  {result.won ? `WIN · +KES ${(result.winnings / 100).toFixed(0)}` : 'LOSS'}
+                </p>
+              </div>
+            ) : (
+              <p className="text-gray-500 text-lg py-2">Set your target and roll</p>
+            )}
 
             {/* Direction buttons */}
             <div className="flex gap-3 w-full max-w-xs">
@@ -117,9 +109,16 @@ export default function WinguDicePage() {
             </div>
           </div>
 
-          {/* Slider */}
+          {/* Win/lose track */}
           <div className="bg-game-card border border-game-border rounded-2xl p-4">
-            <DiceSlider value={target} onChange={setTarget} />
+            <DiceTrack
+              target={target}
+              onChange={setTarget}
+              direction={direction}
+              result={result?.roll ?? null}
+              won={result?.won ?? null}
+              rolling={rolling}
+            />
           </div>
 
           {/* Bet controls */}
