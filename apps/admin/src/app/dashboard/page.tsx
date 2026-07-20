@@ -10,7 +10,7 @@ import { PaymentsTab } from '@/components/PaymentsTab'
 import { WithdrawalsTab } from '@/components/WithdrawalsTab'
 import { GameSettingsTab } from '@/components/GameSettingsTab'
 import { ReconciliationTab } from '@/components/ReconciliationTab'
-import { Users, Dice6, BarChart3, ArrowDownCircle, Landmark, DollarSign, Wallet, ArrowUpFromLine, RefreshCw } from 'lucide-react'
+import { Users, Dice6, BarChart3, ArrowDownCircle, Landmark, DollarSign, Wallet, ArrowUpFromLine, RefreshCw, Bell } from 'lucide-react'
 
 // ---------------------------------------------------------------------------
 // Types
@@ -53,6 +53,12 @@ interface Banner {
 
 interface BannersResponse {
   banners: Banner[]
+}
+
+interface PendingCounts {
+  withdrawalsAwaitingApproval: number
+  c2bUnresolved: number
+  total: number
 }
 
 // ---------------------------------------------------------------------------
@@ -459,6 +465,8 @@ export default function AdminDashboardPage() {
   const [stats, setStats] = useState<Stats | null>(null)
   const [loading, setLoading] = useState(true)
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null)
+  const [pending, setPending] = useState<PendingCounts>({ withdrawalsAwaitingApproval: 0, c2bUnresolved: 0, total: 0 })
+  const [bellOpen, setBellOpen] = useState(false)
 
   // Promotions state
   const [banners, setBanners] = useState<Banner[]>([])
@@ -472,6 +480,11 @@ export default function AdminDashboardPage() {
       setLastUpdated(new Date())
     }
     setLoading(false)
+  }, [])
+
+  const fetchPending = useCallback(async () => {
+    const { data } = await apiFetch<PendingCounts>('/admin/pending-counts')
+    if (data) setPending(data)
   }, [])
 
   const fetchBanners = useCallback(async () => {
@@ -489,9 +502,10 @@ export default function AdminDashboardPage() {
   useEffect(() => {
     if (!isAuthenticated()) { router.replace('/login'); return }
     fetchStats()
-    const interval = setInterval(fetchStats, 30_000)
+    fetchPending()
+    const interval = setInterval(() => { fetchStats(); fetchPending() }, 30_000)
     return () => clearInterval(interval)
-  }, [router, fetchStats])
+  }, [router, fetchStats, fetchPending])
 
   useEffect(() => {
     if (tab === 'promotions') {
@@ -549,8 +563,61 @@ export default function AdminDashboardPage() {
           )}
         </div>
         <div className="flex items-center gap-3">
+          {/* Notification bell */}
+          <div className="relative">
+            <button
+              onClick={() => setBellOpen(o => !o)}
+              aria-label={`Notifications${pending.total ? `, ${pending.total} pending` : ''}`}
+              className="relative rounded-lg bg-gray-800 p-2 hover:bg-gray-700 transition-colors"
+            >
+              <Bell size={16} className={pending.total > 0 ? 'text-cyan-400' : 'text-gray-400'} />
+              {pending.total > 0 && (
+                <span className="absolute -top-1 -right-1 min-w-[16px] h-4 px-1 flex items-center justify-center rounded-full bg-red-500 text-white text-[10px] font-bold animate-pulse">
+                  {pending.total > 99 ? '99+' : pending.total}
+                </span>
+              )}
+            </button>
+            {bellOpen && (
+              <>
+                <div className="fixed inset-0 z-10" onClick={() => setBellOpen(false)} />
+                <div className="absolute right-0 mt-2 w-72 bg-gray-900 border border-gray-800 rounded-xl shadow-2xl z-20 overflow-hidden">
+                  <div className="px-4 py-2.5 border-b border-gray-800 text-xs font-semibold text-gray-400 uppercase tracking-wide">
+                    Needs attention
+                  </div>
+                  {pending.total === 0 ? (
+                    <p className="px-4 py-4 text-sm text-gray-500 text-center">All clear - nothing pending.</p>
+                  ) : (
+                    <ul className="divide-y divide-gray-800">
+                      {pending.withdrawalsAwaitingApproval > 0 && (
+                        <li>
+                          <button
+                            onClick={() => { setTab('withdrawals'); setBellOpen(false) }}
+                            className="w-full flex items-center justify-between px-4 py-3 text-sm hover:bg-gray-800/50 transition-colors"
+                          >
+                            <span className="flex items-center gap-2 text-gray-300"><ArrowUpFromLine size={14} className="text-orange-400" /> Withdrawals awaiting approval</span>
+                            <span className="min-w-[20px] h-5 px-1.5 flex items-center justify-center rounded-full bg-orange-500/20 text-orange-300 text-xs font-bold">{pending.withdrawalsAwaitingApproval}</span>
+                          </button>
+                        </li>
+                      )}
+                      {pending.c2bUnresolved > 0 && (
+                        <li>
+                          <button
+                            onClick={() => { setTab('reconciliation'); setBellOpen(false) }}
+                            className="w-full flex items-center justify-between px-4 py-3 text-sm hover:bg-gray-800/50 transition-colors"
+                          >
+                            <span className="flex items-center gap-2 text-gray-300"><Wallet size={14} className="text-yellow-400" /> Unresolved paybill payments</span>
+                            <span className="min-w-[20px] h-5 px-1.5 flex items-center justify-center rounded-full bg-yellow-500/20 text-yellow-300 text-xs font-bold">{pending.c2bUnresolved}</span>
+                          </button>
+                        </li>
+                      )}
+                    </ul>
+                  )}
+                </div>
+              </>
+            )}
+          </div>
           <button
-            onClick={fetchStats}
+            onClick={() => { fetchStats(); fetchPending() }}
             className="rounded-lg bg-gray-800 px-3 py-1.5 text-xs hover:bg-gray-700 transition-colors"
           >
             <RefreshCw size={12} className="inline mr-1" /> Refresh
@@ -566,19 +633,29 @@ export default function AdminDashboardPage() {
 
       {/* Tab bar */}
       <div className="flex gap-1 mb-6 border-b border-gray-800">
-        {(['stats', 'promotions', 'payments', 'integrations', 'users', 'transactions', 'withdrawals', 'reconciliation', 'settings'] as const).map(t => (
-          <button
-            key={t}
-            onClick={() => setTab(t)}
-            className={`px-4 py-2 text-sm font-medium capitalize transition-colors border-b-2 -mb-px ${
-              tab === t
-                ? 'border-cyan-500 text-cyan-400'
-                : 'border-transparent text-gray-500 hover:text-gray-300'
-            }`}
-          >
-            {t}
-          </button>
-        ))}
+        {(['stats', 'promotions', 'payments', 'integrations', 'users', 'transactions', 'withdrawals', 'reconciliation', 'settings'] as const).map(t => {
+          const badge = t === 'withdrawals' ? pending.withdrawalsAwaitingApproval
+            : t === 'reconciliation' ? pending.c2bUnresolved
+            : 0
+          return (
+            <button
+              key={t}
+              onClick={() => setTab(t)}
+              className={`px-4 py-2 text-sm font-medium capitalize transition-colors border-b-2 -mb-px flex items-center gap-1.5 ${
+                tab === t
+                  ? 'border-cyan-500 text-cyan-400'
+                  : 'border-transparent text-gray-500 hover:text-gray-300'
+              }`}
+            >
+              {t}
+              {badge > 0 && (
+                <span className="min-w-[18px] h-4 px-1 flex items-center justify-center rounded-full bg-red-500 text-white text-[10px] font-bold">
+                  {badge > 99 ? '99+' : badge}
+                </span>
+              )}
+            </button>
+          )
+        })}
       </div>
 
       {/* Stats tab */}
