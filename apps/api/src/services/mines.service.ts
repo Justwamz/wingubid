@@ -78,6 +78,30 @@ export async function startGame(
   }
 }
 
+// Returns the player's in-progress game so the client can resume it after a
+// reload / navigation. Deliberately omits minePositions and the serverSeed so
+// resuming can't be used to cheat. Returns null when there is no active game.
+export async function getCurrentGame(playerId: string): Promise<{
+  gameId: string; gridSize: number; mineCount: number; serverSeedHash: string
+  clientSeed: string; revealedTiles: number[]; multiplier: number; status: 'active'
+} | null> {
+  const redis = getRedis()
+  const raw = await redis.get(redisKey(playerId))
+  if (!raw) return null
+  const state = JSON.parse(raw) as MinesGameState
+  if (state.status !== 'active') return null
+  return {
+    gameId: state.gameId,
+    gridSize: state.gridSize,
+    mineCount: state.mineCount,
+    serverSeedHash: state.serverSeedHash,
+    clientSeed: state.clientSeed,
+    revealedTiles: state.revealedTiles,
+    multiplier: payoutMultiplier(state.currentMultiplier),
+    status: 'active',
+  }
+}
+
 export async function revealTile(
   playerId: string, gameId: string, tileIndex: number,
 ): Promise<{ safe: boolean; multiplier?: number; minePositions?: number[] }> {

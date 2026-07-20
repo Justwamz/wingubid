@@ -1,5 +1,5 @@
 'use client'
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useEffect } from 'react'
 import { apiFetch } from '@/lib/api'
 import { sounds } from '@/lib/sounds'
 import { haptics } from '@/lib/haptics'
@@ -19,7 +19,30 @@ interface GameState {
 export function useMinesGame() {
   const [game, setGame] = useState<GameState | null>(null)
   const [loading, setLoading] = useState(false)
+  const [hydrating, setHydrating] = useState(true)
   const [error, setError] = useState<string | null>(null)
+
+  // Resume an in-progress game after a reload / navigation. Without this, the
+  // active game left in Redis blocks every new start with GAME_ALREADY_ACTIVE
+  // and the player is locked out of mines until the server-side TTL expires.
+  useEffect(() => {
+    let cancelled = false
+    apiFetch<{ game: {
+      gameId: string; gridSize: number; mineCount: number; serverSeedHash: string
+      revealedTiles: number[]; multiplier: number; status: 'active'
+    } | null }>('/games/mines/current', { cache: 'no-store' })
+      .then(({ data }) => {
+        if (cancelled || !data?.game) return
+        const g = data.game
+        setGame({
+          gameId: g.gameId, gridSize: g.gridSize, mineCount: g.mineCount,
+          serverSeedHash: g.serverSeedHash, revealedTiles: g.revealedTiles,
+          multiplier: g.multiplier, minePositions: null, status: 'active',
+        })
+      })
+      .finally(() => { if (!cancelled) setHydrating(false) })
+    return () => { cancelled = true }
+  }, [])
 
   const startGame = useCallback(async (grossStake: number, gridSize: number, mineCount: number) => {
     setLoading(true); setError(null)
@@ -61,5 +84,5 @@ export function useMinesGame() {
     refreshBalance()
   }, [game])
 
-  return { game, loading, error, startGame, revealTile, cashout }
+  return { game, loading, hydrating, error, startGame, revealTile, cashout }
 }

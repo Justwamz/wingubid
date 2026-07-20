@@ -12,7 +12,7 @@ vi.mock('./crash.service.js', () => ({ getHouseEdge: vi.fn(async () => 5) }))
 import { pool } from '@betting/db'
 import { getRedis } from '../lib/redis.js'
 import { creditWinnings } from './wallet.service.js'
-import { startGame, revealTile, cashoutMines } from './mines.service.js'
+import { startGame, revealTile, cashoutMines, getCurrentGame } from './mines.service.js'
 
 const mockConnect = vi.mocked(pool.connect)
 const mockRedis = { get: vi.fn(), setex: vi.fn(), del: vi.fn() }
@@ -75,6 +75,33 @@ describe('revealTile', () => {
     expect(result.safe).toBe(false)
     expect(result.minePositions).toEqual([2, 5])
     expect(mockRedis.del).toHaveBeenCalled()
+  })
+})
+
+describe('getCurrentGame', () => {
+  it('returns null when the player has no game in Redis', async () => {
+    mockRedis.get.mockResolvedValueOnce(null)
+    expect(await getCurrentGame('p-1')).toBeNull()
+  })
+
+  it('returns null when the stored game is no longer active', async () => {
+    mockRedis.get.mockResolvedValueOnce(JSON.stringify({ ...activeGame, status: 'lost' }))
+    expect(await getCurrentGame('p-1')).toBeNull()
+  })
+
+  it('returns the safe game state WITHOUT mine positions for an active game', async () => {
+    const game = { ...activeGame, revealedTiles: [0, 3], currentMultiplier: 1.35 }
+    mockRedis.get.mockResolvedValueOnce(JSON.stringify(game))
+    const result = await getCurrentGame('p-1')
+    expect(result).not.toBeNull()
+    expect(result!.gameId).toBe('g-1')
+    expect(result!.gridSize).toBe(3)
+    expect(result!.mineCount).toBe(2)
+    expect(result!.revealedTiles).toEqual([0, 3])
+    expect(result!.multiplier).toBe(1.35)
+    expect(result!.status).toBe('active')
+    // Must never leak mine positions to the client.
+    expect((result as Record<string, unknown>).minePositions).toBeUndefined()
   })
 })
 

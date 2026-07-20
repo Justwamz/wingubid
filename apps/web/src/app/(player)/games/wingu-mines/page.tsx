@@ -15,7 +15,7 @@ const HOW_TO_PLAY = [
 ]
 
 export default function WinguMinesPage() {
-  const { game, loading, error, startGame, revealTile, cashout } = useMinesGame()
+  const { game, loading, hydrating, error, startGame, revealTile, cashout } = useMinesGame()
   const [stake, setStake] = useState(String(DEFAULT_STAKE_KES))
   const [gridSize, setGridSize] = useState(3)
   const [mineCount, setMineCount] = useState(2)
@@ -39,7 +39,12 @@ export default function WinguMinesPage() {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
         {/* Game area */}
         <div className="lg:col-span-2 space-y-4">
-          {!isActive && (
+          {hydrating && (
+            <div className="bg-game-card border border-game-border rounded-2xl p-5 text-center text-gray-500 text-sm">
+              Loading…
+            </div>
+          )}
+          {!isActive && !hydrating && (
             <div className="bg-game-card border border-game-border rounded-2xl p-5 space-y-4">
               <input
                 type="number"

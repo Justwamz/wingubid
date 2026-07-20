@@ -1,10 +1,15 @@
 import { z } from 'zod'
 import type { FastifyInstance } from 'fastify'
 import { authenticate } from '../../middleware/authenticate.js'
-import { startGame, revealTile, cashoutMines } from '../../services/mines.service.js'
+import { startGame, revealTile, cashoutMines, getCurrentGame } from '../../services/mines.service.js'
 import { AppError } from '../../lib/errors.js'
 
 export async function minesRoutes(app: FastifyInstance) {
+  // Resume support: returns the player's in-progress game (or { game: null }).
+  app.get('/games/mines/current', { preHandler: authenticate }, async (req, reply) => {
+    return reply.send({ game: await getCurrentGame(req.playerId) })
+  })
+
   app.post('/games/mines/start', { preHandler: authenticate }, async (req, reply) => {
     const parsed = z.object({
       grossStake: z.number({ invalid_type_error: 'Please enter a valid bet amount.' }).int('Please enter a valid bet amount.').positive('Please enter a bet greater than zero.'),
