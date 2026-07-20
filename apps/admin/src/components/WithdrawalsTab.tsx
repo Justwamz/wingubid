@@ -60,7 +60,7 @@ export function WithdrawalsTab() {
         <div>
           <h2 className="text-lg font-semibold">Withdrawals</h2>
           {failedCount > 0 && (
-            <p className="text-xs text-red-400 mt-0.5">{failedCount} failed — review and retry</p>
+            <p className="text-xs text-red-400 mt-0.5">{failedCount} failed - review and retry</p>
           )}
         </div>
         <div className="flex items-center gap-3">

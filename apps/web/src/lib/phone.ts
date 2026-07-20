@@ -1,7 +1,7 @@
 // Kenya / Safaricom phone-number helpers (mirrors apps/api/src/lib/phone.ts).
 //
 // Safaricom subscriber prefixes (first 3 digits after +254), from the national
-// list: 0110–0115, 0700–0729, 0740–0743, 0745–0748, 0757–0759, 0768–0769, 0790–0799
+// list: 0110-0115, 0700-0729, 0740-0743, 0745-0748, 0757-0759, 0768-0769, 0790-0799
 const SAFARICOM_PREFIXES: ReadonlySet<string> = (() => {
   const s = new Set<string>()
   const addRange = (a: number, b: number) => { for (let n = a; n <= b; n++) s.add(String(n)) }

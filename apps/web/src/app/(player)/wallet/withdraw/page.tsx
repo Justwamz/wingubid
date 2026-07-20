@@ -107,7 +107,7 @@ export default function WithdrawPage() {
       <h1 className="text-2xl font-bold mb-1">Withdraw Funds</h1>
       <p className="text-gray-400 text-sm mb-8">Withdraw winnings to your mobile money account</p>
 
-      {/* M-Pesa — coming soon */}
+      {/* M-Pesa - coming soon */}
       <div className="rounded-xl border border-game-border bg-game-card p-6 mb-4 opacity-60 select-none">
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center gap-3">
@@ -126,7 +126,7 @@ export default function WithdrawPage() {
         <p className="text-gray-500 text-xs">Instant payout to your M-Pesa number. Minimum KES 100.</p>
       </div>
 
-      {/* MTN / Airtel — coming soon */}
+      {/* MTN / Airtel - coming soon */}
       <div className="rounded-xl border border-game-border bg-game-card p-6 mb-8 opacity-60 select-none">
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center gap-3">

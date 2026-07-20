@@ -6,7 +6,7 @@ interface Props {
   direction: 'over' | 'under'
   result: number | null
   won: boolean | null
-  // Live 0–100 value while the roll is spinning; drives the sweeping marker.
+  // Live 0-100 value while the roll is spinning; drives the sweeping marker.
   rollingValue?: number | null
 }
 
@@ -16,7 +16,7 @@ const NEUTRAL = '#e5e7eb'
 
 // The dice track IS the result surface: a green win zone and a red lose zone
 // split at the target, with the rolled number dropping onto the exact spot so a
-// player can see why they won or lost. Axis is 0–100; position(v) = v%.
+// player can see why they won or lost. Axis is 0-100; position(v) = v%.
 export function DiceTrack({ target, onChange, direction, result, won, rollingValue }: Props) {
   const winRight = direction === 'over' // win zone is to the RIGHT of the target
   const betText = direction === 'over'

@@ -90,7 +90,7 @@ export function GameSettingsTab() {
       </div>
       <p className="text-xs text-gray-500 max-w-md">
         The house edge is the percentage the house keeps on every bet. A higher edge means
-        smaller payouts and more margin. Changes take effect immediately for new bets. Allowed range: 0–30%.
+        smaller payouts and more margin. Changes take effect immediately for new bets. Allowed range: 0-30%.
       </p>
 
       <form onSubmit={handleSave} className="bg-gray-900 border border-gray-800 rounded-xl p-4 space-y-4 max-w-md">
@@ -130,7 +130,7 @@ export function GameSettingsTab() {
       <div className="pt-4 space-y-2">
         <h3 className="text-sm font-semibold text-gray-300">Lotto &amp; Scratch (read-only)</h3>
         <p className="text-xs text-gray-500 max-w-xl">
-          These games have no single house-edge setting — their margin comes from fixed prize tables
+          These games have no single house-edge setting - their margin comes from fixed prize tables
           and match odds. Figures below are the effective RTP (return to player) and house edge,
           computed from the live prize tables. Editing isn&apos;t available yet.
         </p>

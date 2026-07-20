@@ -85,7 +85,7 @@ export default function DepositPage() {
       <h1 className="text-2xl font-bold mb-1">Deposit Funds</h1>
       <p className="text-gray-400 text-sm mb-8">Add money to your account to start playing</p>
 
-      {/* M-Pesa card — coming soon */}
+      {/* M-Pesa card - coming soon */}
       <div className="rounded-xl border border-game-border bg-game-card p-6 mb-4 opacity-60 select-none">
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center gap-3">
@@ -106,7 +106,7 @@ export default function DepositPage() {
         </p>
       </div>
 
-      {/* MTN / Airtel — coming soon */}
+      {/* MTN / Airtel - coming soon */}
       <div className="rounded-xl border border-game-border bg-game-card p-6 mb-8 opacity-60 select-none">
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center gap-3">

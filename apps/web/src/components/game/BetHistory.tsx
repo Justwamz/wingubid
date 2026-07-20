@@ -91,10 +91,10 @@ export function BetHistory({
                   <td className="py-1.5"><OutcomeBadge status={e.status} /></td>
                   <td className="text-right text-white">{(e.stake / 100).toFixed(0)}</td>
                   <td className="text-right text-gray-300">
-                    {e.multiplier != null ? `${e.multiplier.toFixed(2)}×` : '—'}
+                    {e.multiplier != null ? `${e.multiplier.toFixed(2)}×` : '-'}
                   </td>
                   <td className={`text-right font-semibold ${e.status === 'won' ? 'text-accent-cyan' : 'text-gray-400'}`}>
-                    {e.status === 'won' ? (e.payout / 100).toFixed(0) : '—'}
+                    {e.status === 'won' ? (e.payout / 100).toFixed(0) : '-'}
                   </td>
                   <td className="text-right text-gray-500 whitespace-nowrap">{relativeTime(e.createdAt)}</td>
                 </tr>

@@ -51,7 +51,7 @@ export async function cashout(
   // point. The caller must not settle a bet on a round that has already busted,
   // and we enforce it here rather than trusting the in-memory round status.
   if (!(multiplier < crashPoint)) {
-    throw new AppError('ROUND_CRASHED', 'Too late — the round already crashed.', 422)
+    throw new AppError('ROUND_CRASHED', 'Too late, the round already crashed.', 422)
   }
 
   const client = await pool.connect()

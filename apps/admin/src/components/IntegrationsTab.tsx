@@ -110,7 +110,7 @@ function AddSlotForm({ onCreated }: { onCreated: () => void }) {
 }
 
 // ---------------------------------------------------------------------------
-// Configure slot panel — shown inline when a slot is clicked
+// Configure slot panel - shown inline when a slot is clicked
 // ---------------------------------------------------------------------------
 
 function ConfigureSlotPanel({
@@ -379,7 +379,7 @@ function SlotCard({
 
   return (
     <div className={`border rounded-xl overflow-hidden transition-colors ${isLive ? 'border-cyan-800/60 bg-cyan-950/10' : 'border-gray-800 bg-gray-900/40'}`}>
-      {/* Slot header — always clickable */}
+      {/* Slot header - always clickable */}
       <button
         onClick={() => setOpen(o => !o)}
         className="w-full px-4 py-3 flex items-center gap-3 text-left hover:bg-white/[0.02] transition-colors"
@@ -423,7 +423,7 @@ function SlotCard({
             onDone={() => { setOpen(false); onRefresh() }}
             onRemove={() => { setOpen(false); onRefresh() }}
           />
-          {/* Delete slot option — only when unassigned */}
+          {/* Delete slot option - only when unassigned */}
           {!isAssigned && (
             <button
               onClick={() => onDelete(slot.slug)}
@@ -520,7 +520,7 @@ function SmsProviderCard() {
             type="password"
             value={apiKey}
             onChange={e => setApiKey(e.target.value)}
-            placeholder={maskedKey ? `Saved: ${maskedKey} — type to replace` : 'atsk_…'}
+            placeholder={maskedKey ? `Saved: ${maskedKey} - type to replace` : 'atsk_…'}
             className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-cyan-600 font-mono"
           />
         </div>
@@ -537,7 +537,7 @@ function SmsProviderCard() {
 
         <label className="flex items-center gap-2.5 cursor-pointer text-sm text-gray-300 pt-1">
           <input type="checkbox" checked={enabled} onChange={e => setEnabled(e.target.checked)} className="h-4 w-4 accent-cyan-400" />
-          <span>Enabled — send live OTPs and require phone verification</span>
+          <span>Enabled - send live OTPs and require phone verification</span>
         </label>
 
         {error && <p className="text-xs text-red-400 bg-red-900/20 border border-red-700/30 rounded px-3 py-2">{error}</p>}
@@ -643,7 +643,7 @@ export function IntegrationsTab() {
       {/* Add slot */}
       <AddSlotForm onCreated={fetchAll} />
 
-      {/* Webhook reference — collapsed by default */}
+      {/* Webhook reference - collapsed by default */}
       <div className="bg-gray-900 border border-gray-800 rounded-xl overflow-hidden">
         <button
           onClick={() => setShowWebhooks(w => !w)}

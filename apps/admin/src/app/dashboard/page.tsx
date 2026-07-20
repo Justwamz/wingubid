@@ -363,7 +363,7 @@ function BannerSection({
               </div>
             </div>
 
-            {/* Image field — Upload or URL */}
+            {/* Image field - Upload or URL */}
             <div>
               <div className="flex items-center justify-between mb-2">
                 <label className="text-xs text-gray-400">Banner Image <span className="text-gray-600">(optional)</span></label>

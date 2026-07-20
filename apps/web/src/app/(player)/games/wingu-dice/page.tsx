@@ -22,7 +22,7 @@ interface RollResult {
 const HOW_TO_PLAY = [
   { icon: <Target size={16} />, text: 'Drag the target on the track. The green zone is where you win, red is where you lose.' },
   { icon: <ArrowUp size={16} />, text: 'Choose HIGH (roll above target) or LOW (roll below). A smaller win zone pays a bigger multiplier.' },
-  { icon: <Dice6 size={16} />, text: 'Enter your stake and roll. The number lands on the track — green means you won.' },
+  { icon: <Dice6 size={16} />, text: 'Enter your stake and roll. The number lands on the track - green means you won.' },
 ]
 
 export default function WinguDicePage() {
@@ -91,7 +91,7 @@ export default function WinguDicePage() {
       </div>
 
       <p className="text-sm text-gray-500">
-        A random number from 0–100 is rolled — you win if it lands in your green zone.
+        A random number from 0 to 100 is rolled. You win if it lands in your green zone.
       </p>
 
       <HowToPlay steps={HOW_TO_PLAY} />
@@ -138,7 +138,7 @@ export default function WinguDicePage() {
                 ))}
               </div>
               <span className="text-white font-extrabold text-lg tabular-nums">{target}</span>
-              <span className="text-gray-400">— win</span>
+              <span className="text-gray-400">to win</span>
               <span className="font-extrabold" style={{ color: '#00C896' }}>KES {potentialWin.toLocaleString('en-KE')}</span>
             </div>
 

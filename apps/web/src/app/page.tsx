@@ -120,7 +120,7 @@ const QUICK_GAMES = [
   },
 ]
 
-// Crash games — Aviator / Aviatrix / JetX / Crash activate when a provider is configured
+// Crash games - Aviator / Aviatrix / JetX / Crash activate when a provider is configured
 const CRASH_GAMES = [
   {
     name: 'Crash',
@@ -173,7 +173,7 @@ const CRASH_GAMES = [
   },
 ]
 
-// Casino games — B-Ball Blitz / Sun of Egypt 4 activate when a provider is configured
+// Casino games - B-Ball Blitz / Sun of Egypt 4 activate when a provider is configured
 const CASINO_GAMES = [
   {
     name: 'B-Ball Blitz',
@@ -320,7 +320,7 @@ export default function LandingPage() {
         </div>
       </div>
 
-      {/* ── Hero Carousel — same width as game sections ── */}
+      {/* ── Hero Carousel - same width as game sections ── */}
       <div className="max-w-7xl mx-auto px-3 pt-3">
       <section className="relative overflow-hidden rounded-xl h-64 md:h-72">
         {/* Background */}
@@ -539,7 +539,7 @@ function LoginModal({ onClose, onSuccess, initialTab = 'login' }: { onClose: () 
       setError('Enter the 6-digit code')
       return
     }
-    // SMS disabled (demo): registration already returned a token — accept any
+    // SMS disabled (demo): registration already returned a token - accept any
     // 6-digit code and sign in.
     if (pendingToken) {
       saveToken(pendingToken)
@@ -598,7 +598,7 @@ function LoginModal({ onClose, onSuccess, initialTab = 'login' }: { onClose: () 
           <TabButton id="register" label="REGISTER" />
         </div>
 
-        {/* Card — the top corner under the active tab stays square so the tab
+        {/* Card - the top corner under the active tab stays square so the tab
             reads as connected to the card. */}
         <div
           className={`relative rounded-2xl p-6 shadow-2xl ${tab === 'login' ? 'rounded-tl-none' : 'rounded-tr-none'}`}
@@ -644,7 +644,7 @@ function LoginModal({ onClose, onSuccess, initialTab = 'login' }: { onClose: () 
                 className="w-full rounded-xl px-4 py-3 text-center text-2xl tracking-[0.5em] font-mono text-white placeholder-gray-700 focus:outline-none focus:ring-1 focus:ring-cyan-500"
                 style={INPUT_STYLE}
               />
-              <p className="text-center text-xs text-gray-500">{pendingToken ? 'Demo mode — enter any 6 digits to continue' : 'Enter the code sent to your phone'}</p>
+              <p className="text-center text-xs text-gray-500">{pendingToken ? 'Demo mode - enter any 6 digits to continue' : 'Enter the code sent to your phone'}</p>
               {error && <p className="text-red-400 text-xs bg-red-900/20 border border-red-700/30 rounded-lg px-3 py-2">{error}</p>}
               <button type="submit" className="w-full py-3.5 rounded-xl font-extrabold text-sm tracking-widest transition-opacity hover:opacity-90" style={{ background: '#22D3EE', color: '#0A0420' }}>
                 VERIFY & CONTINUE

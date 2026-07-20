@@ -123,7 +123,7 @@ const GAMES = [
   },
 ]
 
-// Provider-powered games — activate when a provider is configured via admin
+// Provider-powered games - activate when a provider is configured via admin
 const PROVIDER_GAMES = [
   {
     providerSlug: 'crash',

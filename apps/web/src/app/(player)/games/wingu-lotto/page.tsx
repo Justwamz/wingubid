@@ -8,7 +8,7 @@ import { Target, Hash, Trophy } from 'lucide-react'
 
 const HOW_TO_PLAY = [
   { icon: <Target size={16} />, text: 'Pick a draw tier: Hourly (KES 20), Daily (KES 100) or Weekly (KES 500). Each has bigger jackpots.' },
-  { icon: <Hash size={16} />, text: 'Choose exactly 3 numbers from 1–36 and buy your ticket before the countdown reaches zero.' },
+  { icon: <Hash size={16} />, text: 'Choose exactly 3 numbers from 1 to 36 and buy your ticket before the countdown reaches zero.' },
   { icon: <Trophy size={16} />, text: 'Match 3 numbers to win the jackpot. Match 2 for a bonus, match 1 to break even. Results appear in My Tickets.' },
 ]
 

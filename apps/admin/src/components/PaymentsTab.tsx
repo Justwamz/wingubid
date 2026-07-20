@@ -81,7 +81,7 @@ function ProviderCard({
     setError(null)
     setSuccess(false)
 
-    // Only send non-empty values — avoids overwriting stored secrets with masked display values
+    // Only send non-empty values - avoids overwriting stored secrets with masked display values
     const configPayload: Record<string, string> = {}
     for (const [k, v] of Object.entries(values)) {
       if (v && !v.includes('***')) configPayload[k] = v
@@ -183,7 +183,7 @@ function ProviderCard({
           <div className="flex items-start gap-2 bg-amber-900/20 border border-amber-700/30 rounded-lg px-3 py-2.5">
             <span className="text-amber-400 text-sm mt-0.5">⚠</span>
             <p className="text-xs text-amber-300">
-              Production mode with live credentials — real money will be collected from customers.
+              Production mode with live credentials - real money will be collected from customers.
               Ensure your business short code and passkey are from the <strong>live</strong> Daraja environment.
             </p>
           </div>
@@ -198,7 +198,7 @@ function ProviderCard({
                 type={f.type}
                 value={values[f.key]}
                 onChange={e => update(f.key, e.target.value)}
-                placeholder={values[f.key]?.includes('***') ? 'Already saved — enter new value to update' : f.placeholder}
+                placeholder={values[f.key]?.includes('***') ? 'Already saved - enter new value to update' : f.placeholder}
                 className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-cyan-600 font-mono"
               />
             </div>
