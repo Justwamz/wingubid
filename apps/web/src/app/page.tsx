@@ -21,8 +21,8 @@ interface Banner {
 
 const SECONDARY_NAV = [
   { label: 'AVIATOR',       href: '/register' },
-  { label: 'AVIATRIX',      href: '/register' },
   { label: 'JETX',          href: '/register' },
+  { label: 'AVIATRIX',      href: '/register' },
   { label: 'CRASH',         href: '/register' },
   { label: 'WINGU CRASH',   href: '/games/wingu-crash' },
   { label: 'WINGU LOTTO',   href: '/games/wingu-lotto' },
@@ -143,16 +143,6 @@ const CRASH_GAMES = [
     labelColor: '#fff',
   },
   {
-    name: 'Aviatrix',
-    slug: 'aviatrix',
-    active: false,
-    href: '/register',
-    artwork: '/games/aviatrix.webp',
-    placeholderBg: 'linear-gradient(135deg,#1a0840 0%,#3d1a80 50%,#2a0e60 100%)',
-    placeholderLabel: 'AVIATRIX',
-    labelColor: '#fff',
-  },
-  {
     name: 'JetX',
     slug: 'jetx',
     active: false,
@@ -160,6 +150,16 @@ const CRASH_GAMES = [
     artwork: '/games/jetx.webp',
     placeholderBg: 'linear-gradient(135deg,#050d2a 0%,#0d1f5c 50%,#1a3a80 100%)',
     placeholderLabel: 'JETX',
+    labelColor: '#fff',
+  },
+  {
+    name: 'Aviatrix',
+    slug: 'aviatrix',
+    active: false,
+    href: '/register',
+    artwork: '/games/aviatrix.webp',
+    placeholderBg: 'linear-gradient(135deg,#1a0840 0%,#3d1a80 50%,#2a0e60 100%)',
+    placeholderLabel: 'AVIATRIX',
     labelColor: '#fff',
   },
   {
@@ -415,10 +415,11 @@ export default function LandingPage() {
         <div className="max-w-7xl mx-auto px-4 py-6 flex flex-col md:flex-row items-center justify-between gap-4">
           <img src="/wingubet-logo.png" alt="WinguBet" className="h-14 md:h-24 w-auto" />
           <p className="text-xs text-gray-600 text-center">18+ only · Please gamble responsibly · Demonstration platform</p>
-          <div className="flex gap-6 text-xs text-gray-600">
+          <div className="flex flex-wrap items-center justify-center gap-x-6 gap-y-2 text-xs text-gray-600">
             <button onClick={() => { setAuthTab('login'); setLoginOpen(true) }} className="hover:text-gray-400 transition-colors">Log in</button>
             <button onClick={() => { setAuthTab('register'); setLoginOpen(true) }} className="hover:text-gray-400 transition-colors">Register</button>
             <Link href="/terms" className="hover:text-gray-400 transition-colors">Terms &amp; Conditions</Link>
+            <a href="mailto:support@wingubet.com" className="hover:text-gray-400 transition-colors">support@wingubet.com</a>
           </div>
         </div>
       </footer>

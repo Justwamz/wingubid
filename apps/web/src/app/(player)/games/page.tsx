@@ -146,16 +146,6 @@ const PROVIDER_GAMES = [
     image: '/games/aviator.webp',
   },
   {
-    providerSlug: 'aviatrix',
-    name: 'AVIATRIX',
-    tagline: 'The next generation crash game',
-    gradient: 'from-violet-500/15 to-indigo-700/10',
-    border: 'border-violet-500/25',
-    accent: '#A78BFA',
-    badgeColor: 'bg-violet-500/20 text-violet-300',
-    image: '/games/aviatrix.webp',
-  },
-  {
     providerSlug: 'jetx',
     name: 'JETX',
     tagline: 'Ride the jet, escape before it explodes',
@@ -164,6 +154,16 @@ const PROVIDER_GAMES = [
     accent: '#38BDF8',
     badgeColor: 'bg-blue-500/20 text-blue-300',
     image: '/games/jetx.webp',
+  },
+  {
+    providerSlug: 'aviatrix',
+    name: 'AVIATRIX',
+    tagline: 'The next generation crash game',
+    gradient: 'from-violet-500/15 to-indigo-700/10',
+    border: 'border-violet-500/25',
+    accent: '#A78BFA',
+    badgeColor: 'bg-violet-500/20 text-violet-300',
+    image: '/games/aviatrix.webp',
   },
   {
     providerSlug: 'bball-blitz',
