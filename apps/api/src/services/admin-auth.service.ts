@@ -1,8 +1,7 @@
 import crypto from 'crypto'
 import { pool } from '@betting/db'
-import { verifyPassword } from '../lib/hash.js'
 import { signAdminAccessToken } from '../lib/jwt.js'
-import { AppError } from './auth.service.js'
+import { authenticateStaff } from './staff-auth.service.js'
 
 export async function loginAdmin(
   email: string,
@@ -11,57 +10,31 @@ export async function loginAdmin(
   accessToken: string
   refreshToken: string
   admin: { id: string; name: string; email: string; role: string }
+  mustChangePassword: boolean
 }> {
-  const { rows } = await pool.query<{
-    id: string
-    role: string
-    status: string
-    password_hash: string
-    name: string
-    email: string
-  }>(
-    `SELECT id, role, status, password_hash, name, email
-     FROM admin_users WHERE email = $1`,
-    [email],
-  )
+  const staff = await authenticateStaff(email, password)
 
-  if (rows.length === 0) {
-    throw new AppError('INVALID_CREDENTIALS', 'Invalid email or password', 401)
-  }
-
-  const admin = rows[0]
-  const match = await verifyPassword(password, admin.password_hash)
-  if (!match) {
-    throw new AppError('INVALID_CREDENTIALS', 'Invalid email or password', 401)
-  }
-
-  if (admin.status === 'suspended') {
-    throw new AppError('ACCOUNT_SUSPENDED', 'This admin account has been suspended. Please contact the system owner.', 403)
-  }
-
-  const accessToken = signAdminAccessToken(admin.id, admin.role)
+  const accessToken = signAdminAccessToken(staff.id, staff.role)
 
   const refreshToken = crypto.randomUUID()
   const tokenHash = crypto.createHash('sha256').update(refreshToken).digest('hex')
   const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000)
 
   await pool.query(
-    `INSERT INTO admin_refresh_tokens (admin_id, token_hash, expires_at)
-     VALUES ($1, $2, $3)`,
-    [admin.id, tokenHash, expiresAt],
+    `INSERT INTO admin_refresh_tokens (admin_id, token_hash, expires_at) VALUES ($1, $2, $3)`,
+    [staff.id, tokenHash, expiresAt],
   )
+  await pool.query(`UPDATE admin_users SET last_login_at = NOW() WHERE id = $1`, [staff.id])
 
   return {
     accessToken,
     refreshToken,
-    admin: { id: admin.id, name: admin.name, email: admin.email, role: admin.role },
+    admin: { id: staff.id, name: staff.name, email: staff.email, role: staff.role },
+    mustChangePassword: staff.mustChangePassword,
   }
 }
 
 export async function logoutAdmin(refreshToken: string): Promise<void> {
   const tokenHash = crypto.createHash('sha256').update(refreshToken).digest('hex')
-  await pool.query(
-    'DELETE FROM admin_refresh_tokens WHERE token_hash = $1',
-    [tokenHash],
-  )
+  await pool.query('DELETE FROM admin_refresh_tokens WHERE token_hash = $1', [tokenHash])
 }

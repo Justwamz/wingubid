@@ -44,6 +44,9 @@ import { adminGameSettingsRoutes } from './routes/admin/game-settings.js'
 import { adminWithdrawalRoutes } from './routes/admin/withdrawals.js'
 import { adminC2bRoutes } from './routes/admin/c2b.js'
 import { adminNotificationRoutes } from './routes/admin/notifications.js'
+import { adminStaffRoutes } from './routes/admin/staff.js'
+import { adminRolesRoutes } from './routes/admin/roles.js'
+import { adminMeRoutes } from './routes/admin/me.js'
 import { chatRoutes } from './routes/chat.js'
 import { adminChatRoutes } from './routes/admin/chat.js'
 import { providerGameRoutes } from './routes/games/provider-games.js'
@@ -137,6 +140,9 @@ export function buildServer() {
   app.register(adminWithdrawalRoutes)
   app.register(adminC2bRoutes)
   app.register(adminNotificationRoutes)
+  app.register(adminStaffRoutes)
+  app.register(adminRolesRoutes)
+  app.register(adminMeRoutes)
   app.register(chatRoutes)
   app.register(adminChatRoutes)
   app.register(providerGameRoutes)

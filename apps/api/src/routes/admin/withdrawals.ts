@@ -1,22 +1,11 @@
 import { z } from 'zod'
-import type { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify'
+import type { FastifyInstance } from 'fastify'
 import { authenticateAdmin } from '../../middleware/authenticateAdmin.js'
+import { requirePermission } from '../../middleware/requirePermission.js'
 import { pool } from '@betting/db'
 import { approveWithdrawal, rejectWithdrawal } from '../../services/payment.service.js'
 import { getWithdrawalThreshold, setWithdrawalThreshold } from '../../services/game-settings.service.js'
 import { AppError } from '../../lib/errors.js'
-
-const APPROVER_ROLES = ['finance', 'super_admin']
-
-// Separation of duty: only finance/super_admin may approve/reject or change the
-// threshold. Returns true if the request may proceed; otherwise sends 403.
-function requireApprover(req: FastifyRequest, reply: FastifyReply): boolean {
-  if (!APPROVER_ROLES.includes(req.adminRole)) {
-    reply.status(403).send({ error: { code: 'FORBIDDEN', message: 'Only Finance or Super Admin can perform this action.' } })
-    return false
-  }
-  return true
-}
 
 export async function adminWithdrawalRoutes(app: FastifyInstance) {
   // List all withdrawals with player info
@@ -54,8 +43,7 @@ export async function adminWithdrawalRoutes(app: FastifyInstance) {
     return reply.send({ approvalThreshold: await getWithdrawalThreshold() })
   })
 
-  app.put('/admin/withdrawal-config', { preHandler: authenticateAdmin }, async (req, reply) => {
-    if (!requireApprover(req, reply)) return
+  app.put('/admin/withdrawal-config', { preHandler: [authenticateAdmin, requirePermission('withdrawals.config')] }, async (req, reply) => {
     const parsed = z.object({
       approvalThreshold: z.number().int().min(0, 'Threshold cannot be negative.'),
     }).safeParse(req.body)
@@ -67,8 +55,7 @@ export async function adminWithdrawalRoutes(app: FastifyInstance) {
   })
 
   // Approve an above-threshold withdrawal (finance/super_admin only).
-  app.post('/admin/withdrawals/:id/approve', { preHandler: authenticateAdmin }, async (req, reply) => {
-    if (!requireApprover(req, reply)) return
+  app.post('/admin/withdrawals/:id/approve', { preHandler: [authenticateAdmin, requirePermission('withdrawals.approve')] }, async (req, reply) => {
     const { id } = req.params as { id: string }
     try {
       await approveWithdrawal(id, req.adminId)
@@ -80,8 +67,7 @@ export async function adminWithdrawalRoutes(app: FastifyInstance) {
   })
 
   // Reject an above-threshold withdrawal and return the funds (finance/super_admin only).
-  app.post('/admin/withdrawals/:id/reject', { preHandler: authenticateAdmin }, async (req, reply) => {
-    if (!requireApprover(req, reply)) return
+  app.post('/admin/withdrawals/:id/reject', { preHandler: [authenticateAdmin, requirePermission('withdrawals.reject')] }, async (req, reply) => {
     const { id } = req.params as { id: string }
     const parsed = z.object({ reason: z.string().max(500).optional() }).safeParse(req.body ?? {})
     if (!parsed.success) {

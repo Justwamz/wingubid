@@ -11,6 +11,8 @@ import { WithdrawalsTab } from '@/components/WithdrawalsTab'
 import { GameSettingsTab } from '@/components/GameSettingsTab'
 import { ReconciliationTab } from '@/components/ReconciliationTab'
 import { ChatModerationTab } from '@/components/ChatModerationTab'
+import { StaffTab } from '@/components/StaffTab'
+import { fetchMe, type Me } from '@/lib/me'
 import { Users, Dice6, BarChart3, ArrowDownCircle, Landmark, DollarSign, Wallet, ArrowUpFromLine, RefreshCw, Bell } from 'lucide-react'
 
 // ---------------------------------------------------------------------------
@@ -460,9 +462,18 @@ function BannerSection({
 // Main page
 // ---------------------------------------------------------------------------
 
+const TAB_PERMISSION: Record<string, string> = {
+  stats: 'stats.view', promotions: 'promotions.view', payments: 'payments.view',
+  integrations: 'integrations.view', users: 'players.view', transactions: 'transactions.view',
+  withdrawals: 'withdrawals.view', reconciliation: 'reconciliation.view', chat: 'chat.view',
+  settings: 'settings.view', staff: 'staff.view',
+}
+const ALL_TABS = ['stats', 'promotions', 'payments', 'integrations', 'users', 'transactions', 'withdrawals', 'reconciliation', 'chat', 'settings', 'staff'] as const
+
 export default function AdminDashboardPage() {
   const router = useRouter()
-  const [tab, setTab] = useState<'stats' | 'promotions' | 'payments' | 'integrations' | 'users' | 'transactions' | 'withdrawals' | 'reconciliation' | 'chat' | 'settings'>('stats')
+  const [tab, setTab] = useState<'stats' | 'promotions' | 'payments' | 'integrations' | 'users' | 'transactions' | 'withdrawals' | 'reconciliation' | 'chat' | 'settings' | 'staff'>('stats')
+  const [me, setMe] = useState<Me | null>(null)
   const [stats, setStats] = useState<Stats | null>(null)
   const [loading, setLoading] = useState(true)
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null)
@@ -503,6 +514,14 @@ export default function AdminDashboardPage() {
   useEffect(() => {
     if (!isAuthenticated()) { router.replace('/login'); return }
     fetchStats()
+    fetchMe().then(m => {
+      setMe(m)
+      // If the current tab is not permitted, jump to the first permitted tab.
+      if (m && !m.permissions.includes(TAB_PERMISSION['stats'])) {
+        const first = ALL_TABS.find(t => m.permissions.includes(TAB_PERMISSION[t]))
+        if (first) setTab(first)
+      }
+    })
     fetchPending()
     const interval = setInterval(() => { fetchStats(); fetchPending() }, 30_000)
     return () => clearInterval(interval)
@@ -634,7 +653,7 @@ export default function AdminDashboardPage() {
 
       {/* Tab bar */}
       <div className="flex gap-1 mb-6 border-b border-gray-800">
-        {(['stats', 'promotions', 'payments', 'integrations', 'users', 'transactions', 'withdrawals', 'reconciliation', 'chat', 'settings'] as const).map(t => {
+        {ALL_TABS.filter(t => !me || me.permissions.includes(TAB_PERMISSION[t])).map(t => {
           const badge = t === 'withdrawals' ? pending.withdrawalsAwaitingApproval
             : t === 'reconciliation' ? pending.c2bUnresolved
             : 0
@@ -779,6 +798,7 @@ export default function AdminDashboardPage() {
       {tab === 'reconciliation' && <ReconciliationTab />}
       {tab === 'chat' && <ChatModerationTab />}
       {tab === 'settings' && <GameSettingsTab />}
+      {tab === 'staff' && <StaffTab />}
     </main>
   )
 }
