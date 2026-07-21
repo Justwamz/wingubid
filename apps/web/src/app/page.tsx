@@ -7,6 +7,7 @@ import { apiFetch } from '@/lib/api'
 import { X } from 'lucide-react'
 import { TermsContent } from '@/components/TermsContent'
 import { normalizeKePhone, validateSafaricomPhone } from '@/lib/phone'
+import { applyGameOrder } from '@/lib/gameOrder'
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3001'
 
@@ -238,6 +239,7 @@ export default function LandingPage() {
   const [slideIdx, setSlideIdx] = useState(0)
   const [banner, setBanner] = useState<Banner | null>(null)
   const [availableSlugs, setAvailableSlugs] = useState<Set<string>>(new Set())
+  const [order, setOrder] = useState<string[]>([])
   const [loginOpen, setLoginOpen] = useState(false)
   const [authTab, setAuthTab] = useState<'login' | 'register'>('login')
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null)
@@ -260,6 +262,10 @@ export default function LandingPage() {
       .then(r => r.ok ? r.json() : null)
       .then((d: { slugs: string[] } | null) => { if (d?.slugs) setAvailableSlugs(new Set(d.slugs)) })
       .catch(() => {})
+    fetch(`${API_URL}/games/config`)
+      .then(r => r.ok ? r.json() : null)
+      .then((d: { order: string[] } | null) => { if (d?.order) setOrder(d.order) })
+      .catch(() => {})
   }, [router])
 
   const startTimer = useCallback(() => {
@@ -271,12 +277,16 @@ export default function LandingPage() {
 
   const goTo = (i: number) => { setSlideIdx(i); startTimer() }
 
-  // Activate provider games that have a configured provider
-  const crashGames = CRASH_GAMES.map(g =>
-    g.slug && availableSlugs.has(g.slug) ? { ...g, active: true } : g,
+  // Activate provider games that have a configured provider, then reorder each
+  // category by the house-optimized rank (live Wingu games move up; "coming
+  // soon" provider tiles keep their relative order after them).
+  const crashGames = applyGameOrder(
+    CRASH_GAMES.map(g => (g.slug && availableSlugs.has(g.slug) ? { ...g, active: true } : g)),
+    order,
   )
-  const casinoGames = CASINO_GAMES.map(g =>
-    g.slug && availableSlugs.has(g.slug) ? { ...g, active: true } : g,
+  const casinoGames = applyGameOrder(
+    CASINO_GAMES.map(g => (g.slug && availableSlugs.has(g.slug) ? { ...g, active: true } : g)),
+    order,
   )
 
   const raw = CAROUSEL_SLIDES[slideIdx]
