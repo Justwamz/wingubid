@@ -3,6 +3,8 @@ import { buildServer } from './server.js'
 import { env } from './env.js'
 import { startCron } from './lib/cron.js'
 import { Server } from 'socket.io'
+import { Redis } from 'ioredis'
+import { createAdapter } from '@socket.io/redis-adapter'
 import { registerCrashSocket } from './game/crash-socket.js'
 import { registerChatSocket } from './game/chat-socket.js'
 import { startCrashLoop } from './game/crash-loop.js'
@@ -23,6 +25,16 @@ async function main() {
   const io = new Server(app.server, {
     cors: { origin: allowedOrigins.length > 0 ? allowedOrigins : false, credentials: true },
   })
+
+  // Redis adapter so socket rooms (crash ticks, chat) fan out across multiple
+  // API instances. Dedicated pub/sub clients, separate from the app command
+  // client. Errors are logged, never thrown, so a Redis blip can't crash boot.
+  const pubClient = new Redis(env.REDIS_URL)
+  const subClient = pubClient.duplicate()
+  pubClient.on('error', err => app.log.error(`[socket-redis] pub: ${err.message}`))
+  subClient.on('error', err => app.log.error(`[socket-redis] sub: ${err.message}`))
+  io.adapter(createAdapter(pubClient, subClient))
+
   registerCrashSocket(io)
   registerChatSocket(io)
   startCrashLoop(io)
