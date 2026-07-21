@@ -42,13 +42,13 @@ export async function gameLeaderboardRoutes(app: FastifyInstance) {
        ORDER BY won_at DESC LIMIT 15`,
     )
 
-    const { rows: agg } = await pool.query<{ total: string; biggest: string; cnt: string }>(
+    const { rows: agg } = await pool.query<{ total: string; winners: string; cnt: string }>(
       `WITH wins AS (
-         SELECT b.winnings AS amt, b.settled_at AS t FROM bets b WHERE b.status = 'won' AND b.winnings IS NOT NULL
-         UNION ALL SELECT sc.prize_cents, sc.created_at FROM scratch_cards sc WHERE sc.prize_cents > 0
-         UNION ALL SELECT lt.prize_cents, lt.created_at FROM lottery_tickets lt WHERE lt.status = 'won' AND lt.prize_cents > 0
+         SELECT b.player_id AS pid, b.winnings AS amt, b.settled_at AS t FROM bets b WHERE b.status = 'won' AND b.winnings IS NOT NULL
+         UNION ALL SELECT sc.player_id, sc.prize_cents, sc.created_at FROM scratch_cards sc WHERE sc.prize_cents > 0
+         UNION ALL SELECT lt.player_id, lt.prize_cents, lt.created_at FROM lottery_tickets lt WHERE lt.status = 'won' AND lt.prize_cents > 0
        )
-       SELECT COALESCE(SUM(amt),0) AS total, COALESCE(MAX(amt),0) AS biggest, COUNT(*) AS cnt
+       SELECT COALESCE(SUM(amt),0) AS total, COUNT(DISTINCT pid) AS winners, COUNT(*) AS cnt
        FROM wins WHERE t >= (CURRENT_DATE AT TIME ZONE 'Africa/Nairobi')`,
     )
 
@@ -63,7 +63,7 @@ export async function gameLeaderboardRoutes(app: FastifyInstance) {
       })),
       today: {
         totalWon: Number(agg[0].total),
-        biggestWin: Number(agg[0].biggest),
+        winners: Number(agg[0].winners),
         count: Number(agg[0].cnt),
       },
     })

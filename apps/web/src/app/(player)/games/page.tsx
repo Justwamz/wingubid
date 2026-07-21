@@ -7,7 +7,7 @@ import { GAME_KEY_BY_HREF, applyGameOrder } from '@/lib/gameOrder'
 interface WinEntry {
   name: string; game: string; multiplier: number | null; winnings: number; currency: string; wonAt: string
 }
-interface TodayStats { totalWon: number; biggestWin: number; count: number }
+interface TodayStats { totalWon: number; winners: number; count: number }
 
 interface Banner {
   headline: string
@@ -402,8 +402,8 @@ export default function GamesLobby() {
                 <p className="text-accent-cyan font-mono font-bold text-sm">KES {(today.totalWon / 100).toLocaleString('en-KE')}</p>
               </div>
               <div className="bg-game-card border border-game-border rounded-xl px-3 py-2">
-                <p className="text-[10px] text-gray-500 uppercase tracking-wide">Biggest win</p>
-                <p className="text-accent-cyan font-mono font-bold text-sm">KES {(today.biggestWin / 100).toLocaleString('en-KE')}</p>
+                <p className="text-[10px] text-gray-500 uppercase tracking-wide">Winners</p>
+                <p className="text-accent-cyan font-mono font-bold text-sm">{today.winners.toLocaleString('en-KE')}</p>
               </div>
             </div>
           )}

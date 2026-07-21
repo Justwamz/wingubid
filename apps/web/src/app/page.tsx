@@ -11,6 +11,13 @@ import { applyGameOrder } from '@/lib/gameOrder'
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3001'
 
+interface LiveWin { name: string; game: string; winnings: number; currency: string }
+
+const GAME_LABELS: Record<string, string> = {
+  crash: 'Crash', mines: 'Mines', dice: 'Dice', scratch: 'Scratch', lottery: 'Lotto',
+}
+const gameLabel = (g: string) => GAME_LABELS[g] ?? g
+
 interface Banner {
   headline: string
   subtext?: string
@@ -241,7 +248,7 @@ export default function LandingPage() {
   const [availableSlugs, setAvailableSlugs] = useState<Set<string>>(new Set())
   const [order, setOrder] = useState<string[]>([])
   const [players, setPlayers] = useState(0)
-  const [biggestWinToday, setBiggestWinToday] = useState(0)
+  const [recentWins, setRecentWins] = useState<LiveWin[]>([])
   const [loginOpen, setLoginOpen] = useState(false)
   const [authTab, setAuthTab] = useState<'login' | 'register'>('login')
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null)
@@ -268,14 +275,19 @@ export default function LandingPage() {
       .then(r => r.ok ? r.json() : null)
       .then((d: { order: string[] } | null) => { if (d?.order) setOrder(d.order) })
       .catch(() => {})
-    fetch(`${API_URL}/games/presence`)
-      .then(r => r.ok ? r.json() : null)
-      .then((d: { players: number } | null) => { if (d) setPlayers(d.players) })
-      .catch(() => {})
-    fetch(`${API_URL}/games/leaderboard`)
-      .then(r => r.ok ? r.json() : null)
-      .then((d: { today?: { biggestWin: number } } | null) => { if (d?.today) setBiggestWinToday(d.today.biggestWin) })
-      .catch(() => {})
+    const loadLive = () => {
+      fetch(`${API_URL}/games/presence`)
+        .then(r => r.ok ? r.json() : null)
+        .then((d: { players: number } | null) => { if (d) setPlayers(d.players) })
+        .catch(() => {})
+      fetch(`${API_URL}/games/leaderboard`)
+        .then(r => r.ok ? r.json() : null)
+        .then((d: { wins?: LiveWin[] } | null) => { if (d?.wins) setRecentWins(d.wins) })
+        .catch(() => {})
+    }
+    loadLive()
+    const liveTimer = setInterval(loadLive, 12000)
+    return () => clearInterval(liveTimer)
   }, [router])
 
   const startTimer = useCallback(() => {
@@ -340,20 +352,34 @@ export default function LandingPage() {
         </div>
       </div>
 
-      {/* -- Live strip (real data; hidden when sparse) -- */}
-      {(players >= 3 || biggestWinToday > 0) && (
+      {/* -- Live wins ticker (real data; hidden when sparse) -- */}
+      {(players >= 3 || recentWins.length >= 3) && (
         <div className="max-w-7xl mx-auto px-3 pt-3">
-          <div className="flex flex-wrap items-center gap-x-5 gap-y-1 text-xs">
+          <div className="flex items-center gap-3 bg-game-card border border-game-border rounded-xl overflow-hidden">
             {players >= 3 && (
-              <span className="inline-flex items-center gap-1.5 font-semibold text-green-400">
+              <span className="flex-shrink-0 inline-flex items-center gap-1.5 pl-3 py-2 text-xs font-semibold text-green-400 whitespace-nowrap">
                 <span className="w-1.5 h-1.5 rounded-full bg-green-400 animate-pulse" />
                 {players} playing now
               </span>
             )}
-            {biggestWinToday > 0 && (
-              <span className="text-gray-400">
-                Biggest win today <span className="text-white font-semibold font-mono">KES {(biggestWinToday / 100).toLocaleString('en-KE')}</span>
-              </span>
+            {recentWins.length >= 3 && (
+              <div className="relative flex-1 overflow-hidden py-2">
+                <div className="flex w-max animate-marquee">
+                  {[0, 1].map(dup => (
+                    <div key={dup} className="flex flex-shrink-0" aria-hidden={dup === 1}>
+                      {recentWins.map((w, i) => (
+                        <span key={`${dup}-${i}`} className="inline-flex items-center gap-1.5 px-4 text-xs whitespace-nowrap">
+                          <span className="text-yellow-400">&#127942;</span>
+                          <span className="text-white font-semibold">{w.name}</span>
+                          <span className="text-gray-500">won</span>
+                          <span className="text-accent-cyan font-mono font-semibold">{w.currency} {(w.winnings / 100).toLocaleString('en-KE')}</span>
+                          <span className="text-gray-500">on {gameLabel(w.game)}</span>
+                        </span>
+                      ))}
+                    </div>
+                  ))}
+                </div>
+              </div>
             )}
           </div>
         </div>
