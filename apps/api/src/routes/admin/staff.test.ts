@@ -12,6 +12,7 @@ vi.mock('../../lib/hash.js', () => ({ hashPassword: vi.fn(async (p: string) => `
 
 import { buildServer } from '../../server.js'
 import { pool } from '@betting/db'
+import { getPermissionsForAdmin } from '../../services/permissions.service.js'
 
 const mockQuery = vi.mocked(pool.query)
 
@@ -36,6 +37,8 @@ describe('POST /admin/staff', () => {
   it('creates a staff member', async () => {
     // role lookup
     mockQuery.mockResolvedValueOnce({ rows: [{ id: 'r1', key: 'finance' }] } as never)
+    // target role permission keys (escalation check)
+    mockQuery.mockResolvedValueOnce({ rows: [{ permission_key: 'stats.view' }] } as never)
     // insert
     mockQuery.mockResolvedValueOnce({ rows: [{ id: 'new-1' }] } as never)
     // audit
@@ -48,6 +51,24 @@ describe('POST /admin/staff', () => {
     })
     expect(res.statusCode).toBe(200)
     expect(res.json().id).toBe('new-1')
+  })
+
+  it('rejects assigning a role that grants perms the caller lacks', async () => {
+    // Caller only holds staff.create; the middleware gate and the route
+    // escalation check both read the same limited set.
+    vi.mocked(getPermissionsForAdmin)
+      .mockResolvedValueOnce(new Set(['staff.create']))
+      .mockResolvedValueOnce(new Set(['staff.create']))
+    // role lookup
+    mockQuery.mockResolvedValueOnce({ rows: [{ id: 'r1', key: 'finance' }] } as never)
+    // target role grants a broader permission the caller does not hold
+    mockQuery.mockResolvedValueOnce({ rows: [{ permission_key: 'withdrawals.approve' }] } as never)
+    const res = await app.inject({
+      method: 'POST', url: '/admin/staff', headers: { Authorization: 'Bearer t' },
+      payload: { name: 'Otis', email: 'otis@x.com', roleId: '11111111-1111-1111-1111-111111111111', password: 'temp1234' },
+    })
+    expect(res.statusCode).toBe(403)
+    expect(res.json().error.code).toBe('INSUFFICIENT_PRIVILEGE')
   })
 
   it('rejects a short password', async () => {

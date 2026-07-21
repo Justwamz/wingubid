@@ -43,6 +43,14 @@ describe('ldapAuthenticate', () => {
     expect(unbind).toHaveBeenCalled()
   })
 
+  it('escapes RFC 4515 special characters in the search filter', async () => {
+    bind.mockResolvedValue(undefined)
+    search.mockResolvedValue({ searchEntries: [{ dn: 'cn=x,dc=example,dc=com', mail: 'x@example.com', cn: 'X', memberOf: [] }] })
+    await ldapAuthenticate(cfg, '*)(uid=*', 'pw')
+    const filterArg = (search.mock.calls[0][1] as { filter: string }).filter
+    expect(filterArg).toBe('(mail=\\2a\\29\\28uid=\\2a)')
+  })
+
   it('throws LDAP_AUTH_FAILED when the user bind rejects', async () => {
     bind.mockResolvedValueOnce(undefined) // service bind ok
     search.mockResolvedValue({ searchEntries: [{ dn: 'cn=jane,dc=example,dc=com', mail: 'jane@example.com', cn: 'Jane', memberOf: [] }] })

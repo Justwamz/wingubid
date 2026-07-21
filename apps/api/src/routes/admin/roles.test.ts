@@ -11,6 +11,7 @@ vi.mock('@betting/db', () => ({ pool: { query: vi.fn() } }))
 
 import { buildServer } from '../../server.js'
 import { pool } from '@betting/db'
+import { getPermissionsForAdmin } from '../../services/permissions.service.js'
 
 const mockQuery = vi.mocked(pool.query)
 
@@ -33,6 +34,20 @@ describe('POST /admin/roles', () => {
       payload: { key: 'ops', name: 'Ops', description: '', permissions: ['not.a.key'] },
     })
     expect(res.statusCode).toBe(400)
+  })
+
+  it('rejects granting a permission the caller does not hold', async () => {
+    // Caller only holds roles.create; the middleware gate and the route
+    // escalation check both read the same limited set.
+    vi.mocked(getPermissionsForAdmin)
+      .mockResolvedValueOnce(new Set(['roles.create']))
+      .mockResolvedValueOnce(new Set(['roles.create']))
+    const res = await app.inject({
+      method: 'POST', url: '/admin/roles', headers: { Authorization: 'Bearer t' },
+      payload: { key: 'ops', name: 'Ops', description: '', permissions: ['withdrawals.approve'] },
+    })
+    expect(res.statusCode).toBe(403)
+    expect(res.json().error.code).toBe('INSUFFICIENT_PRIVILEGE')
   })
 })
 

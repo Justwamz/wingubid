@@ -3,7 +3,7 @@ import type { FastifyInstance } from 'fastify'
 import { pool } from '@betting/db'
 import { authenticateAdmin } from '../../middleware/authenticateAdmin.js'
 import { requirePermission } from '../../middleware/requirePermission.js'
-import { invalidatePermissionsCache } from '../../services/permissions.service.js'
+import { invalidatePermissionsCache, getPermissionsForAdmin } from '../../services/permissions.service.js'
 import { PERMISSION_CATALOG, ALL_PERMISSION_KEYS, isValidPermission, SUPER_ADMIN_ROLE_KEY } from '../../lib/permissions.js'
 
 async function audit(adminId: string, action: string, entityId: string | null, after: unknown): Promise<void> {
@@ -45,6 +45,14 @@ export async function adminRolesRoutes(app: FastifyInstance) {
     const bad = parsed.data.permissions.filter(k => !isValidPermission(k))
     if (bad.length) return reply.status(400).send({ error: { code: 'VALIDATION_ERROR', message: `Unknown permission: ${bad[0]}` } })
     if (parsed.data.key === SUPER_ADMIN_ROLE_KEY) return reply.status(400).send({ error: { code: 'VALIDATION_ERROR', message: 'Reserved role key.' } })
+
+    // A caller may never grant permissions they do not themselves hold.
+    if (parsed.data.permissions.length) {
+      const callerPerms = await getPermissionsForAdmin(req.adminId)
+      if (parsed.data.permissions.some(k => !callerPerms.has(k))) {
+        return reply.status(403).send({ error: { code: 'INSUFFICIENT_PRIVILEGE', message: 'You cannot grant permissions you do not hold.' } })
+      }
+    }
 
     const client = await pool.connect()
     try {
@@ -89,6 +97,12 @@ export async function adminRolesRoutes(app: FastifyInstance) {
     if (parsed.data.permissions) {
       const bad = parsed.data.permissions.filter(k => !isValidPermission(k))
       if (bad.length) return reply.status(400).send({ error: { code: 'VALIDATION_ERROR', message: `Unknown permission: ${bad[0]}` } })
+
+      // A caller may never grant permissions they do not themselves hold.
+      const callerPerms = await getPermissionsForAdmin(req.adminId)
+      if (parsed.data.permissions.some(k => !callerPerms.has(k))) {
+        return reply.status(403).send({ error: { code: 'INSUFFICIENT_PRIVILEGE', message: 'You cannot grant permissions you do not hold.' } })
+      }
     }
 
     const client = await pool.connect()

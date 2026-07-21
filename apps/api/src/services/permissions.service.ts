@@ -11,19 +11,23 @@ export async function getPermissionsForAdmin(adminId: string): Promise<Set<strin
   const hit = cache.get(adminId)
   if (hit && Date.now() - hit.at < TTL_MS) return hit.perms
 
-  const { rows } = await pool.query<{ role_key: string; perms: string[] }>(
-    `SELECT r.key AS role_key,
+  const { rows } = await pool.query<{ role_key: string; status: string; perms: string[] }>(
+    `SELECT r.key AS role_key, au.status AS status,
             COALESCE(array_agg(rp.permission_key) FILTER (WHERE rp.permission_key IS NOT NULL), '{}') AS perms
      FROM admin_users au
      JOIN roles r ON r.id = au.role_id
      LEFT JOIN role_permissions rp ON rp.role_id = r.id
      WHERE au.id = $1
-     GROUP BY r.key`,
+     GROUP BY r.key, au.status`,
     [adminId],
   )
 
   let perms: Set<string>
   if (rows.length === 0) {
+    perms = new Set()
+  } else if (rows[0].status !== 'active') {
+    // Suspended (or otherwise inactive) admins lose all permission-gated access
+    // immediately, without waiting for their access token to expire.
     perms = new Set()
   } else if (rows[0].role_key === SUPER_ADMIN_ROLE_KEY) {
     perms = new Set(ALL_PERMISSION_KEYS)

@@ -1,7 +1,6 @@
 import crypto from 'crypto'
 import { pool } from '@betting/db'
 import { signAdminAccessToken } from '../lib/jwt.js'
-import { AppError } from './auth.service.js'
 import { authenticateStaff } from './staff-auth.service.js'
 
 export async function loginAdmin(

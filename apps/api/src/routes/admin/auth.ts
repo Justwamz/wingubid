@@ -1,7 +1,7 @@
 import { z } from 'zod'
 import type { FastifyInstance } from 'fastify'
 import { loginAdmin, logoutAdmin } from '../../services/admin-auth.service.js'
-import { AppError } from '../../services/auth.service.js'
+import { AppError } from '../../lib/errors.js'
 
 const loginBody = z.object({
   email: z.string().email(),

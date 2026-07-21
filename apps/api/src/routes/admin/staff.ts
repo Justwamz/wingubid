@@ -5,10 +5,20 @@ import { authenticateAdmin } from '../../middleware/authenticateAdmin.js'
 import { requirePermission } from '../../middleware/requirePermission.js'
 import { hashPassword } from '../../lib/hash.js'
 import { AppError } from '../../lib/errors.js'
-import { invalidatePermissionsCache } from '../../services/permissions.service.js'
+import { invalidatePermissionsCache, getPermissionsForAdmin } from '../../services/permissions.service.js'
 import { getLdapConfig, setLdapConfig } from '../../services/ldap-config.service.js'
 import { DEFAULT_LDAP_CONFIG } from '../../lib/ldap-auth.js'
-import { SUPER_ADMIN_ROLE_KEY } from '../../lib/permissions.js'
+import { SUPER_ADMIN_ROLE_KEY, ALL_PERMISSION_KEYS } from '../../lib/permissions.js'
+
+// Effective permission keys granted by a role. super_admin resolves to every
+// catalog key; other roles resolve to their explicit role_permissions grants.
+async function targetRolePermissionKeys(roleId: string, roleKey: string): Promise<string[]> {
+  if (roleKey === SUPER_ADMIN_ROLE_KEY) return ALL_PERMISSION_KEYS
+  const { rows } = await pool.query<{ permission_key: string }>(
+    `SELECT permission_key FROM role_permissions WHERE role_id = $1`, [roleId],
+  )
+  return rows.map(r => r.permission_key)
+}
 
 async function audit(adminId: string, action: string, entityId: string | null, after: unknown): Promise<void> {
   await pool.query(
@@ -51,6 +61,13 @@ export async function adminStaffRoutes(app: FastifyInstance) {
 
     const { rows: roleRows } = await pool.query<{ id: string; key: string }>(`SELECT id, key FROM roles WHERE id = $1`, [parsed.data.roleId])
     if (roleRows.length === 0) return reply.status(400).send({ error: { code: 'VALIDATION_ERROR', message: 'Unknown role.' } })
+
+    // A caller may never assign a role that grants privileges they do not hold.
+    const targetPerms = await targetRolePermissionKeys(roleRows[0].id, roleRows[0].key)
+    const callerPerms = await getPermissionsForAdmin(req.adminId)
+    if (targetPerms.some(k => !callerPerms.has(k))) {
+      return reply.status(403).send({ error: { code: 'INSUFFICIENT_PRIVILEGE', message: 'You cannot assign a role with permissions you do not hold.' } })
+    }
 
     const hash = await hashPassword(parsed.data.password)
     try {
@@ -95,6 +112,13 @@ export async function adminStaffRoutes(app: FastifyInstance) {
       const { rows } = await pool.query<{ key: string }>(`SELECT key FROM roles WHERE id = $1`, [parsed.data.roleId])
       if (rows.length === 0) return reply.status(400).send({ error: { code: 'VALIDATION_ERROR', message: 'Unknown role.' } })
       roleKey = rows[0].key
+
+      // A caller may never assign a role that grants privileges they do not hold.
+      const targetPerms = await targetRolePermissionKeys(parsed.data.roleId, roleKey)
+      const callerPerms = await getPermissionsForAdmin(req.adminId)
+      if (targetPerms.some(k => !callerPerms.has(k))) {
+        return reply.status(403).send({ error: { code: 'INSUFFICIENT_PRIVILEGE', message: 'You cannot assign a role with permissions you do not hold.' } })
+      }
     }
 
     const { rowCount } = await pool.query(

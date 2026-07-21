@@ -1,5 +1,5 @@
 'use client'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { apiFetch } from '@/lib/api'
 import { isAuthenticated } from '@/lib/auth'
@@ -12,9 +12,9 @@ export default function ChangePasswordPage() {
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
 
-  if (typeof window !== 'undefined' && !isAuthenticated()) {
-    router.replace('/login')
-  }
+  useEffect(() => {
+    if (!isAuthenticated()) router.replace('/login')
+  }, [router])
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()

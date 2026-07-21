@@ -45,6 +45,18 @@ function asArray(v: unknown): string[] {
   return [String(v)]
 }
 
+// Escape a value for safe use inside an LDAP search filter (RFC 4515). This
+// prevents filter injection via crafted login identifiers. Backslash must be
+// escaped first so the substitutions it introduces are not re-escaped.
+function escapeLdapFilterValue(value: string): string {
+  return value
+    .replace(/\\/g, '\\5c')
+    .replace(/\*/g, '\\2a')
+    .replace(/\(/g, '\\28')
+    .replace(/\)/g, '\\29')
+    .replace(/\0/g, '\\00')
+}
+
 // Real LDAP authentication: service-bind, find the user, rebind AS the user to
 // verify the password, then read group membership. Directory-only; the caller
 // maps groups to a role. Dormant in production until ldap_config.enabled is true.
@@ -65,7 +77,7 @@ export async function ldapAuthenticate(
     }
 
     // 2. Find the user under baseDN.
-    const filter = cfg.userFilter.replace('{{login}}', loginId)
+    const filter = cfg.userFilter.replace('{{login}}', escapeLdapFilterValue(loginId))
     const { searchEntries } = await client.search(cfg.baseDN, {
       scope: 'sub',
       filter,
