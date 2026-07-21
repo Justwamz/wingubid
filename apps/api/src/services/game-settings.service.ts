@@ -127,3 +127,32 @@ export async function setRtpMonitorConfig(cfg: RtpMonitorConfig): Promise<void> 
     [JSON.stringify(cfg)],
   )
 }
+
+// ---- Game-ordering config --------------------------------------------------
+
+export interface GameOrderConfig {
+  windowDays: number
+  revenueWeight: number // 0..1; activity weight is (1 - revenueWeight)
+  minStake: number      // cents; minimum window volume to be ranked
+}
+
+const DEFAULT_ORDER_CONFIG: GameOrderConfig = { windowDays: 7, revenueWeight: 0.7, minStake: 100000 }
+
+export async function getGameOrderConfig(): Promise<GameOrderConfig> {
+  const { rows } = await pool.query<{ value: Partial<GameOrderConfig> }>(`SELECT value FROM game_settings WHERE key = 'game_order'`)
+  const v = rows[0]?.value ?? {}
+  return {
+    windowDays: v.windowDays ?? DEFAULT_ORDER_CONFIG.windowDays,
+    revenueWeight: v.revenueWeight ?? DEFAULT_ORDER_CONFIG.revenueWeight,
+    minStake: v.minStake ?? DEFAULT_ORDER_CONFIG.minStake,
+  }
+}
+
+export async function setGameOrderConfig(cfg: GameOrderConfig): Promise<void> {
+  await pool.query(
+    `INSERT INTO game_settings (key, value, updated_at)
+     VALUES ('game_order', $1::jsonb, NOW())
+     ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value, updated_at = NOW()`,
+    [JSON.stringify(cfg)],
+  )
+}

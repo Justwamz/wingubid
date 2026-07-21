@@ -24,6 +24,7 @@ interface RtpMonitor {
   windowMinutes: number; minBets: number; reAlertMinutes: number
   warnRtp: Record<MonitoredGame, number>
 }
+interface GameOrderCfg { windowDays: number; revenueWeight: number; minStake: number }
 interface SettingsResponse {
   houseEdge: Record<GameKey, number>
   lottery: LotteryMargin[]
@@ -31,6 +32,7 @@ interface SettingsResponse {
   gamesEnabled: Record<AnyGame, boolean>
   rtpMonitor: RtpMonitor
   realizedRtp: Record<MonitoredGame, RtpStat>
+  gameOrder: GameOrderCfg
 }
 
 const ALL_GAMES: { key: AnyGame; label: string }[] = [
@@ -59,6 +61,7 @@ export function GameSettingsTab() {
   const [enabled, setEnabled] = useState<Record<AnyGame, boolean> | null>(null)
   const [rtp, setRtp] = useState<RtpMonitor | null>(null)
   const [realized, setRealized] = useState<Record<MonitoredGame, RtpStat> | null>(null)
+  const [gameOrder, setGameOrder] = useState<GameOrderCfg | null>(null)
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [saved, setSaved] = useState(false)
@@ -79,9 +82,21 @@ export function GameSettingsTab() {
       setEnabled(data.gamesEnabled)
       setRtp(data.rtpMonitor)
       setRealized(data.realizedRtp)
+      setGameOrder(data.gameOrder)
     }
     setLoading(false)
   }, [])
+
+  async function saveGameOrder() {
+    if (!gameOrder) return
+    setBusy(true); setError(null)
+    const { error: err } = await apiFetch('/admin/game-settings/game-order', {
+      method: 'PUT', body: JSON.stringify(gameOrder),
+    })
+    setBusy(false)
+    if (err) { setError(err.message); return }
+    setSaved(true); load()
+  }
 
   async function toggleGame(game: AnyGame, next: boolean) {
     setBusy(true); setError(null)
@@ -216,6 +231,36 @@ export function GameSettingsTab() {
             </div>
           ))}
           <button onClick={saveRtpConfig} disabled={busy} className="bg-cyan-600 hover:bg-cyan-500 disabled:opacity-50 text-white font-semibold text-sm px-4 py-2 rounded-lg transition-colors">Save monitor</button>
+        </div>
+      )}
+
+      {/* Game ordering */}
+      <h3 className="text-sm font-semibold text-gray-300 pt-2">Lobby ordering</h3>
+      <p className="text-xs text-gray-500 max-w-xl">
+        Games are ranked by a blend of house revenue and activity over a rolling window.
+        Revenue weight {gameOrder ? `${Math.round(gameOrder.revenueWeight * 100)}%` : ''} · activity is the remainder.
+      </p>
+      {gameOrder && (
+        <div className="bg-gray-900 border border-gray-800 rounded-xl p-4 flex flex-wrap items-end gap-4 max-w-xl">
+          <div>
+            <label className="text-xs text-gray-400 block mb-1">Window (days)</label>
+            <input type="number" min="1" max="90" value={gameOrder.windowDays}
+              onChange={e => setGameOrder(c => c && ({ ...c, windowDays: Number(e.target.value) }))}
+              className="w-20 bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm text-white font-mono focus:outline-none focus:border-cyan-600" />
+          </div>
+          <div>
+            <label className="text-xs text-gray-400 block mb-1">Revenue weight (%)</label>
+            <input type="number" min="0" max="100" value={Math.round(gameOrder.revenueWeight * 100)}
+              onChange={e => setGameOrder(c => c && ({ ...c, revenueWeight: Math.min(100, Math.max(0, Number(e.target.value))) / 100 }))}
+              className="w-24 bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm text-white font-mono focus:outline-none focus:border-cyan-600" />
+          </div>
+          <div>
+            <label className="text-xs text-gray-400 block mb-1">Min stake to rank (KES)</label>
+            <input type="number" min="0" step="100" value={Math.round(gameOrder.minStake / 100)}
+              onChange={e => setGameOrder(c => c && ({ ...c, minStake: Math.max(0, Number(e.target.value)) * 100 }))}
+              className="w-28 bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm text-white font-mono focus:outline-none focus:border-cyan-600" />
+          </div>
+          <button onClick={saveGameOrder} disabled={busy} className="bg-cyan-600 hover:bg-cyan-500 disabled:opacity-50 text-white font-semibold text-sm px-4 py-2 rounded-lg transition-colors">Save ordering</button>
         </div>
       )}
 

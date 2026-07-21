@@ -3,10 +3,12 @@ import type { FastifyInstance } from 'fastify'
 import { authenticateAdmin } from '../../middleware/authenticateAdmin.js'
 import {
   getHouseEdges, setHouseEdge, getGamesEnabled, setGameEnabled,
-  getRtpMonitorConfig, setRtpMonitorConfig, ALL_GAMES, type AnyGame,
+  getRtpMonitorConfig, setRtpMonitorConfig, getGameOrderConfig, setGameOrderConfig,
+  ALL_GAMES, type AnyGame,
 } from '../../services/game-settings.service.js'
 import { getLotteryMargins, getScratchMargin } from '../../services/game-margins.service.js'
 import { computeRealizedRtp } from '../../services/rtp-monitor.service.js'
+import { invalidateGameOrderCache } from '../../services/game-order.service.js'
 
 // House edge is a percentage; bound it to a sane range so a typo can't make a
 // game unplayable or run at a loss.
@@ -25,6 +27,7 @@ export async function adminGameSettingsRoutes(app: FastifyInstance) {
       gamesEnabled: await getGamesEnabled(),
       rtpMonitor: rtpConfig,
       realizedRtp,
+      gameOrder: await getGameOrderConfig(),
     })
   })
 
@@ -72,5 +75,25 @@ export async function adminGameSettingsRoutes(app: FastifyInstance) {
       warnRtp: { ...cur.warnRtp, ...(parsed.data.warnRtp ?? {}) },
     })
     return reply.send({ rtpMonitor: await getRtpMonitorConfig() })
+  })
+
+  // Game-ordering weights / window.
+  app.put('/admin/game-settings/game-order', { preHandler: authenticateAdmin }, async (req, reply) => {
+    const parsed = z.object({
+      windowDays: z.number().int().min(1).max(90).optional(),
+      revenueWeight: z.number().min(0).max(1).optional(),
+      minStake: z.number().int().min(0).optional(),
+    }).safeParse(req.body)
+    if (!parsed.success) {
+      return reply.status(400).send({ error: { code: 'VALIDATION_ERROR', message: parsed.error.issues[0].message } })
+    }
+    const cur = await getGameOrderConfig()
+    await setGameOrderConfig({
+      windowDays: parsed.data.windowDays ?? cur.windowDays,
+      revenueWeight: parsed.data.revenueWeight ?? cur.revenueWeight,
+      minStake: parsed.data.minStake ?? cur.minStake,
+    })
+    invalidateGameOrderCache()
+    return reply.send({ gameOrder: await getGameOrderConfig() })
   })
 }
