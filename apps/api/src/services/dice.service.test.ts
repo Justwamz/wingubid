@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 
 vi.mock('@betting/db', () => ({ pool: { query: vi.fn(), connect: vi.fn() } }))
+vi.mock('./game-settings.service.js', () => ({ assertGameEnabled: vi.fn(async () => {}) }))
 vi.mock('../lib/crash-rng.js', () => ({ rollDiceResult: vi.fn() }))
 vi.mock('./wallet.service.js', () => ({
   debitForBet: vi.fn(async () => ({ transactionId: 'tx-1', walletId: 'w-1' })),

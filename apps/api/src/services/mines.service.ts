@@ -4,6 +4,7 @@ import { getRedis } from '../lib/redis.js'
 import { debitForBet, creditWinnings } from './wallet.service.js'
 import { generateMinePositions } from '../lib/crash-rng.js'
 import { getHouseEdge } from './crash.service.js'
+import { assertGameEnabled } from './game-settings.service.js'
 import { AppError } from '../lib/errors.js'
 
 const GAME_TTL = 1800
@@ -33,6 +34,7 @@ function payoutMultiplier(m: number): number {
 export async function startGame(
   playerId: string, grossStake: number, gridSize: number, mineCount: number,
 ): Promise<{ gameId: string; serverSeedHash: string; clientSeed: string; gridSize: number; mineCount: number }> {
+  await assertGameEnabled('mines')
   const redis = getRedis()
   const existing = await redis.get(redisKey(playerId))
   if (existing && (JSON.parse(existing) as MinesGameState).status === 'active') {

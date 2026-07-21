@@ -1,8 +1,12 @@
 import { z } from 'zod'
 import type { FastifyInstance } from 'fastify'
 import { authenticateAdmin } from '../../middleware/authenticateAdmin.js'
-import { getHouseEdges, setHouseEdge } from '../../services/game-settings.service.js'
+import {
+  getHouseEdges, setHouseEdge, getGamesEnabled, setGameEnabled,
+  getRtpMonitorConfig, setRtpMonitorConfig, ALL_GAMES, type AnyGame,
+} from '../../services/game-settings.service.js'
 import { getLotteryMargins, getScratchMargin } from '../../services/game-margins.service.js'
+import { computeRealizedRtp } from '../../services/rtp-monitor.service.js'
 
 // House edge is a percentage; bound it to a sane range so a typo can't make a
 // game unplayable or run at a loss.
@@ -11,11 +15,16 @@ const bodySchema = z.object({ crash: edge, mines: edge, dice: edge })
 
 export async function adminGameSettingsRoutes(app: FastifyInstance) {
   app.get('/admin/game-settings', { preHandler: authenticateAdmin }, async (_req, reply) => {
+    const rtpConfig = await getRtpMonitorConfig()
+    const realizedRtp = await computeRealizedRtp(rtpConfig.windowMinutes)
     return reply.send({
       houseEdge: await getHouseEdges(),
       // Read-only: lotto and scratch margins are structural (fixed prize tables).
       lottery: getLotteryMargins(),
       scratch: getScratchMargin(),
+      gamesEnabled: await getGamesEnabled(),
+      rtpMonitor: rtpConfig,
+      realizedRtp,
     })
   })
 
@@ -28,5 +37,40 @@ export async function adminGameSettingsRoutes(app: FastifyInstance) {
     await setHouseEdge('mines', parsed.data.mines)
     await setHouseEdge('dice', parsed.data.dice)
     return reply.send({ houseEdge: await getHouseEdges() })
+  })
+
+  // Pause / resume a game.
+  app.put('/admin/game-settings/game-enabled', { preHandler: authenticateAdmin }, async (req, reply) => {
+    const parsed = z.object({
+      game: z.enum(ALL_GAMES as [AnyGame, ...AnyGame[]]),
+      enabled: z.boolean(),
+    }).safeParse(req.body)
+    if (!parsed.success) {
+      return reply.status(400).send({ error: { code: 'VALIDATION_ERROR', message: parsed.error.issues[0].message } })
+    }
+    await setGameEnabled(parsed.data.game, parsed.data.enabled)
+    return reply.send({ gamesEnabled: await getGamesEnabled() })
+  })
+
+  // RTP monitor thresholds.
+  app.put('/admin/game-settings/rtp-monitor', { preHandler: authenticateAdmin }, async (req, reply) => {
+    const g = z.number().positive()
+    const parsed = z.object({
+      windowMinutes: z.number().int().min(5).max(10080).optional(),
+      minBets: z.number().int().min(1).max(100000).optional(),
+      reAlertMinutes: z.number().int().min(5).max(1440).optional(),
+      warnRtp: z.object({ crash: g, mines: g, dice: g, scratch: g }).partial().optional(),
+    }).safeParse(req.body)
+    if (!parsed.success) {
+      return reply.status(400).send({ error: { code: 'VALIDATION_ERROR', message: parsed.error.issues[0].message } })
+    }
+    const cur = await getRtpMonitorConfig()
+    await setRtpMonitorConfig({
+      windowMinutes: parsed.data.windowMinutes ?? cur.windowMinutes,
+      minBets: parsed.data.minBets ?? cur.minBets,
+      reAlertMinutes: parsed.data.reAlertMinutes ?? cur.reAlertMinutes,
+      warnRtp: { ...cur.warnRtp, ...(parsed.data.warnRtp ?? {}) },
+    })
+    return reply.send({ rtpMonitor: await getRtpMonitorConfig() })
   })
 }

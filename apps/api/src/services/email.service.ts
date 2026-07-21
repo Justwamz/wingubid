@@ -52,6 +52,21 @@ function kes(cents: number): string {
   return `KES ${(cents / 100).toLocaleString('en-KE', { minimumFractionDigits: 2 })}`
 }
 
+// Risk alert: a game's realized RTP is running above its warn threshold.
+export async function notifyRtpAlert(game: string, rtp: number, nBets: number, windowMin: number): Promise<void> {
+  const pct = (rtp * 100).toFixed(1)
+  const subject = `[WinguBet][RISK] High RTP on ${game} - ${pct}%`
+  const html =
+    `<p><strong>High RTP alert</strong></p>` +
+    `<ul>` +
+    `<li>Game: ${game}</li>` +
+    `<li>Realized RTP: ${pct}% over the last ${windowMin} minutes</li>` +
+    `<li>Settled bets in window: ${nBets}</li>` +
+    `</ul>` +
+    `<p>The house is paying out more than expected on this game. Review it in the admin Game Settings tab, and pause the game there if needed.</p>`
+  await sendEmail({ subject, html })
+}
+
 // Fire a withdrawal notification to the configured recipient. Never throws.
 export async function notifyWithdrawal(event: WithdrawalEvent, d: {
   id: string; amount: number; phone: string; player: string; provider: string; adminId?: string

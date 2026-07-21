@@ -2,6 +2,7 @@ import { pool } from '@betting/db'
 import { debitForBet, creditWinnings } from './wallet.service.js'
 import { rollDiceResult } from '../lib/crash-rng.js'
 import { getHouseEdge } from './crash.service.js'
+import { assertGameEnabled } from './game-settings.service.js'
 import { nextDiceRoll } from './dice-seed.service.js'
 
 export async function rollDice(
@@ -13,6 +14,7 @@ export async function rollDice(
   result: number; won: boolean; multiplier: number; winnings: number
   serverSeedHash: string; clientSeed: string; nonce: number
 }> {
+  await assertGameEnabled('dice')
   const houseEdge = await getHouseEdge('dice_house_edge')
 
   const winCount = direction === 'over' ? 100 - target : target

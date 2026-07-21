@@ -2,6 +2,7 @@ import { createHmac } from 'crypto'
 import { pool } from '@betting/db'
 import { debitForBet, creditWinnings } from './wallet.service.js'
 import { nextScratchRoll } from './scratch-seed.service.js'
+import { assertGameEnabled } from './game-settings.service.js'
 import { AppError } from '../lib/errors.js'
 
 export const SYMBOLS_EMOJI = ['💎', '🌟', '🍀', '🔥', '💰', '❌']
@@ -82,6 +83,7 @@ export async function buyScratchCard(
   if (!VALID_STAKES.has(stakeCents)) {
     throw new AppError('INVALID_STAKE', 'Please choose a stake of KES 20, 50, 100, or 200.', 400)
   }
+  await assertGameEnabled('scratch')
 
   const client = await pool.connect()
   try {

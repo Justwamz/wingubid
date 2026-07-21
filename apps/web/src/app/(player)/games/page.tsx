@@ -187,11 +187,20 @@ const PROVIDER_GAMES = [
   },
 ]
 
+const GAME_KEY_BY_HREF: Record<string, string> = {
+  '/games/wingu-crash': 'crash',
+  '/games/wingu-mines': 'mines',
+  '/games/wingu-dice': 'dice',
+  '/games/wingu-lotto': 'lottery',
+  '/games/wingu-scratch': 'scratch',
+}
+
 export default function GamesLobby() {
   const [leaderboard, setLeaderboard] = useState<LeaderboardEntry[]>([])
   const [expanded, setExpanded] = useState<string | null>(null)
   const [banner, setBanner] = useState<Banner | null>(null)
   const [availableSlugs, setAvailableSlugs] = useState<Set<string>>(new Set())
+  const [enabled, setEnabled] = useState<Record<string, boolean>>({})
   const [launching, setLaunching] = useState<string | null>(null)
 
   useEffect(() => {
@@ -205,6 +214,9 @@ export default function GamesLobby() {
 
     apiFetch<{ slugs: string[] }>('/games/available')
       .then(({ data }) => data?.slugs && setAvailableSlugs(new Set(data.slugs)))
+
+    apiFetch<{ enabled: Record<string, boolean> }>('/games/config')
+      .then(({ data }) => data?.enabled && setEnabled(data.enabled))
 
     return () => clearInterval(id)
   }, [])
@@ -248,7 +260,9 @@ export default function GamesLobby() {
             GAMES
           </h2>
           <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-            {GAMES.map(g => (
+            {GAMES.map(g => {
+              const paused = enabled[GAME_KEY_BY_HREF[g.href]] === false
+              return (
               <div key={g.href} className={`bg-gray-900 bg-gradient-to-br ${g.gradient} border ${g.border} rounded-2xl overflow-hidden flex flex-col`}>
                 {'image' in g && g.image && (
                   <div className="relative w-full h-36 overflow-hidden bg-gray-950">
@@ -289,16 +303,23 @@ export default function GamesLobby() {
                   )}
                 </div>
 
-                <Link href={g.href} className="block">
-                  <div
-                    className="mx-4 mb-4 py-2.5 rounded-xl text-center font-bold text-sm transition-opacity hover:opacity-90"
-                    style={{ background: `${g.accent}22`, border: `1px solid ${g.accent}44`, color: g.accent }}
-                  >
-                    PLAY NOW →
+                {paused ? (
+                  <div className="mx-4 mb-4 py-2.5 rounded-xl text-center font-bold text-sm bg-gray-800/40 border border-gray-700/40 text-gray-500 cursor-not-allowed">
+                    TEMPORARILY UNAVAILABLE
                   </div>
-                </Link>
+                ) : (
+                  <Link href={g.href} className="block">
+                    <div
+                      className="mx-4 mb-4 py-2.5 rounded-xl text-center font-bold text-sm transition-opacity hover:opacity-90"
+                      style={{ background: `${g.accent}22`, border: `1px solid ${g.accent}44`, color: g.accent }}
+                    >
+                      PLAY NOW →
+                    </div>
+                  </Link>
+                )}
               </div>
-            ))}
+              )
+            })}
 
             {/* Provider-powered games */}
             {PROVIDER_GAMES.map(g => {

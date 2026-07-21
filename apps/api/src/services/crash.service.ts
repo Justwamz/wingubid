@@ -1,5 +1,6 @@
 import { pool } from '@betting/db'
 import { debitForBet, creditWinnings } from './wallet.service.js'
+import { assertGameEnabled } from './game-settings.service.js'
 import { AppError } from '../lib/errors.js'
 
 export interface PlacedBet {
@@ -13,6 +14,7 @@ export async function placeBet(
   grossStake: number,
   autoCashoutAt: number | undefined,
 ): Promise<PlacedBet> {
+  await assertGameEnabled('crash')
   const client = await pool.connect()
   try {
     await client.query('BEGIN')

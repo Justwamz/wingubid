@@ -1,6 +1,7 @@
 import { randomBytes, createHmac } from 'crypto'
 import { pool } from '@betting/db'
 import { debitForBet, creditWinnings } from './wallet.service.js'
+import { assertGameEnabled } from './game-settings.service.js'
 import { AppError } from '../lib/errors.js'
 
 export const TICKET_PRICES: Record<string, number> = {
@@ -74,6 +75,7 @@ export async function buyTicket(
   if (!['hourly', 'daily', 'weekly'].includes(drawType)) {
     throw new AppError('INVALID_DRAW_TYPE', "That lottery draw isn't available.", 400)
   }
+  await assertGameEnabled('lottery')
   if (pickedNumbers.length !== 3) {
     throw new AppError('INVALID_NUMBERS', 'Please pick exactly 3 numbers.', 400)
   }

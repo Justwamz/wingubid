@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 
 vi.mock('@betting/db', () => ({ pool: { query: vi.fn(), connect: vi.fn() } }))
+vi.mock('./game-settings.service.js', () => ({ assertGameEnabled: vi.fn(async () => {}) }))
 
 import { pool } from '@betting/db'
 import { placeBet, cashout, settleLostBets } from './crash.service.js'

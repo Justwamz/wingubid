@@ -1,5 +1,6 @@
 import cron from 'node-cron'
 import { pool } from '@betting/db'
+import { runRtpMonitor } from '../services/rtp-monitor.service.js'
 
 async function runDailyReconciliation(): Promise<void> {
   console.log('[cron] Starting daily tax reconciliation...')
@@ -78,4 +79,10 @@ export function startCron(): void {
     })
   })
   console.log('[cron] Daily tax reconciliation scheduled at 21:00 UTC')
+
+  // RTP risk monitor: warn-only, every 5 minutes.
+  cron.schedule('*/5 * * * *', () => {
+    runRtpMonitor().catch(err => console.error('[cron] RTP monitor error', err))
+  })
+  console.log('[cron] RTP monitor scheduled every 5 minutes')
 }
