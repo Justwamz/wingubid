@@ -240,6 +240,8 @@ export default function LandingPage() {
   const [banner, setBanner] = useState<Banner | null>(null)
   const [availableSlugs, setAvailableSlugs] = useState<Set<string>>(new Set())
   const [order, setOrder] = useState<string[]>([])
+  const [players, setPlayers] = useState(0)
+  const [biggestWinToday, setBiggestWinToday] = useState(0)
   const [loginOpen, setLoginOpen] = useState(false)
   const [authTab, setAuthTab] = useState<'login' | 'register'>('login')
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null)
@@ -265,6 +267,14 @@ export default function LandingPage() {
     fetch(`${API_URL}/games/config`)
       .then(r => r.ok ? r.json() : null)
       .then((d: { order: string[] } | null) => { if (d?.order) setOrder(d.order) })
+      .catch(() => {})
+    fetch(`${API_URL}/games/presence`)
+      .then(r => r.ok ? r.json() : null)
+      .then((d: { players: number } | null) => { if (d) setPlayers(d.players) })
+      .catch(() => {})
+    fetch(`${API_URL}/games/leaderboard`)
+      .then(r => r.ok ? r.json() : null)
+      .then((d: { today?: { biggestWin: number } } | null) => { if (d?.today) setBiggestWinToday(d.today.biggestWin) })
       .catch(() => {})
   }, [router])
 
@@ -329,6 +339,25 @@ export default function LandingPage() {
           ))}
         </div>
       </div>
+
+      {/* -- Live strip (real data; hidden when sparse) -- */}
+      {(players >= 3 || biggestWinToday > 0) && (
+        <div className="max-w-7xl mx-auto px-3 pt-3">
+          <div className="flex flex-wrap items-center gap-x-5 gap-y-1 text-xs">
+            {players >= 3 && (
+              <span className="inline-flex items-center gap-1.5 font-semibold text-green-400">
+                <span className="w-1.5 h-1.5 rounded-full bg-green-400 animate-pulse" />
+                {players} playing now
+              </span>
+            )}
+            {biggestWinToday > 0 && (
+              <span className="text-gray-400">
+                Biggest win today <span className="text-white font-semibold font-mono">KES {(biggestWinToday / 100).toLocaleString('en-KE')}</span>
+              </span>
+            )}
+          </div>
+        </div>
+      )}
 
       {/* -- Hero Carousel - same width as game sections -- */}
       <div className="max-w-7xl mx-auto px-3 pt-3">

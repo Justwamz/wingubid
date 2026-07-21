@@ -4,9 +4,10 @@ import { useEffect, useState } from 'react'
 import { apiFetch } from '@/lib/api'
 import { GAME_KEY_BY_HREF, applyGameOrder } from '@/lib/gameOrder'
 
-interface LeaderboardEntry {
-  playerName: string; game: string; multiplier: number; winnings: number; currency: string
+interface WinEntry {
+  name: string; game: string; multiplier: number | null; winnings: number; currency: string; wonAt: string
 }
+interface TodayStats { totalWon: number; biggestWin: number; count: number }
 
 interface Banner {
   headline: string
@@ -189,7 +190,9 @@ const PROVIDER_GAMES = [
 ]
 
 export default function GamesLobby() {
-  const [leaderboard, setLeaderboard] = useState<LeaderboardEntry[]>([])
+  const [leaderboard, setLeaderboard] = useState<WinEntry[]>([])
+  const [today, setToday] = useState<TodayStats | null>(null)
+  const [players, setPlayers] = useState(0)
   const [expanded, setExpanded] = useState<string | null>(null)
   const [banner, setBanner] = useState<Banner | null>(null)
   const [availableSlugs, setAvailableSlugs] = useState<Set<string>>(new Set())
@@ -198,10 +201,14 @@ export default function GamesLobby() {
   const [launching, setLaunching] = useState<string | null>(null)
 
   useEffect(() => {
-    const load = () => apiFetch<LeaderboardEntry[]>('/games/leaderboard')
-      .then(({ data }) => data && setLeaderboard(data))
+    const load = () => {
+      apiFetch<{ wins: WinEntry[]; today: TodayStats }>('/games/leaderboard')
+        .then(({ data }) => { if (data) { setLeaderboard(data.wins); setToday(data.today) } })
+      apiFetch<{ players: number }>('/games/presence')
+        .then(({ data }) => { if (data) setPlayers(data.players) })
+    }
     load()
-    const id = setInterval(load, 5000)
+    const id = setInterval(load, 8000)
 
     apiFetch<{ banner: Banner | null }>('/banners/lobby')
       .then(({ data }) => data?.banner ? setBanner(data.banner) : null)
@@ -253,9 +260,17 @@ export default function GamesLobby() {
       <div className="flex flex-col lg:flex-row gap-6">
         {/* Game cards */}
         <div className="flex-1">
-          <h2 className="text-2xl font-extrabold font-mono mb-4" style={{ color: '#00F2FE' }}>
-            GAMES
-          </h2>
+          <div className="flex items-center gap-3 mb-4">
+            <h2 className="text-2xl font-extrabold font-mono" style={{ color: '#00F2FE' }}>
+              GAMES
+            </h2>
+            {players >= 3 && (
+              <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-green-400 bg-green-500/10 border border-green-500/20 rounded-full px-2.5 py-1">
+                <span className="w-1.5 h-1.5 rounded-full bg-green-400 animate-pulse" />
+                {players} playing
+              </span>
+            )}
+          </div>
           <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
             {applyGameOrder(GAMES, order).map(g => {
               const paused = enabled[GAME_KEY_BY_HREF[g.href]] === false
@@ -379,20 +394,30 @@ export default function GamesLobby() {
         {/* Leaderboard sidebar */}
         <div className="lg:w-72 xl:w-80 flex-shrink-0">
           <h2 className="text-sm font-mono font-bold text-gray-400 uppercase tracking-widest mb-4">Recent Wins</h2>
-          {leaderboard.length === 0 ? (
-            <div className="text-gray-600 text-sm text-center py-8 border border-game-border rounded-xl">
-              No recent wins yet
+
+          {today && today.count > 0 && (
+            <div className="grid grid-cols-2 gap-2 mb-3">
+              <div className="bg-game-card border border-game-border rounded-xl px-3 py-2">
+                <p className="text-[10px] text-gray-500 uppercase tracking-wide">Won today</p>
+                <p className="text-accent-cyan font-mono font-bold text-sm">KES {(today.totalWon / 100).toLocaleString('en-KE')}</p>
+              </div>
+              <div className="bg-game-card border border-game-border rounded-xl px-3 py-2">
+                <p className="text-[10px] text-gray-500 uppercase tracking-wide">Biggest win</p>
+                <p className="text-accent-cyan font-mono font-bold text-sm">KES {(today.biggestWin / 100).toLocaleString('en-KE')}</p>
+              </div>
             </div>
-          ) : (
+          )}
+
+          {leaderboard.length > 0 && (
             <div className="space-y-2">
               {leaderboard.map((e, i) => (
                 <div key={i} className="flex items-center gap-3 bg-game-card border border-game-border rounded-xl px-4 py-3">
                   <div className="flex-1 min-w-0">
-                    <p className="text-white text-sm font-semibold truncate">{e.playerName}</p>
+                    <p className="text-white text-sm font-semibold truncate">{e.name}</p>
                     <p className="text-gray-500 text-xs uppercase">{e.game}</p>
                   </div>
                   <div className="text-right flex-shrink-0">
-                    <p className="text-accent-cyan font-mono font-bold text-sm">{e.multiplier.toFixed(2)}×</p>
+                    {e.multiplier != null && <p className="text-accent-cyan font-mono font-bold text-sm">{e.multiplier.toFixed(2)}×</p>}
                     <p className="text-gray-300 text-xs font-mono">{e.currency} {(e.winnings / 100).toLocaleString('en-KE', { minimumFractionDigits: 2 })}</p>
                   </div>
                 </div>
