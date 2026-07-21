@@ -284,7 +284,7 @@ function LdapSection({ roles, flash }: { roles: Role[]; flash: (m: string) => vo
   useEffect(() => {
     apiFetch<{ config: typeof cfg }>('/admin/ldap-config').then(({ data }) => {
       if (data?.config) {
-        setCfg(data.config)
+        setCfg({ ...data.config, bindPassword: '' })
         setMapText(Object.entries(data.config.groupRoleMap || {}).map(([g, r]) => `${g} = ${r}`).join('\n'))
       }
     })
@@ -293,7 +293,12 @@ function LdapSection({ roles, flash }: { roles: Role[]; flash: (m: string) => vo
   async function save() {
     const groupRoleMap: Record<string, string> = {}
     for (const line of mapText.split('\n')) {
-      const [g, r] = line.split('=').map(s => s.trim())
+      // Group identifiers are DNs that contain '=' themselves, so split on the
+      // last '=': everything before it is the group DN, the remainder is the role key.
+      const idx = line.lastIndexOf('=')
+      if (idx === -1) continue
+      const g = line.slice(0, idx).trim()
+      const r = line.slice(idx + 1).trim()
       if (g && r) groupRoleMap[g] = r
     }
     const body: Record<string, unknown> = { ...cfg, groupRoleMap }
