@@ -28,8 +28,10 @@ enabled later without rework.
   (`staff.*`, `roles.*`), which Super Admin holds by default.
 - **Onboarding:** super admin sets an initial password; staff is forced to
   change it on first login. (Transactional email is not wired yet.)
-- **LDAP:** design the seam + store config now, but keep it dormant (local
-  password auth day 1). No LDAP npm dependency added yet.
+- **LDAP:** build the **real, working bind module** now (proper LDAP client,
+  fully unit-tested), but keep it dormant — `authenticateStaff` only reaches it
+  when `ldap_config.enabled` is true, which defaults off. Ready to activate by
+  config flip; nothing exercises it on day 1.
 - **Default grants:** start minimal — each seeded role gets only `stats.view` +
   its own area's view permission; super admin configures the rest in the UI.
 
@@ -135,22 +137,43 @@ the role cannot be deleted.
     `withdrawals.approve` / `withdrawals.reject`; threshold config →
     `withdrawals.config`.
 
-## Authentication seam (LDAP-ready, local today)
+## Authentication seam (real LDAP module, dormant by default)
 
 - `apps/api/src/services/staff-auth.service.ts` exposes
   `authenticateStaff(email, password)`:
   1. Load the staff row (incl. `auth_provider`, `status`).
   2. If `auth_provider === 'ldap'` **and** stored `ldap_config.enabled` →
-     `ldapBind(email, password)` (from `lib/ldap-auth.ts`) → map an LDAP group to
-     a role via `groupRoleMap` → resolve/match `admin_users` by email.
+     `ldapAuthenticate(config, email, password)` (from `lib/ldap-auth.ts`) →
+     returns the matched LDAP groups → map to a role via `groupRoleMap` →
+     resolve/match `admin_users` by email.
   3. Else → today's local `verifyPassword` path.
-- `apps/api/src/lib/ldap-auth.ts`: a clearly-marked **stub** that throws
-  `AppError('LDAP_NOT_ENABLED', ...)`. No ldap dependency yet. Documented TODO
-  for the real `ldapts` bind.
+  - Because `auth_provider` defaults `'local'` and `ldap_config.enabled` defaults
+    `false`, branch (2) is **never taken on day 1**. It is real code behind an
+    off switch, not a stub.
+
+- `apps/api/src/lib/ldap-auth.ts`: the **real, working** bind module, built on
+  `ldapts` (added as an `apps/api` dependency). It is a pure, config-driven
+  function with no DB access, so it can be unit-tested in isolation and enabled
+  later by flipping config — no code change:
+  ```
+  ldapAuthenticate(cfg, email, password) -> { dn, email, name, groups[] }
+  ```
+  Steps: open a client to `ldaps://host:port` (TLS options honored) → optionally
+  service-bind as `bindDN`/`bindPassword` → search under `baseDN` with
+  `userFilter` (templated on the login identifier) to find the user DN →
+  **rebind as the found user DN with the supplied password** to verify
+  credentials → read `memberOf` / `groupAttribute` for group membership →
+  return the profile + groups. Always `unbind()` in a `finally`. Throws
+  `AppError('LDAP_AUTH_FAILED' | 'LDAP_USER_NOT_FOUND' | 'LDAP_NO_ROLE', ...)`
+  on the respective failures. No group→role decision here — that mapping lives in
+  `staff-auth.service` so the bind module stays directory-only.
+
 - LDAP config stored in `game_settings` key `ldap_config`:
-  `{ enabled:false, host, port, baseDN, bindDN, userFilter, groupAttribute,
-  groupRoleMap: { "<ldap-group>": "<role-key>" } }`. The bind password, if ever
-  set, is stored server-side and never returned to the client.
+  `{ enabled:false, host, port, useTls, baseDN, bindDN, bindPassword,
+  userFilter, groupAttribute, groupRoleMap: { "<ldap-group>": "<role-key>" } }`.
+  `bindPassword` is stored server-side and **never returned to the client**
+  (the GET endpoint redacts it to a boolean `hasBindPassword`).
+
 - `loginAdmin` is refactored to call `authenticateStaff`, then sign the JWT
   (unchanged shape: `sub`, `role` key), stamp `last_login_at`, and include
   `mustChangePassword` in the response.
@@ -222,12 +245,18 @@ the role cannot be deleted.
 - Update existing chat/withdrawals route tests for the permission retrofit (the
   test middleware mock should grant all permissions, matching the current
   `role='super'` pattern).
-- `staff-auth.service`: local path succeeds; ldap path throws `LDAP_NOT_ENABLED`
-  when provider=ldap.
+- `staff-auth.service`: local path succeeds; when provider=ldap + enabled, it
+  calls the ldap module and maps groups→role (ldap client mocked).
+- `lib/ldap-auth.ts`: against a mocked `ldapts` Client — success returns
+  profile + groups; wrong password throws `LDAP_AUTH_FAILED`; missing user throws
+  `LDAP_USER_NOT_FOUND`; `unbind()` always called. (No live directory needed.)
 
 ## Out of scope (YAGNI)
 
-- Real LDAP bind (stubbed; enable later).
+- Activating LDAP in production (the module is real and tested, but the
+  `enabled` flag stays off until you have a directory to point at).
+- LDAP auto-provisioning of brand-new staff on first login (day 1 matches an
+  existing `admin_users` row by email; auto-create can come later).
 - Email invites / SMS (super admin sets initial password instead).
 - Per-staff permission overrides on top of role (roles only for now).
 - Self-service password reset via email.
