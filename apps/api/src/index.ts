@@ -4,6 +4,7 @@ import { env } from './env.js'
 import { startCron } from './lib/cron.js'
 import { Server } from 'socket.io'
 import { registerCrashSocket } from './game/crash-socket.js'
+import { registerChatSocket } from './game/chat-socket.js'
 import { startCrashLoop } from './game/crash-loop.js'
 import { startLotteryLoop } from './game/lottery-loop.js'
 
@@ -23,6 +24,7 @@ async function main() {
     cors: { origin: allowedOrigins.length > 0 ? allowedOrigins : false, credentials: true },
   })
   registerCrashSocket(io)
+  registerChatSocket(io)
   startCrashLoop(io)
   startLotteryLoop()
 }

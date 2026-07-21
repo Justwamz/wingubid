@@ -5,6 +5,7 @@ import { useCrashGame } from '@/hooks/useCrashGame'
 import { BetPanel } from '@/components/game/BetPanel'
 import { RoundHistory } from '@/components/game/RoundHistory'
 import { GameBetHistory } from '@/components/game/GameBetHistory'
+import { ChatPanel } from '@/components/game/ChatPanel'
 import { LiveLeaderboard } from '@/components/game/LiveLeaderboard'
 import { CrashChart } from '@/components/game/CrashChart'
 import { HowToPlay } from '@/components/game/HowToPlay'
@@ -83,6 +84,7 @@ export default function WinguCrashPage() {
         {/* Sidebar: history + leaderboard */}
         <div className="space-y-4">
           <RoundHistory crashes={recentCrashes} />
+          <ChatPanel />
           <LiveLeaderboard feed={feed} />
           <GameBetHistory game="crash" />
         </div>
