@@ -1,7 +1,8 @@
 import { z } from 'zod'
-import type { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify'
+import type { FastifyInstance } from 'fastify'
 import { pool } from '@betting/db'
 import { authenticateAdmin } from '../../middleware/authenticateAdmin.js'
+import { requirePermission } from '../../middleware/requirePermission.js'
 import { AppError } from '../../lib/errors.js'
 import {
   getMessagesForAdmin, deleteMessage, banPlayer, unbanPlayer, listActiveBans,
@@ -11,15 +12,6 @@ import {
 import { broadcastChatDeleted, broadcastChatEnabled } from '../../game/chat-socket.js'
 
 const GAME = 'crash'
-const MODERATOR_ROLES = ['support', 'super_admin']
-
-function requireMod(req: FastifyRequest, reply: FastifyReply): boolean {
-  if (!MODERATOR_ROLES.includes(req.adminRole)) {
-    reply.status(403).send({ error: { code: 'FORBIDDEN', message: 'Only Support or Super Admin can moderate chat.' } })
-    return false
-  }
-  return true
-}
 
 async function audit(adminId: string, action: string, entityId: string | null, after: unknown): Promise<void> {
   await pool.query(
@@ -46,8 +38,7 @@ export async function adminChatRoutes(app: FastifyInstance) {
     return reply.send({ enabled: await getChatEnabled(GAME), autoban: await getAutobanConfig() })
   })
 
-  app.post('/admin/chat/messages/:id/delete', { preHandler: authenticateAdmin }, async (req, reply) => {
-    if (!requireMod(req, reply)) return
+  app.post('/admin/chat/messages/:id/delete', { preHandler: [authenticateAdmin, requirePermission('chat.moderate')] }, async (req, reply) => {
     const { id } = req.params as { id: string }
     const game = await deleteMessage(id, req.adminId)
     if (!game) return reply.status(404).send({ error: { code: 'NOT_FOUND', message: 'Message not found or already deleted.' } })
@@ -56,8 +47,7 @@ export async function adminChatRoutes(app: FastifyInstance) {
     return reply.send({ ok: true })
   })
 
-  app.post('/admin/chat/ban', { preHandler: authenticateAdmin }, async (req, reply) => {
-    if (!requireMod(req, reply)) return
+  app.post('/admin/chat/ban', { preHandler: [authenticateAdmin, requirePermission('chat.moderate')] }, async (req, reply) => {
     const parsed = z.object({
       playerId: z.string().uuid(),
       durationHours: z.number().positive().optional(),
@@ -70,8 +60,7 @@ export async function adminChatRoutes(app: FastifyInstance) {
     return reply.send({ ok: true })
   })
 
-  app.post('/admin/chat/unban', { preHandler: authenticateAdmin }, async (req, reply) => {
-    if (!requireMod(req, reply)) return
+  app.post('/admin/chat/unban', { preHandler: [authenticateAdmin, requirePermission('chat.moderate')] }, async (req, reply) => {
     const parsed = z.object({ playerId: z.string().uuid() }).safeParse(req.body)
     if (!parsed.success) return reply.status(400).send({ error: { code: 'VALIDATION_ERROR', message: 'Invalid player.' } })
     await unbanPlayer(parsed.data.playerId)
@@ -79,8 +68,7 @@ export async function adminChatRoutes(app: FastifyInstance) {
     return reply.send({ ok: true })
   })
 
-  app.post('/admin/chat/reset-username', { preHandler: authenticateAdmin }, async (req, reply) => {
-    if (!requireMod(req, reply)) return
+  app.post('/admin/chat/reset-username', { preHandler: [authenticateAdmin, requirePermission('chat.reset_username')] }, async (req, reply) => {
     const parsed = z.object({ playerId: z.string().uuid() }).safeParse(req.body)
     if (!parsed.success) return reply.status(400).send({ error: { code: 'VALIDATION_ERROR', message: 'Invalid player.' } })
     await resetUsername(parsed.data.playerId)
@@ -88,8 +76,7 @@ export async function adminChatRoutes(app: FastifyInstance) {
     return reply.send({ ok: true })
   })
 
-  app.post('/admin/chat/banned-words', { preHandler: authenticateAdmin }, async (req, reply) => {
-    if (!requireMod(req, reply)) return
+  app.post('/admin/chat/banned-words', { preHandler: [authenticateAdmin, requirePermission('chat.words')] }, async (req, reply) => {
     const parsed = z.object({ word: z.string().min(1).max(50) }).safeParse(req.body)
     if (!parsed.success) return reply.status(400).send({ error: { code: 'VALIDATION_ERROR', message: 'Enter a word.' } })
     try {
@@ -101,14 +88,12 @@ export async function adminChatRoutes(app: FastifyInstance) {
     return reply.send({ ok: true })
   })
 
-  app.delete('/admin/chat/banned-words/:word', { preHandler: authenticateAdmin }, async (req, reply) => {
-    if (!requireMod(req, reply)) return
+  app.delete('/admin/chat/banned-words/:word', { preHandler: [authenticateAdmin, requirePermission('chat.words')] }, async (req, reply) => {
     await removeBannedWord((req.params as { word: string }).word)
     return reply.send({ ok: true })
   })
 
-  app.put('/admin/chat/settings', { preHandler: authenticateAdmin }, async (req, reply) => {
-    if (!requireMod(req, reply)) return
+  app.put('/admin/chat/settings', { preHandler: [authenticateAdmin, requirePermission('chat.config')] }, async (req, reply) => {
     const parsed = z.object({
       enabled: z.boolean().optional(),
       windowMin: z.number().int().min(1).max(1440).optional(),
