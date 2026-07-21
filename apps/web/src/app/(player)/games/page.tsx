@@ -27,7 +27,7 @@ const GAMES = [
     accent: '#00F2FE',
     badge: 'LIVE',
     badgeColor: 'bg-cyan-500/20 text-cyan-400',
-    image: '/games/wingu-crash.webp',
+    image: '/games/wingu-crash-logo.webp',
     visual: null,
   },
   {
