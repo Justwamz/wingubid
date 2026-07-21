@@ -7,6 +7,7 @@ import { saveToken } from '@/lib/auth'
 interface LoginResponse {
   access_token: string
   admin: { name: string; role: string }
+  mustChangePassword?: boolean
 }
 
 export default function AdminLoginPage() {
@@ -27,7 +28,7 @@ export default function AdminLoginPage() {
     setLoading(false)
     if (err) { setError(err.message); return }
     saveToken(data!.access_token)
-    router.push('/dashboard')
+    router.push(data!.mustChangePassword ? '/change-password' : '/dashboard')
   }
 
   return (
