@@ -20,7 +20,7 @@ export async function adminAuthRoutes(app: FastifyInstance) {
     }
 
     try {
-      const { accessToken, refreshToken, admin } = await loginAdmin(
+      const { accessToken, refreshToken, admin, mustChangePassword } = await loginAdmin(
         parsed.data.email,
         parsed.data.password,
       )
@@ -33,7 +33,7 @@ export async function adminAuthRoutes(app: FastifyInstance) {
         maxAge: 7 * 24 * 60 * 60,
       })
 
-      return reply.send({ access_token: accessToken, admin })
+      return reply.send({ access_token: accessToken, admin, mustChangePassword })
     } catch (err) {
       if (err instanceof AppError) {
         return reply.status(err.statusCode).send({ error: { code: err.code, message: err.message } })
