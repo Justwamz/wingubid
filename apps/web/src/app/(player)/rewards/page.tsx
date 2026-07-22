@@ -31,6 +31,21 @@ export default function RewardsPage() {
   const [claimError, setClaimError] = useState<Record<string, string>>({})
   const [claimSuccess, setClaimSuccess] = useState<Record<string, number>>({})
 
+  const [promoCode, setPromoCode] = useState('')
+  const [promoSubmitting, setPromoSubmitting] = useState(false)
+  const [promoError, setPromoError] = useState('')
+  const [promoSuccess, setPromoSuccess] = useState<number | null>(null)
+
+  async function fetchAvailable() {
+    try {
+      const data = await apiFetch<AvailableResponse>('/bonuses/available')
+      setCampaigns(data.campaigns ?? [])
+      setLoadError(false)
+    } catch {
+      setLoadError(true)
+    }
+  }
+
   useEffect(() => {
     let cancelled = false
     apiFetch<AvailableResponse>('/bonuses/available')
@@ -61,11 +76,59 @@ export default function RewardsPage() {
     }
   }
 
+  async function handleApplyCode() {
+    const code = promoCode.trim()
+    if (!code) return
+    setPromoSubmitting(true)
+    setPromoError('')
+    try {
+      const data = await apiFetch<ClaimResponse>('/bonuses/claim', {
+        method: 'POST',
+        body: JSON.stringify({ code, deviceId: getDeviceId() }),
+      })
+      setPromoSuccess(data.amountCents)
+      window.dispatchEvent(new Event('balanceRefresh'))
+      setPromoCode('')
+      fetchAvailable()
+    } catch (e: unknown) {
+      setPromoError(e instanceof Error ? e.message : 'Something went wrong. Please try again in a moment.')
+    } finally {
+      setPromoSubmitting(false)
+    }
+  }
+
   return (
     <div className="max-w-3xl mx-auto px-4 py-6 space-y-6">
       <div className="flex items-center gap-3">
         <Gift size={24} className="text-accent-cyan" />
         <h1 className="text-2xl font-extrabold font-mono text-white">Rewards</h1>
+      </div>
+
+      <div className="bg-game-card border border-game-border rounded-2xl p-5 space-y-3">
+        <p className="text-white font-bold text-sm">Have a promo code?</p>
+        <div className="flex flex-col sm:flex-row gap-3">
+          <input
+            type="text"
+            value={promoCode}
+            onChange={e => setPromoCode(e.target.value)}
+            placeholder="Enter promo code"
+            className="flex-1 bg-black/30 border border-game-border rounded-xl px-4 py-2.5 text-white text-sm placeholder:text-gray-500 focus:outline-none focus:border-accent-cyan"
+          />
+          <button
+            onClick={handleApplyCode}
+            disabled={promoSubmitting || !promoCode.trim()}
+            className="px-5 py-2.5 rounded-xl font-bold text-sm disabled:opacity-40 transition-all whitespace-nowrap"
+            style={{ background: 'linear-gradient(135deg, #00C896, #00F2FE)', color: '#0a0a0a' }}
+          >
+            {promoSubmitting ? 'Applying...' : 'Apply'}
+          </button>
+        </div>
+        {promoError && <p className="text-warning-coral text-sm">{promoError}</p>}
+        {promoSuccess !== null && (
+          <p className="text-emerald-400 text-sm font-bold">
+            Bonus claimed! KES {(promoSuccess / 100).toLocaleString('en-KE', { minimumFractionDigits: 2 })} has been credited to your account.
+          </p>
+        )}
       </div>
 
       {loading ? (
