@@ -207,8 +207,20 @@ describe('settleBonusWin', () => {
       if (sql.startsWith('UPDATE wallets')) return { rows: [{ balance: '1000000' }] }
       return { rows: [{ id: 'tx1' }] }
     }) } as never
-    const { net } = await settleBonusWin(client, 'p1', 'g1', 5_000_000, 100_000, 'b1', 1_000_000)
+    const { net, capped } = await settleBonusWin(client, 'p1', 'g1', 5_000_000, 100_000, 'b1', 1_000_000)
     expect(net).toBe(1_000_000) // capped
+    expect(capped).toBe(true)
+  })
+
+  it('reports capped=false when the win is within the cap', async () => {
+    const client = { query: vi.fn(async (sql: string) => {
+      if (sql.includes('SELECT id, balance')) return { rows: [{ id: 'w1', balance: '0', currency: 'KES' }] }
+      if (sql.startsWith('UPDATE wallets')) return { rows: [{ balance: '15000' }] }
+      return { rows: [{ id: 'tx1' }] }
+    }) } as never
+    const { net, capped } = await settleBonusWin(client, 'p1', 'g1', 25000, 10000, 'b1', 1_000_000)
+    expect(net).toBe(15000)
+    expect(capped).toBe(false)
   })
 
   it('credits nothing when payout <= stake', async () => {

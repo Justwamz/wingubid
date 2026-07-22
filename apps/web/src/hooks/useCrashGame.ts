@@ -30,7 +30,7 @@ export function useCrashGame() {
   const [feed, setFeed] = useState<CashoutFeed | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [connected, setConnected] = useState(false)
-  const [cashoutResult, setCashoutResult] = useState<{ multiplier: number; winnings: number } | null>(null)
+  const [cashoutResult, setCashoutResult] = useState<{ multiplier: number; winnings: number; netCredited: number; fundSource: 'cash' | 'bonus'; capped: boolean } | null>(null)
   // Bumped whenever the player's bet settles (cashout win, or a loss when the
   // round crashes on an active bet). The page passes it to GameBetHistory as a
   // refreshKey so the bet-history panel reloads after each settlement - crash is
@@ -76,7 +76,7 @@ export function useCrashGame() {
       refreshBalance()
     })
     socket.on('bet:confirmed', (data: MyBet) => { setMyBet(data); hadBetRef.current = true; refreshBalance() })
-    socket.on('cashout:confirmed', (data: { multiplier: number; winnings: number }) => {
+    socket.on('cashout:confirmed', (data: { multiplier: number; winnings: number; netCredited: number; fundSource: 'cash' | 'bonus'; capped: boolean }) => {
       setMyBet(null)
       hadBetRef.current = false
       setCashoutResult(data)

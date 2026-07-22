@@ -16,11 +16,19 @@ interface GameState {
   status: 'idle' | 'active' | 'won' | 'lost'
 }
 
+export interface MinesWin {
+  winnings: number
+  netCredited: number
+  fundSource: 'cash' | 'bonus'
+  capped: boolean
+}
+
 export function useMinesGame() {
   const [game, setGame] = useState<GameState | null>(null)
   const [loading, setLoading] = useState(false)
   const [hydrating, setHydrating] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [lastWin, setLastWin] = useState<MinesWin | null>(null)
 
   // Resume an in-progress game after a reload / navigation. Without this, the
   // active game left in Redis blocks every new start with GAME_ALREADY_ACTIVE
@@ -51,6 +59,7 @@ export function useMinesGame() {
     }>('/games/mines/start', { method: 'POST', body: JSON.stringify({ grossStake, gridSize, mineCount, fundSource }) })
     setLoading(false)
     if (err) { setError(err.message); return }
+    setLastWin(null)
     setGame({ gameId: data!.gameId, gridSize: data!.gridSize, mineCount: data!.mineCount,
       serverSeedHash: data!.serverSeedHash, revealedTiles: [], multiplier: 1 - 0.05,
       minePositions: null, status: 'active' })
@@ -76,13 +85,15 @@ export function useMinesGame() {
   const cashout = useCallback(async () => {
     if (!game || game.status !== 'active') return
     const { data, error: err } = await apiFetch<{
-      winnings: number; minePositions: number[]; serverSeed: string
+      winnings: number; netCredited: number; fundSource: 'cash' | 'bonus'; capped: boolean
+      minePositions: number[]; serverSeed: string
     }>('/games/mines/cashout', { method: 'POST', body: JSON.stringify({ gameId: game.gameId }) })
     if (err) { setError(err.message); return }
     sounds.cashout(); haptics.win()
+    setLastWin({ winnings: data!.winnings, netCredited: data!.netCredited, fundSource: data!.fundSource, capped: data!.capped })
     setGame(g => g ? { ...g, minePositions: data!.minePositions, status: 'won' } : g)
     refreshBalance()
   }, [game])
 
-  return { game, loading, hydrating, error, startGame, revealTile, cashout }
+  return { game, loading, hydrating, error, lastWin, startGame, revealTile, cashout }
 }

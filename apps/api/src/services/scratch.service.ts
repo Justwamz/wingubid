@@ -79,6 +79,7 @@ export async function buyScratchCard(
   fundSource: 'cash' | 'bonus' = 'cash',
 ): Promise<{
   cardId: string; grid: number[]; prizeCents: number
+  netCredited: number; fundSource: 'cash' | 'bonus'; capped: boolean
   serverSeedHash: string; clientSeed: string; nonce: number
 }> {
   if (!VALID_STAKES.has(stakeCents)) {
@@ -116,16 +117,20 @@ export async function buyScratchCard(
     )
     const cardId = rows[0].id
 
+    let netCredited = 0
+    let capped = false
     if (prizeCents > 0) {
       if (fundSource === 'bonus') {
-        await settleBonusWin(client, playerId, bonusGrantId!, prizeCents, stakeCents, cardId, await getBonusMaxWinCents())
+        const r = await settleBonusWin(client, playerId, bonusGrantId!, prizeCents, stakeCents, cardId, await getBonusMaxWinCents())
+        netCredited = r.net; capped = r.capped
       } else {
         await creditWinnings(client, playerId, prizeCents, { game: 'scratch', cardId })
+        netCredited = prizeCents
       }
     }
 
     await client.query('COMMIT')
-    return { cardId, grid, prizeCents, serverSeedHash, clientSeed, nonce }
+    return { cardId, grid, prizeCents, netCredited, fundSource, capped, serverSeedHash, clientSeed, nonce }
   } catch (err) {
     await client.query('ROLLBACK')
     throw err

@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from 'react'
 import { apiFetch } from '@/lib/apiFetch'
+import { displayedWinCents, bonusWinNote } from '@/lib/bonusWin'
 import { refreshBalance } from '@/lib/auth'
 import { HowToPlay } from '@/components/game/HowToPlay'
 import { BetHistory, type BetHistoryEntry } from '@/components/game/BetHistory'
@@ -33,6 +34,9 @@ interface BuyResponse {
   cardId: string
   grid: number[]
   prizeCents: number
+  netCredited?: number
+  fundSource?: 'cash' | 'bonus'
+  capped?: boolean
 }
 
 interface HistoryCard {
@@ -332,8 +336,12 @@ export default function WinguScratchPage() {
                 🎉 YOU WIN!
               </p>
               <p className="text-xl font-bold text-white">
-                KES {(card.prizeCents / 100).toFixed(0)}
+                KES {(displayedWinCents({ fundSource: card.fundSource, winnings: card.prizeCents, netCredited: card.netCredited, capped: card.capped }) / 100).toFixed(0)}
+                {card.fundSource === 'bonus' && ' to cash'}
               </p>
+              {bonusWinNote({ fundSource: card.fundSource, winnings: card.prizeCents, netCredited: card.netCredited, capped: card.capped }) && (
+                <p className="text-yellow-200/80 text-xs mt-0.5">{bonusWinNote({ fundSource: card.fundSource, winnings: card.prizeCents, netCredited: card.netCredited, capped: card.capped })}</p>
+              )}
             </div>
           )}
 

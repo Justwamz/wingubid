@@ -323,6 +323,7 @@ export async function debitBonusForBet(
 }
 
 // Settle a winning bonus bet: credit net = min(payout - stake, cap) to CASH.
+// `capped` is true when the raw profit exceeded the cap (so the UI can say so).
 export async function settleBonusWin(
   client: PoolClient,
   playerId: string,
@@ -331,9 +332,11 @@ export async function settleBonusWin(
   stake: number,
   betId: string,
   maxWinCents: number,
-): Promise<{ net: number }> {
-  const net = Math.min(Math.max(payout - stake, 0), maxWinCents)
-  if (net <= 0) return { net: 0 }
+): Promise<{ net: number; capped: boolean }> {
+  const profit = Math.max(payout - stake, 0)
+  const net = Math.min(profit, maxWinCents)
+  const capped = profit > maxWinCents
+  if (net <= 0) return { net: 0, capped }
   const wallet = await selectWalletForUpdate(client, playerId)
   const { rows: updated } = await client.query<{ balance: string }>(
     `UPDATE wallets SET balance = balance + $1 WHERE player_id = $2 RETURNING balance`,
@@ -344,7 +347,7 @@ export async function settleBonusWin(
      VALUES ($1, $2, 'bonus_won', $3, $4, 'completed', $5::jsonb)`,
     [wallet.id, playerId, net, Number(updated[0].balance), JSON.stringify({ grantId, betId, payout, stake })],
   )
-  return { net }
+  return { net, capped }
 }
 
 // Return a bonus stake to the bonus wallet (voided in-flight round).

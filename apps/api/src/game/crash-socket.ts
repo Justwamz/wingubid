@@ -86,9 +86,11 @@ export function handleCrashSocket(io: Server, socket: Socket): void {
     }
 
     try {
-      const { winnings } = await cashout(playerId, bet.betId, multiplier, round.crashPoint)
+      const { winnings, netCredited, fundSource, capped } = await cashout(playerId, bet.betId, multiplier, round.crashPoint)
       removeBetFromRound(playerId)
-      socket.emit('cashout:confirmed', { multiplier, winnings })
+      socket.emit('cashout:confirmed', { multiplier, winnings, netCredited, fundSource, capped })
+      // Broadcast keeps showing gross winnings in the public feed (bonus vs cash
+      // is private to the player); only the player's own confirmation carries net.
       io.to('crash').emit('cashout:broadcast', { playerId, multiplier, winnings })
     } catch (err: any) {
       socket.emit('bet:error', { code: err.code ?? 'CASHOUT_FAILED', message: err.message })

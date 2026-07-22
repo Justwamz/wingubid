@@ -10,6 +10,7 @@ import { LiveLeaderboard } from '@/components/game/LiveLeaderboard'
 import { CrashChart } from '@/components/game/CrashChart'
 import { HowToPlay } from '@/components/game/HowToPlay'
 import { apiFetch } from '@/lib/api'
+import { displayedWinCents, bonusWinNote } from '@/lib/bonusWin'
 import { DollarSign, TrendingUp, Rocket } from 'lucide-react'
 
 const HOW_TO_PLAY = [
@@ -64,8 +65,12 @@ export default function WinguCrashPage() {
       {cashoutResult && (
         <div className="w-full bg-green-900/60 border border-green-500/40 rounded-xl px-4 py-3 text-center">
           <p className="text-green-400 font-bold text-lg">
-            Cashed out at {cashoutResult.multiplier.toFixed(2)}× · KES {(cashoutResult.winnings / 100).toFixed(2)}
+            Cashed out at {cashoutResult.multiplier.toFixed(2)}× · KES {(displayedWinCents(cashoutResult) / 100).toFixed(2)}
+            {cashoutResult.fundSource === 'bonus' && ' to your cash'}
           </p>
+          {bonusWinNote(cashoutResult) && (
+            <p className="text-green-300/80 text-xs mt-0.5">{bonusWinNote(cashoutResult)}</p>
+          )}
         </div>
       )}
 

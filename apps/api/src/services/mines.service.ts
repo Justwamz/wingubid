@@ -174,7 +174,7 @@ export async function revealTile(
 
 export async function cashoutMines(
   playerId: string, gameId: string,
-): Promise<{ winnings: number; minePositions: number[]; serverSeed: string }> {
+): Promise<{ winnings: number; netCredited: number; fundSource: 'cash' | 'bonus'; capped: boolean; minePositions: number[]; serverSeed: string }> {
   const redis = getRedis()
   const raw = await redis.get(redisKey(playerId))
   if (!raw) throw new AppError('GAME_NOT_FOUND', "You don't have a mines game in progress.", 404)
@@ -189,6 +189,9 @@ export async function cashoutMines(
 
   const client = await pool.connect()
   let winnings = 0
+  let netCredited = 0
+  let capped = false
+  let fundSource: 'cash' | 'bonus' = 'cash'
   try {
     await client.query('BEGIN')
     // Atomic guard: lock the bet and only pay out if it is still active. A
@@ -205,11 +208,14 @@ export async function cashoutMines(
     const paidMultiplier = payoutMultiplier(state.currentMultiplier)
     winnings = Math.floor(effectiveStake * paidMultiplier)
 
+    fundSource = rows[0].fund_source
     if (rows[0].fund_source === 'bonus') {
-      await settleBonusWin(client, playerId, rows[0].bonus_grant_id!, winnings, effectiveStake, state.betId, await getBonusMaxWinCents())
+      const r = await settleBonusWin(client, playerId, rows[0].bonus_grant_id!, winnings, effectiveStake, state.betId, await getBonusMaxWinCents())
+      netCredited = r.net; capped = r.capped
       // Bonus stake was never locked, so there is no locked_balance to release.
     } else {
       await creditWinnings(client, playerId, winnings, { game: 'mines', gameId, multiplier: paidMultiplier })
+      netCredited = winnings
       await client.query(
         `UPDATE wallets SET locked_balance = locked_balance - $1 WHERE player_id = $2`,
         [effectiveStake, playerId],
@@ -227,5 +233,5 @@ export async function cashoutMines(
     client.release()
   }
   await redis.del(redisKey(playerId))
-  return { winnings, minePositions: state.minePositions, serverSeed: state.serverSeed }
+  return { winnings, netCredited, fundSource, capped, minePositions: state.minePositions, serverSeed: state.serverSeed }
 }

@@ -8,6 +8,7 @@ import { QuickStakes } from '@/components/game/QuickStakes'
 import { BonusToggle } from '@/components/game/BonusToggle'
 import { DEFAULT_STAKE_KES } from '@/lib/gameConfig'
 import { apiFetch } from '@/lib/api'
+import { displayedWinCents, bonusWinNote } from '@/lib/bonusWin'
 import { Gem, Search, DollarSign } from 'lucide-react'
 
 const HOW_TO_PLAY = [
@@ -17,7 +18,7 @@ const HOW_TO_PLAY = [
 ]
 
 export default function WinguMinesPage() {
-  const { game, loading, hydrating, error, startGame, revealTile, cashout } = useMinesGame()
+  const { game, loading, hydrating, error, lastWin, startGame, revealTile, cashout } = useMinesGame()
   const [stake, setStake] = useState(String(DEFAULT_STAKE_KES))
   const [gridSize, setGridSize] = useState(3)
   const [mineCount, setMineCount] = useState(2)
@@ -163,7 +164,14 @@ export default function WinguMinesPage() {
                   className="w-full py-3.5 rounded-xl font-bold text-base"
                   style={{ background: 'linear-gradient(135deg, #00F2FE, #00C896)', color: '#0a0a0a' }}
                 >
-                  Cash Out · KES {Math.floor(parseInt(stake || '0') * game.multiplier)}
+                  {(() => {
+                    const stakeKes = parseInt(stake || '0')
+                    const grossKes = Math.floor(stakeKes * game.multiplier)
+                    // Bonus pays net to cash (gross minus the free stake), so the
+                    // projection must show what actually lands in cash.
+                    const shownKes = fundSource === 'bonus' ? Math.max(grossKes - stakeKes, 0) : grossKes
+                    return <>Cash Out · KES {shownKes}{fundSource === 'bonus' ? ' to cash' : ''}</>
+                  })()}
                 </button>
               )}
 
@@ -174,7 +182,12 @@ export default function WinguMinesPage() {
                       ? 'text-accent-cyan border-cyan-500/20 bg-cyan-500/5'
                       : 'text-warning-coral border-red-500/20 bg-red-500/5'
                   }`}>
-                    {game.status === 'won' ? <><Gem size={20} className="inline mr-1.5" />You won!</> : 'Mine hit!'}
+                    {game.status === 'won'
+                      ? <><Gem size={20} className="inline mr-1.5" />You won! KES {((lastWin ? displayedWinCents(lastWin) : 0) / 100).toFixed(0)}</>
+                      : 'Mine hit!'}
+                    {game.status === 'won' && lastWin && bonusWinNote(lastWin) && (
+                      <span className="block text-accent-cyan/70 text-xs font-normal mt-0.5">{bonusWinNote(lastWin)}</span>
+                    )}
                   </div>
                   <button
                     onClick={() => window.location.reload()}

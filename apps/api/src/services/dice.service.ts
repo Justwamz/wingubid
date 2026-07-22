@@ -13,6 +13,7 @@ export async function rollDice(
   fundSource: 'cash' | 'bonus' = 'cash',
 ): Promise<{
   result: number; won: boolean; multiplier: number; winnings: number
+  netCredited: number; fundSource: 'cash' | 'bonus'; capped: boolean
   serverSeedHash: string; clientSeed: string; nonce: number
 }> {
   await assertGameEnabled('dice')
@@ -53,16 +54,22 @@ export async function rollDice(
       [playerId, walletId, grossStake, grossStake, multiplier, winnings, won ? 'won' : 'lost', fundSource, bonusGrantId],
     )
 
+    // netCredited = amount actually added to cash (bonus wins credit net, not
+    // gross); capped is true only when the 10k cap clipped a bonus win.
+    let netCredited = 0
+    let capped = false
     if (won) {
       if (fundSource === 'bonus') {
-        await settleBonusWin(client, playerId, bonusGrantId!, winnings, grossStake, rows[0].id, await getBonusMaxWinCents())
+        const r = await settleBonusWin(client, playerId, bonusGrantId!, winnings, grossStake, rows[0].id, await getBonusMaxWinCents())
+        netCredited = r.net; capped = r.capped
       } else {
         await creditWinnings(client, playerId, winnings, { game: 'dice', betId: rows[0].id })
+        netCredited = winnings
       }
     }
 
     await client.query('COMMIT')
-    return { result, won, multiplier, winnings, serverSeedHash, clientSeed, nonce }
+    return { result, won, multiplier, winnings, netCredited, fundSource, capped, serverSeedHash, clientSeed, nonce }
   } catch (err) {
     await client.query('ROLLBACK')
     throw err

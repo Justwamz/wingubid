@@ -55,7 +55,7 @@ export async function cashout(
   betId: string,
   multiplier: number,
   crashPoint: number,
-): Promise<{ winnings: number }> {
+): Promise<{ winnings: number; netCredited: number; fundSource: 'cash' | 'bonus'; capped: boolean }> {
   // Authoritative fairness guard: never pay at or above the round's crash
   // point. The caller must not settle a bet on a round that has already busted,
   // and we enforce it here rather than trusting the in-memory round status.
@@ -64,6 +64,9 @@ export async function cashout(
   }
 
   const client = await pool.connect()
+  let netCredited = 0
+  let capped = false
+  let fundSource: 'cash' | 'bonus' = 'cash'
   try {
     await client.query('BEGIN')
     const { rows } = await client.query<{
@@ -78,11 +81,14 @@ export async function cashout(
     const effectiveStake = Number(rows[0].effective_stake)
     const winnings = Math.floor(effectiveStake * multiplier)
 
+    fundSource = rows[0].fund_source
     if (rows[0].fund_source === 'bonus') {
-      await settleBonusWin(client, playerId, rows[0].bonus_grant_id!, winnings, effectiveStake, betId, await getBonusMaxWinCents())
+      const r = await settleBonusWin(client, playerId, rows[0].bonus_grant_id!, winnings, effectiveStake, betId, await getBonusMaxWinCents())
+      netCredited = r.net; capped = r.capped
       // no locked_balance decrement for bonus
     } else {
       await creditWinnings(client, playerId, winnings, { game: 'crash', betId, multiplier })
+      netCredited = winnings
       await client.query(
         `UPDATE wallets SET locked_balance = locked_balance - $1 WHERE player_id = $2`,
         [effectiveStake, playerId],
@@ -93,7 +99,7 @@ export async function cashout(
       [multiplier, winnings, betId],
     )
     await client.query('COMMIT')
-    return { winnings }
+    return { winnings, netCredited, fundSource, capped }
   } catch (err) {
     await client.query('ROLLBACK')
     throw err

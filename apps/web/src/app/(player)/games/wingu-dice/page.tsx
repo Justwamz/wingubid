@@ -8,6 +8,7 @@ import { QuickStakes } from '@/components/game/QuickStakes'
 import { BonusToggle } from '@/components/game/BonusToggle'
 import { DEFAULT_STAKE_KES } from '@/lib/gameConfig'
 import { apiFetch } from '@/lib/apiFetch'
+import { displayedWinCents, bonusWinNote } from '@/lib/bonusWin'
 import { refreshBalance } from '@/lib/auth'
 import { Target, ArrowUp, Dice6 } from 'lucide-react'
 
@@ -17,6 +18,9 @@ interface RollResult {
   roll: number
   won: boolean
   winnings: number
+  netCredited?: number
+  fundSource?: 'cash' | 'bonus'
+  capped?: boolean
   newBalance: number
 }
 
@@ -154,8 +158,11 @@ export default function WinguDicePage() {
                   {result.roll}
                 </p>
                 <p className={`dice-pop text-lg font-bold mt-1 ${result.won ? 'text-accent-cyan' : 'text-warning-coral'}`}>
-                  {result.won ? `WIN · +KES ${(result.winnings / 100).toFixed(0)}` : 'LOSS'}
+                  {result.won ? `WIN · +KES ${(displayedWinCents(result) / 100).toFixed(0)}` : 'LOSS'}
                 </p>
+                {result.won && bonusWinNote(result) && (
+                  <p className="text-accent-cyan/70 text-xs">{bonusWinNote(result)}</p>
+                )}
               </div>
             ) : (
               <p className="text-gray-500 text-lg py-2">Set your bet and roll</p>
