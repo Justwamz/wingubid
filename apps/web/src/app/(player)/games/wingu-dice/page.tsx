@@ -21,7 +21,17 @@ interface RollResult {
   netCredited?: number
   fundSource?: 'cash' | 'bonus'
   capped?: boolean
-  newBalance: number
+}
+
+// The dice API returns the landed number in `result`; map it to the view model's
+// `roll`. (Bug fix: the page previously read `data.roll`, which never existed.)
+interface DiceRollResponse {
+  result: number
+  won: boolean
+  winnings: number
+  netCredited: number
+  fundSource: 'cash' | 'bonus'
+  capped: boolean
 }
 
 const HOW_TO_PLAY = [
@@ -110,14 +120,21 @@ export default function WinguDicePage() {
     spinRef.current = setInterval(() => setSpinValue(Math.floor(Math.random() * 101)), 60)
     const started = Date.now()
     try {
-      const data = await apiFetch<RollResult>('/games/dice/roll', {
+      const data = await apiFetch<DiceRollResponse>('/games/dice/roll', {
         method: 'POST',
         body: JSON.stringify({ grossStake: Math.floor(stake * 100), target, direction, fundSource }),
       })
       await new Promise(r => setTimeout(r, Math.max(0, 1400 - (Date.now() - started))))
       if (spinRef.current) { clearInterval(spinRef.current); spinRef.current = null }
       setSpinValue(null)
-      setResult(data)
+      setResult({
+        roll: data.result,
+        won: data.won,
+        winnings: data.winnings,
+        netCredited: data.netCredited,
+        fundSource: data.fundSource,
+        capped: data.capped,
+      })
       setRollCount(c => c + 1)
       refreshBalance()
     } catch (e: unknown) {
