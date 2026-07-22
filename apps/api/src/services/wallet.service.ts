@@ -296,7 +296,9 @@ export async function debitBonusForBet(
   if (grants.length === 0) throw new AppError('NO_ACTIVE_BONUS', "You don't have an active bonus.", 422)
   const grant = grants[0]
   if (grant.expires_at && new Date(grant.expires_at).getTime() <= Date.now()) {
-    await forfeitBonus(client, grant.id, 'expired')
+    // Do NOT forfeit here: this runs inside the caller's game transaction,
+    // which always ROLLBACKs after this throw, undoing any write we made.
+    // Actual forfeiture happens in the committed sweepExpiredBonuses() job.
     throw new AppError('NO_ACTIVE_BONUS', 'Your bonus has expired.', 422)
   }
   if (Number(grant.remaining) < stake) {
@@ -399,4 +401,37 @@ export async function forfeitBonus(
       [g.wallet_id, g.player_id, remaining, Number(updated[0].bonus_balance), JSON.stringify({ grantId, reason })],
     )
   }
+}
+
+// Sweep and forfeit all bonus grants that have passed their expires_at but are
+// still 'active' (debitBonusForBet rejects betting them but, being inside the
+// caller's transaction, can never commit the forfeit itself). Each grant is
+// forfeited in its own committed transaction, locking the wallet FIRST via
+// selectWalletForUpdate - the same order debitBonusForBet uses - so a
+// concurrent bonus bet on the same player can never deadlock against this
+// sweep (ABBA: wallet-then-grant vs grant-then-wallet). One grant's failure
+// is rolled back and logged without aborting the rest of the sweep.
+export async function sweepExpiredBonuses(): Promise<number> {
+  const { rows: expired } = await pool.query<{ id: string; player_id: string }>(
+    `SELECT id, player_id FROM bonus_grants
+     WHERE status = 'active' AND expires_at IS NOT NULL AND expires_at <= NOW()`,
+  )
+
+  let forfeited = 0
+  for (const grant of expired) {
+    const client = await pool.connect()
+    try {
+      await client.query('BEGIN')
+      await selectWalletForUpdate(client, grant.player_id)
+      await forfeitBonus(client, grant.id, 'expired')
+      await client.query('COMMIT')
+      forfeited++
+    } catch (err) {
+      await client.query('ROLLBACK')
+      console.error(`[bonus-sweep] failed to forfeit grant ${grant.id}`, err)
+    } finally {
+      client.release()
+    }
+  }
+  return forfeited
 }

@@ -1,6 +1,7 @@
 import cron from 'node-cron'
 import { pool } from '@betting/db'
 import { runRtpMonitor } from '../services/rtp-monitor.service.js'
+import { sweepExpiredBonuses } from '../services/wallet.service.js'
 
 async function runDailyReconciliation(): Promise<void> {
   console.log('[cron] Starting daily tax reconciliation...')
@@ -85,4 +86,10 @@ export function startCron(): void {
     runRtpMonitor().catch(err => console.error('[cron] RTP monitor error', err))
   })
   console.log('[cron] RTP monitor scheduled every 5 minutes')
+
+  // Expired bonus sweep: forfeit active grants past expires_at, every 15 minutes.
+  cron.schedule('*/15 * * * *', () => {
+    sweepExpiredBonuses().catch(err => console.error('[cron] Bonus expiry sweep error', err))
+  })
+  console.log('[cron] Bonus expiry sweep scheduled every 15 minutes')
 }

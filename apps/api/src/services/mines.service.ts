@@ -1,7 +1,7 @@
 import { randomBytes, createHash } from 'crypto'
 import { pool } from '@betting/db'
 import { getRedis } from '../lib/redis.js'
-import { debitForBet, creditWinnings, debitBonusForBet, settleBonusWin, refundBonusBet } from './wallet.service.js'
+import { debitForBet, creditWinnings, debitBonusForBet, settleBonusWin } from './wallet.service.js'
 import { generateMinePositions } from '../lib/crash-rng.js'
 import { getHouseEdge } from './crash.service.js'
 import { assertGameEnabled, getBonusMaxWinCents } from './game-settings.service.js'
