@@ -25,18 +25,25 @@ export async function adminBonusRoutes(app: FastifyInstance) {
   })
 
   app.post('/admin/bonuses/grant', { preHandler: [authenticateAdmin, requirePermission('bonuses.grant')] }, async (req, reply) => {
+    // Admins identify players by phone (the natural handle); a player UUID is
+    // also accepted for flexibility. Exactly one is required.
     const parsed = z.object({
-      playerId: z.string().uuid(),
+      phone: z.string().trim().min(1).optional(),
+      playerId: z.string().uuid().optional(),
       amountCents: z.number().int().positive('Amount must be greater than zero.'),
       expiresInDays: z.number().int().min(1).max(365).optional(),
-    }).safeParse(req.body)
+    }).refine(d => Boolean(d.phone) || Boolean(d.playerId), { message: 'Enter a player phone number.' })
+      .safeParse(req.body)
     if (!parsed.success) return reply.status(400).send({ error: { code: 'VALIDATION_ERROR', message: parsed.error.issues[0].message } })
 
-    const { rows: playerRows } = await pool.query<{ id: string }>(`SELECT id FROM players WHERE id = $1`, [parsed.data.playerId])
-    if (playerRows.length === 0) return reply.status(404).send({ error: { code: 'NOT_FOUND', message: 'Player not found.' } })
+    const { rows: playerRows } = parsed.data.playerId
+      ? await pool.query<{ id: string }>(`SELECT id FROM players WHERE id = $1`, [parsed.data.playerId])
+      : await pool.query<{ id: string }>(`SELECT id FROM players WHERE phone = $1`, [parsed.data.phone])
+    if (playerRows.length === 0) return reply.status(404).send({ error: { code: 'NOT_FOUND', message: 'No player found with that phone number.' } })
+    const playerId = playerRows[0].id
 
     const { rows: active } = await pool.query<{ id: string }>(
-      `SELECT id FROM bonus_grants WHERE player_id = $1 AND status = 'active'`, [parsed.data.playerId],
+      `SELECT id FROM bonus_grants WHERE player_id = $1 AND status = 'active'`, [playerId],
     )
     if (active.length > 0) {
       return reply.status(409).send({ error: { code: 'ACTIVE_BONUS_EXISTS', message: 'This player already has an active bonus.' } })
@@ -48,9 +55,9 @@ export async function adminBonusRoutes(app: FastifyInstance) {
     const client = await pool.connect()
     try {
       await client.query('BEGIN')
-      const { grantId } = await grantBonus(client, parsed.data.playerId, parsed.data.amountCents, req.adminId, expiresAt)
+      const { grantId } = await grantBonus(client, playerId, parsed.data.amountCents, req.adminId, expiresAt)
       await client.query('COMMIT')
-      await audit(req.adminId, 'bonus_grant', grantId, { playerId: parsed.data.playerId, amountCents: parsed.data.amountCents, expiresAt })
+      await audit(req.adminId, 'bonus_grant', grantId, { playerId, amountCents: parsed.data.amountCents, expiresAt })
       return reply.send({ grantId, remaining: parsed.data.amountCents })
     } catch (err) {
       await client.query('ROLLBACK')

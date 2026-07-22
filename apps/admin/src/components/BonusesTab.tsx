@@ -12,7 +12,7 @@ function kes(cents: number) { return `KES ${(cents / 100).toLocaleString('en-KE'
 export function BonusesTab() {
   const [rows, setRows] = useState<BonusRow[]>([])
   const [loading, setLoading] = useState(true)
-  const [form, setForm] = useState({ playerId: '', amount: '', expiresInDays: '' })
+  const [form, setForm] = useState({ phone: '', amount: '', expiresInDays: '' })
   const [msg, setMsg] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
 
@@ -27,12 +27,12 @@ export function BonusesTab() {
   async function grant(e: React.FormEvent) {
     e.preventDefault()
     setBusy(true)
-    const body: Record<string, unknown> = { playerId: form.playerId.trim(), amountCents: Math.round(parseFloat(form.amount) * 100) }
+    const body: Record<string, unknown> = { phone: form.phone.trim(), amountCents: Math.round(parseFloat(form.amount) * 100) }
     if (form.expiresInDays) body.expiresInDays = parseInt(form.expiresInDays)
     const { error } = await apiFetch('/admin/bonuses/grant', { method: 'POST', body: JSON.stringify(body) })
     setBusy(false)
     setMsg(error ? error.message : 'Bonus granted.')
-    if (!error) { setForm({ playerId: '', amount: '', expiresInDays: '' }); await load() }
+    if (!error) { setForm({ phone: '', amount: '', expiresInDays: '' }); await load() }
   }
 
   return (
@@ -41,7 +41,7 @@ export function BonusesTab() {
 
       <form onSubmit={grant} className="bg-gray-900 border border-gray-800 rounded-xl p-5 space-y-3 max-w-md">
         <h3 className="font-semibold text-sm">Grant a bonus</h3>
-        <input required placeholder="Player ID (UUID)" value={form.playerId} onChange={e => setForm({ ...form, playerId: e.target.value })}
+        <input required placeholder="Player phone (e.g. +254700000001)" value={form.phone} onChange={e => setForm({ ...form, phone: e.target.value })}
           className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm" />
         <input required type="number" step="0.01" placeholder="Amount (KES)" value={form.amount} onChange={e => setForm({ ...form, amount: e.target.value })}
           className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm" />

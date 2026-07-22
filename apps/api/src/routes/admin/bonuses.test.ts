@@ -61,4 +61,32 @@ describe('POST /admin/bonuses/grant', () => {
       payload: { playerId: PLAYER_ID, amountCents: 0 } })
     expect(res.statusCode).toBe(400)
   })
+
+  it('grants a bonus by phone number', async () => {
+    mockQuery.mockResolvedValueOnce({ rows: [{ id: PLAYER_ID }] } as never)  // player resolved by phone
+    mockQuery.mockResolvedValueOnce({ rows: [] } as never)                    // no active grant
+    mockConnect.mockResolvedValueOnce(fakeClient((sql) => {
+      if (sql.includes('SELECT id, balance')) return { rows: [{ id: 'w1', balance: '0', currency: 'KES' }] }
+      if (sql.includes('INSERT INTO bonus_grants')) return { rows: [{ id: 'g2' }] }
+      if (sql.startsWith('UPDATE wallets')) return { rows: [{ bonus_balance: '50000' }] }
+      return { rows: [] }
+    }) as never)
+    const res = await app.inject({ method: 'POST', url: '/admin/bonuses/grant', headers: { Authorization: 'Bearer t' },
+      payload: { phone: '+254700000001', amountCents: 50000 } })
+    expect(res.statusCode).toBe(200)
+    expect(res.json().grantId).toBe('g2')
+  })
+
+  it('404 when no player has that phone', async () => {
+    mockQuery.mockResolvedValueOnce({ rows: [] } as never)  // phone lookup finds nobody
+    const res = await app.inject({ method: 'POST', url: '/admin/bonuses/grant', headers: { Authorization: 'Bearer t' },
+      payload: { phone: '+254700000999', amountCents: 50000 } })
+    expect(res.statusCode).toBe(404)
+  })
+
+  it('400 when neither phone nor playerId is provided', async () => {
+    const res = await app.inject({ method: 'POST', url: '/admin/bonuses/grant', headers: { Authorization: 'Bearer t' },
+      payload: { amountCents: 50000 } })
+    expect(res.statusCode).toBe(400)
+  })
 })
