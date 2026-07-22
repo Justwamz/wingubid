@@ -8,6 +8,10 @@ vi.mock('../../services/permissions.service.js', () => ({
   invalidatePermissionsCache: vi.fn(),
 }))
 vi.mock('@betting/db', () => ({ pool: { query: vi.fn(), connect: vi.fn() } }))
+vi.mock('../../services/bonus-criteria.service.js', async (orig) => ({
+  ...(await orig()),
+  countMatchingPlayers: vi.fn(async () => 42),
+}))
 
 import { buildServer } from '../../server.js'
 import { pool } from '@betting/db'
@@ -52,6 +56,34 @@ describe('POST /admin/campaigns', () => {
       payload: { key: 'welcome_2026', name: 'Welcome Bonus', type: 'welcome', amountCents: 50000 } })
     expect(res.statusCode).toBe(409)
     expect(res.json().error.code).toBe('CAMPAIGN_KEY_TAKEN')
+  })
+
+  it('creates a campaign with a code and returns its id', async () => {
+    mockQuery.mockResolvedValueOnce({ rows: [{ id: CAMPAIGN_ID }] } as never) // insert
+    mockQuery.mockResolvedValueOnce({ rows: [] } as never) // audit
+    const res = await app.inject({ method: 'POST', url: '/admin/campaigns', headers: { Authorization: 'Bearer t' },
+      payload: { key: 'welcome_2026', name: 'Welcome Bonus', type: 'welcome', amountCents: 50000, code: 'welcome10' } })
+    expect(res.statusCode).toBe(200)
+    expect(res.json().id).toBe(CAMPAIGN_ID)
+  })
+
+  it('409s CODE_TAKEN on a duplicate campaign code', async () => {
+    mockQuery.mockRejectedValueOnce({ code: '23505', constraint: 'uq_bonus_campaigns_code' } as never)
+    const res = await app.inject({ method: 'POST', url: '/admin/campaigns', headers: { Authorization: 'Bearer t' },
+      payload: { key: 'welcome_2026', name: 'Welcome Bonus', type: 'welcome', amountCents: 50000, code: 'welcome10' } })
+    expect(res.statusCode).toBe(409)
+    expect(res.json().error.code).toBe('CODE_TAKEN')
+  })
+})
+
+describe('POST /admin/campaigns/preview-count', () => {
+  const app = buildServer(); afterAll(() => app.close())
+
+  it('returns the count of matching players', async () => {
+    const res = await app.inject({ method: 'POST', url: '/admin/campaigns/preview-count', headers: { Authorization: 'Bearer t' },
+      payload: { criteria: { depositStatus: 'none' } } })
+    expect(res.statusCode).toBe(200)
+    expect(res.json().count).toBe(42)
   })
 })
 
