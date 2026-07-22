@@ -26,10 +26,15 @@ export async function adminBonusRoutes(app: FastifyInstance) {
   })
 
   app.get('/admin/bonuses/eligibility', { preHandler: [authenticateAdmin, requirePermission('bonuses.view')] }, async (req, reply) => {
-    const q = req.query as { phone?: string; playerId?: string }
-    const { rows } = q.playerId
-      ? await pool.query<{ id: string }>(`SELECT id FROM players WHERE id = $1`, [q.playerId])
-      : await pool.query<{ id: string }>(`SELECT id FROM players WHERE phone = $1`, [(q.phone ?? '').trim()])
+    const q = z.object({
+      phone: z.string().trim().min(1).optional(),
+      playerId: z.string().uuid().optional(),
+    }).refine(d => Boolean(d.phone) || Boolean(d.playerId), { message: 'Provide a phone or player id.' }).safeParse(req.query)
+    if (!q.success) return reply.status(400).send({ error: { code: 'VALIDATION_ERROR', message: q.error.issues[0].message } })
+
+    const { rows } = q.data.playerId
+      ? await pool.query<{ id: string }>(`SELECT id FROM players WHERE id = $1`, [q.data.playerId])
+      : await pool.query<{ id: string }>(`SELECT id FROM players WHERE phone = $1`, [(q.data.phone ?? '').trim()])
     if (rows.length === 0) return reply.status(404).send({ error: { code: 'NOT_FOUND', message: 'No player found with that phone number.' } })
     const { flags } = await evaluateBonusEligibility(rows[0].id)
     return reply.send({ playerId: rows[0].id, flags })

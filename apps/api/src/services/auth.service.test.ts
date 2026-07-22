@@ -67,14 +67,14 @@ describe('registerPlayer', () => {
     expect(mockClient.release).toHaveBeenCalledOnce()
   })
 
-  it('records a signup player_signals row with ip + deviceId', async () => {
+  it('records a signup player_signals row on the pool, after commit, with ip + deviceId', async () => {
     mockClientQuery
       .mockResolvedValueOnce({ rows: [] } as any)              // BEGIN
       .mockResolvedValueOnce({ rows: [] } as any)              // phone check - not taken
       .mockResolvedValueOnce({ rows: [{ id: 'new-id' }] } as any) // insert player
       .mockResolvedValueOnce({ rows: [] } as any)              // insert wallet
-      .mockResolvedValueOnce({ rows: [] } as any)              // insert player_signals
       .mockResolvedValueOnce({ rows: [] } as any)              // COMMIT
+    mockPoolQuery.mockResolvedValueOnce({ rows: [] } as any)   // insert player_signals (post-commit)
 
     await registerPlayer({
       phone: '+254700000000',
@@ -87,8 +87,13 @@ describe('registerPlayer', () => {
       deviceId: 'device-abc-123',
     })
 
-    expect(mockClientQuery).toHaveBeenCalledTimes(6)
-    const signalCall = mockClientQuery.mock.calls.find(([sql]) =>
+    // The transaction itself never sees the signal insert.
+    expect(mockClientQuery).toHaveBeenCalledTimes(5)
+    expect(mockClientQuery.mock.calls.some(([sql]) =>
+      typeof sql === 'string' && sql.includes('INSERT INTO player_signals'),
+    )).toBe(false)
+
+    const signalCall = mockPoolQuery.mock.calls.find(([sql]) =>
       typeof sql === 'string' && sql.includes('INSERT INTO player_signals'),
     )
     expect(signalCall).toBeDefined()
@@ -114,10 +119,65 @@ describe('registerPlayer', () => {
     })
 
     expect(mockClientQuery).toHaveBeenCalledTimes(5)
-    const signalCall = mockClientQuery.mock.calls.find(([sql]) =>
+    const signalCall = mockPoolQuery.mock.calls.find(([sql]) =>
       typeof sql === 'string' && sql.includes('INSERT INTO player_signals'),
     )
     expect(signalCall).toBeUndefined()
+  })
+
+  it('stores a null ip (but still registers successfully) when req.ip is not a valid IP', async () => {
+    mockClientQuery
+      .mockResolvedValueOnce({ rows: [] } as any)              // BEGIN
+      .mockResolvedValueOnce({ rows: [] } as any)              // phone check - not taken
+      .mockResolvedValueOnce({ rows: [{ id: 'new-id' }] } as any) // insert player
+      .mockResolvedValueOnce({ rows: [] } as any)              // insert wallet
+      .mockResolvedValueOnce({ rows: [] } as any)              // COMMIT
+    mockPoolQuery.mockResolvedValueOnce({ rows: [] } as any)   // insert player_signals (post-commit)
+
+    // Registration must succeed (not throw/500) regardless of a garbage req.ip.
+    // smsOn is mocked true in this file, so a successful register resolves to
+    // null (OTP path) rather than tokens - the important thing is it resolves.
+    await expect(
+      registerPlayer({
+        phone: '+254700000000',
+        name: 'Alice',
+        country: 'KE',
+        currency: 'KES',
+        date_of_birth: '1990-01-01',
+        password: 'Password1!',
+        ip: 'not-an-ip',
+        deviceId: 'device-abc-123',
+      }),
+    ).resolves.toBeNull()
+
+    const signalCall = mockPoolQuery.mock.calls.find(([sql]) =>
+      typeof sql === 'string' && sql.includes('INSERT INTO player_signals'),
+    )
+    expect(signalCall).toBeDefined()
+    expect(signalCall![1]).toEqual(['new-id', null, 'device-abc-123'])
+  })
+
+  it('still succeeds even if the post-commit signal insert throws', async () => {
+    mockClientQuery
+      .mockResolvedValueOnce({ rows: [] } as any)              // BEGIN
+      .mockResolvedValueOnce({ rows: [] } as any)              // phone check - not taken
+      .mockResolvedValueOnce({ rows: [{ id: 'new-id' }] } as any) // insert player
+      .mockResolvedValueOnce({ rows: [] } as any)              // insert wallet
+      .mockResolvedValueOnce({ rows: [] } as any)              // COMMIT
+    mockPoolQuery.mockRejectedValueOnce(new Error('boom'))     // signal insert fails
+
+    await expect(
+      registerPlayer({
+        phone: '+254700000000',
+        name: 'Alice',
+        country: 'KE',
+        currency: 'KES',
+        date_of_birth: '1990-01-01',
+        password: 'Password1!',
+        ip: '41.90.12.34',
+        deviceId: 'device-abc-123',
+      }),
+    ).resolves.toBeNull()
   })
 
   it('throws PHONE_TAKEN when phone already exists', async () => {

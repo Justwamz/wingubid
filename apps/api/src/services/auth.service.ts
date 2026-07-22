@@ -1,4 +1,5 @@
 import crypto from 'crypto'
+import net from 'net'
 import { pool } from '@betting/db'
 import { hashPassword, verifyPassword } from '../lib/hash.js'
 import { signPlayerAccessToken } from '../lib/jwt.js'
@@ -78,16 +79,6 @@ export async function registerPlayer(
       )
     }
 
-    // Abuse signal: record the signup IP + device for later bonus eligibility
-    // checks. Best-effort; only write when we actually have something.
-    if (input.ip || input.deviceId) {
-      await client.query(
-        `INSERT INTO player_signals (player_id, kind, ip, device_id)
-         VALUES ($1, 'signup', $2, $3)`,
-        [playerId, input.ip ?? null, input.deviceId ? input.deviceId.slice(0, 64) : null],
-      )
-    }
-
     await client.query('COMMIT')
     committed = true
   } catch (err) {
@@ -97,6 +88,21 @@ export async function registerPlayer(
     throw err
   } finally {
     client.release()
+  }
+
+  // Best-effort abuse signal, deliberately AFTER commit and isolated: a bad IP
+  // (req.ip is client-influenceable behind trustProxy) or any write error must
+  // never roll back or fail a real registration.
+  const signalIp = input.ip && net.isIP(input.ip) ? input.ip : null
+  if (signalIp || input.deviceId) {
+    try {
+      await pool.query(
+        `INSERT INTO player_signals (player_id, kind, ip, device_id) VALUES ($1, 'signup', $2, $3)`,
+        [playerId, signalIp, input.deviceId ? input.deviceId.slice(0, 64) : null],
+      )
+    } catch {
+      // swallow: signal capture is non-critical
+    }
   }
 
   if (!smsOn) {

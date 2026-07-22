@@ -104,6 +104,17 @@ describe('GET /admin/bonuses/eligibility', () => {
     expect(res.statusCode).toBe(200)
     expect(res.json().flags[0].type).toBe('ip_velocity')
   })
+
+  it('400s on a malformed playerId instead of 500ing', async () => {
+    const res = await app.inject({ method: 'GET', url: '/admin/bonuses/eligibility?playerId=abc', headers: { Authorization: 'Bearer t' } })
+    expect(res.statusCode).toBe(400)
+    expect(res.json().error.code).toBe('VALIDATION_ERROR')
+  })
+
+  it('400s when neither phone nor playerId is provided', async () => {
+    const res = await app.inject({ method: 'GET', url: '/admin/bonuses/eligibility', headers: { Authorization: 'Bearer t' } })
+    expect(res.statusCode).toBe(400)
+  })
 })
 
 describe('POST /admin/bonuses/grant abuse enforcement', () => {
