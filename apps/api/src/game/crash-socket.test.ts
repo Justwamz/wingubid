@@ -43,8 +43,21 @@ describe('bet:place', () => {
 
     await socket._trigger('bet:place', { grossStake: 10000 })
 
-    expect(placeBet).toHaveBeenCalledWith('player-1', 'r-1', 10000, undefined)
+    expect(placeBet).toHaveBeenCalledWith('player-1', 'r-1', 10000, undefined, 'cash')
     expect(socket.emit).toHaveBeenCalledWith('bet:confirmed', expect.objectContaining({ betId: 'bet-1' }))
+  })
+
+  it('passes fundSource=bonus through to placeBet when specified', async () => {
+    vi.mocked(getCurrentRound).mockReturnValue({ status: 'waiting', roundId: 'r-1', bets: {} } as any)
+    vi.mocked(placeBet).mockResolvedValueOnce({ betId: 'bet-1', effectiveStake: 10000 })
+
+    const socket = makeSocket()
+    const io = makeIo()
+    handleCrashSocket(io as any, socket as any)
+
+    await socket._trigger('bet:place', { grossStake: 10000, fundSource: 'bonus' })
+
+    expect(placeBet).toHaveBeenCalledWith('player-1', 'r-1', 10000, undefined, 'bonus')
   })
 
   it('rejects a negative grossStake without touching the wallet', async () => {

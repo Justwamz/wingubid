@@ -12,6 +12,7 @@ import { GameSettingsTab } from '@/components/GameSettingsTab'
 import { ReconciliationTab } from '@/components/ReconciliationTab'
 import { ChatModerationTab } from '@/components/ChatModerationTab'
 import { StaffTab } from '@/components/StaffTab'
+import { BonusesTab } from '@/components/BonusesTab'
 import { fetchMe, type Me } from '@/lib/me'
 import { Users, Dice6, BarChart3, ArrowDownCircle, Landmark, DollarSign, Wallet, ArrowUpFromLine, RefreshCw, Bell } from 'lucide-react'
 
@@ -466,13 +467,13 @@ const TAB_PERMISSION: Record<string, string> = {
   stats: 'stats.view', promotions: 'promotions.view', payments: 'payments.view',
   integrations: 'integrations.view', users: 'players.view', transactions: 'transactions.view',
   withdrawals: 'withdrawals.view', reconciliation: 'reconciliation.view', chat: 'chat.view',
-  settings: 'settings.view', staff: 'staff.view',
+  settings: 'settings.view', staff: 'staff.view', bonuses: 'bonuses.view',
 }
-const ALL_TABS = ['stats', 'promotions', 'payments', 'integrations', 'users', 'transactions', 'withdrawals', 'reconciliation', 'chat', 'settings', 'staff'] as const
+const ALL_TABS = ['stats', 'promotions', 'payments', 'integrations', 'users', 'transactions', 'withdrawals', 'reconciliation', 'chat', 'settings', 'staff', 'bonuses'] as const
 
 export default function AdminDashboardPage() {
   const router = useRouter()
-  const [tab, setTab] = useState<'stats' | 'promotions' | 'payments' | 'integrations' | 'users' | 'transactions' | 'withdrawals' | 'reconciliation' | 'chat' | 'settings' | 'staff'>('stats')
+  const [tab, setTab] = useState<'stats' | 'promotions' | 'payments' | 'integrations' | 'users' | 'transactions' | 'withdrawals' | 'reconciliation' | 'chat' | 'settings' | 'staff' | 'bonuses'>('stats')
   const [me, setMe] = useState<Me | null>(null)
   const [stats, setStats] = useState<Stats | null>(null)
   const [loading, setLoading] = useState(true)
@@ -799,6 +800,7 @@ export default function AdminDashboardPage() {
       {tab === 'chat' && <ChatModerationTab />}
       {tab === 'settings' && <GameSettingsTab />}
       {tab === 'staff' && <StaffTab />}
+      {tab === 'bonuses' && <BonusesTab />}
     </main>
   )
 }

@@ -1,8 +1,8 @@
 import { createHmac } from 'crypto'
 import { pool } from '@betting/db'
-import { debitForBet, creditWinnings } from './wallet.service.js'
+import { debitForBet, creditWinnings, debitBonusForBet, settleBonusWin } from './wallet.service.js'
 import { nextScratchRoll } from './scratch-seed.service.js'
-import { assertGameEnabled } from './game-settings.service.js'
+import { assertGameEnabled, getBonusMaxWinCents } from './game-settings.service.js'
 import { AppError } from '../lib/errors.js'
 
 export const SYMBOLS_EMOJI = ['💎', '🌟', '🍀', '🔥', '💰', '❌']
@@ -76,6 +76,7 @@ const VALID_STAKES = new Set([2000, 5000, 10000, 20000])
 export async function buyScratchCard(
   playerId: string,
   stakeCents: number,
+  fundSource: 'cash' | 'bonus' = 'cash',
 ): Promise<{
   cardId: string; grid: number[]; prizeCents: number
   serverSeedHash: string; clientSeed: string; nonce: number
@@ -96,7 +97,17 @@ export async function buyScratchCard(
     const grid = generateGridFromSeed(serverSeed, clientSeed, nonce)
     const prizeCents = calculatePrize(grid, stakeCents)
 
-    const { walletId } = await debitForBet(client, playerId, stakeCents, stakeCents, { game: 'scratch' }, { lock: false })
+    // Scratch settles in this same transaction (no locked_balance to release
+    // later), same as dice - the bonus path never locks either.
+    let walletId: string
+    let bonusGrantId: string | null = null
+    if (fundSource === 'bonus') {
+      const r = await debitBonusForBet(client, playerId, stakeCents, { game: 'scratch' })
+      walletId = r.walletId; bonusGrantId = r.grantId
+    } else {
+      const r = await debitForBet(client, playerId, stakeCents, stakeCents, { game: 'scratch' }, { lock: false })
+      walletId = r.walletId
+    }
 
     const { rows } = await client.query<{ id: string }>(
       `INSERT INTO scratch_cards (player_id, wallet_id, stake_cents, grid, prize_cents, status)
@@ -106,7 +117,11 @@ export async function buyScratchCard(
     const cardId = rows[0].id
 
     if (prizeCents > 0) {
-      await creditWinnings(client, playerId, prizeCents, { game: 'scratch', cardId })
+      if (fundSource === 'bonus') {
+        await settleBonusWin(client, playerId, bonusGrantId!, prizeCents, stakeCents, cardId, await getBonusMaxWinCents())
+      } else {
+        await creditWinnings(client, playerId, prizeCents, { game: 'scratch', cardId })
+      }
     }
 
     await client.query('COMMIT')

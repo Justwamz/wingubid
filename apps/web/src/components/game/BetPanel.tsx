@@ -4,6 +4,7 @@ import type { RoundStatus, MyBet } from '@/hooks/useCrashGame'
 import { CheckCircle2 } from 'lucide-react'
 import { DEFAULT_STAKE_KES } from '@/lib/gameConfig'
 import { QuickStakes } from '@/components/game/QuickStakes'
+import { BonusToggle } from '@/components/game/BonusToggle'
 
 interface Props {
   status: RoundStatus
@@ -12,15 +13,17 @@ interface Props {
   waitingEndsAt?: number | null
   error?: string | null
   connected?: boolean
-  onPlaceBet: (grossStake: number, autoCashoutAt?: number) => void
+  bonusBalance?: number
+  onPlaceBet: (grossStake: number, autoCashoutAt?: number, fundSource?: 'cash' | 'bonus') => void
   onCashout: () => void
 }
 
-export function BetPanel({ status, myBet, multiplier = 1, waitingEndsAt, error, connected, onPlaceBet, onCashout }: Props) {
+export function BetPanel({ status, myBet, multiplier = 1, waitingEndsAt, error, connected, bonusBalance = 0, onPlaceBet, onCashout }: Props) {
   const [stake, setStake] = useState(String(DEFAULT_STAKE_KES))
   const [autoCashout, setAutoCashout] = useState('')
   const [showAuto, setShowAuto] = useState(false)
   const [secondsLeft, setSecondsLeft] = useState<number | null>(null)
+  const [fundSource, setFundSource] = useState<'cash' | 'bonus'>('cash')
 
   const canBet = status === 'waiting' && !myBet
   const canCashout = status === 'running' && !!myBet
@@ -39,11 +42,37 @@ export function BetPanel({ status, myBet, multiplier = 1, waitingEndsAt, error, 
     return () => clearInterval(id)
   }, [status, waitingEndsAt])
 
+  // Bonus and cash cannot be mixed in a single bet - cap the stake at the
+  // available bonus whenever the player is betting with bonus funds.
+  useEffect(() => {
+    if (fundSource !== 'bonus') return
+    const capKes = bonusBalance / 100
+    setStake(prev => {
+      const num = parseFloat(prev) || 0
+      return num > capKes ? String(capKes) : prev
+    })
+  }, [fundSource, bonusBalance])
+
+  // If the bonus balance is depleted while betting with bonus, fall back to
+  // cash so betting doesn't silently no-op / get rejected by the server.
+  useEffect(() => {
+    if (bonusBalance <= 0 && fundSource === 'bonus') setFundSource('cash')
+  }, [bonusBalance, fundSource])
+
+  function updateStake(v: string) {
+    if (fundSource === 'bonus') {
+      const capKes = bonusBalance / 100
+      const num = parseFloat(v)
+      if (!isNaN(num) && num > capKes) v = String(capKes)
+    }
+    setStake(v)
+  }
+
   function handleSubmit() {
-    const amount = parseInt(stake)
-    if (!amount || amount <= 0) return
+    const kes = parseFloat(stake)
+    if (!kes || kes <= 0) return
     const auto = parseFloat(autoCashout) || undefined
-    onPlaceBet(amount * 100, auto)
+    onPlaceBet(Math.floor(kes * 100), auto, fundSource)
   }
 
   return (
@@ -52,19 +81,21 @@ export function BetPanel({ status, myBet, multiplier = 1, waitingEndsAt, error, 
         <div className="text-xs text-gray-500 text-center py-1 animate-pulse">Connecting to game…</div>
       )}
 
+      <BonusToggle bonusBalance={bonusBalance} value={fundSource} onChange={setFundSource} disabled={!canBet} />
+
       <div className="flex gap-2">
         <input
           type="number"
           placeholder="Stake (KES)"
           value={stake}
-          onChange={e => setStake(e.target.value)}
+          onChange={e => updateStake(e.target.value)}
           disabled={!canBet}
           className="flex-1 bg-game-bg border border-game-border rounded-lg px-3 py-2 text-white font-mono focus:outline-none focus:border-accent-cyan disabled:opacity-40"
         />
       </div>
 
       <QuickStakes
-        onSelect={v => setStake(String(v))}
+        onSelect={v => updateStake(String(v))}
         disabled={!canBet}
         activeValue={parseInt(stake) || undefined}
       />

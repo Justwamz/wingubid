@@ -5,6 +5,7 @@ import { DiceTrack } from '@/components/game/DiceTrack'
 import { HowToPlay } from '@/components/game/HowToPlay'
 import { GameBetHistory } from '@/components/game/GameBetHistory'
 import { QuickStakes } from '@/components/game/QuickStakes'
+import { BonusToggle } from '@/components/game/BonusToggle'
 import { DEFAULT_STAKE_KES } from '@/lib/gameConfig'
 import { apiFetch } from '@/lib/apiFetch'
 import { refreshBalance } from '@/lib/auth'
@@ -35,6 +36,8 @@ export default function WinguDicePage() {
   const [error, setError] = useState<string | null>(null)
   const [rollCount, setRollCount] = useState(0)
   const [houseEdge, setHouseEdge] = useState(5)
+  const [fundSource, setFundSource] = useState<'cash' | 'bonus'>('cash')
+  const [bonusBalance, setBonusBalance] = useState(0)
   const spinRef = useRef<ReturnType<typeof setInterval> | null>(null)
 
   useEffect(() => () => { if (spinRef.current) clearInterval(spinRef.current) }, [])
@@ -46,6 +49,45 @@ export default function WinguDicePage() {
       .then(d => { if (d?.houseEdge?.dice != null) setHouseEdge(d.houseEdge.dice) })
       .catch(() => {})
   }, [])
+
+  // Load the player's bonus balance (same event the header listens on, so it
+  // stays in sync after every roll).
+  useEffect(() => {
+    function loadBonusBalance() {
+      apiFetch<{ bonus_balance: number }>('/wallet/balance')
+        .then(d => setBonusBalance(d.bonus_balance ?? 0))
+        .catch(() => {})
+    }
+    loadBonusBalance()
+    window.addEventListener('balanceRefresh', loadBonusBalance)
+    return () => window.removeEventListener('balanceRefresh', loadBonusBalance)
+  }, [])
+
+  // Bonus and cash cannot be mixed in a single bet - cap the stake at the
+  // available bonus whenever the player is betting with bonus funds.
+  useEffect(() => {
+    if (fundSource !== 'bonus') return
+    const capKes = bonusBalance / 100
+    setGrossStake(prev => {
+      const num = parseFloat(prev) || 0
+      return num > capKes ? String(capKes) : prev
+    })
+  }, [fundSource, bonusBalance])
+
+  // If the bonus balance is depleted while betting with bonus, fall back to
+  // cash so betting doesn't silently no-op / get rejected by the server.
+  useEffect(() => {
+    if (bonusBalance <= 0 && fundSource === 'bonus') setFundSource('cash')
+  }, [bonusBalance, fundSource])
+
+  function updateStake(v: string) {
+    if (fundSource === 'bonus') {
+      const capKes = bonusBalance / 100
+      const num = parseFloat(v)
+      if (!isNaN(num) && num > capKes) v = String(capKes)
+    }
+    setGrossStake(v)
+  }
 
   const winChance = direction === 'over' ? 100 - target : target
   // Mirror the server payout formula exactly (floored to 2 decimals).
@@ -66,7 +108,7 @@ export default function WinguDicePage() {
     try {
       const data = await apiFetch<RollResult>('/games/dice/roll', {
         method: 'POST',
-        body: JSON.stringify({ grossStake: Math.floor(stake * 100), target, direction }),
+        body: JSON.stringify({ grossStake: Math.floor(stake * 100), target, direction, fundSource }),
       })
       await new Promise(r => setTimeout(r, Math.max(0, 1400 - (Date.now() - started))))
       if (spinRef.current) { clearInterval(spinRef.current); spinRef.current = null }
@@ -167,15 +209,16 @@ export default function WinguDicePage() {
 
           {/* Bet controls */}
           <div className="bg-game-card border border-game-border rounded-2xl p-4 space-y-3">
+            <BonusToggle bonusBalance={bonusBalance} value={fundSource} onChange={setFundSource} disabled={rolling} />
             <input
               type="number"
               placeholder="Stake amount (KES)"
               value={grossStake}
-              onChange={e => setGrossStake(e.target.value)}
+              onChange={e => updateStake(e.target.value)}
               className="w-full bg-game-bg border border-game-border rounded-xl px-4 py-3 text-white placeholder-gray-600 focus:outline-none focus:border-accent-cyan text-sm"
             />
             <QuickStakes
-              onSelect={v => setGrossStake(String(v))}
+              onSelect={v => updateStake(String(v))}
               disabled={rolling}
               activeValue={parseInt(grossStake) || undefined}
             />

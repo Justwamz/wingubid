@@ -9,6 +9,7 @@ import { ChatPanel } from '@/components/game/ChatPanel'
 import { LiveLeaderboard } from '@/components/game/LiveLeaderboard'
 import { CrashChart } from '@/components/game/CrashChart'
 import { HowToPlay } from '@/components/game/HowToPlay'
+import { apiFetch } from '@/lib/api'
 import { DollarSign, TrendingUp, Rocket } from 'lucide-react'
 
 const HOW_TO_PLAY = [
@@ -22,6 +23,7 @@ export default function WinguCrashPage() {
     useCrashGame()
 
   const [chartPoints, setChartPoints] = useState<number[]>([])
+  const [bonusBalance, setBonusBalance] = useState(0)
 
   useEffect(() => {
     if (status === 'waiting') {
@@ -30,6 +32,19 @@ export default function WinguCrashPage() {
       setChartPoints(prev => [...prev, multiplier])
     }
   }, [status, multiplier])
+
+  // Load the player's bonus balance; refetch on the same event the header uses
+  // (fired after every bet, cashout and round settlement).
+  useEffect(() => {
+    function loadBonusBalance() {
+      apiFetch<{ bonus_balance: number }>('/wallet/balance').then(({ data }) => {
+        if (data) setBonusBalance(data.bonus_balance ?? 0)
+      })
+    }
+    loadBonusBalance()
+    window.addEventListener('balanceRefresh', loadBonusBalance)
+    return () => window.removeEventListener('balanceRefresh', loadBonusBalance)
+  }, [])
 
   const multiplierColor = status === 'crashed' ? 'text-warning-coral' : 'text-accent-cyan'
   const multiplierLabel =
@@ -76,6 +91,7 @@ export default function WinguCrashPage() {
             connected={connected}
             waitingEndsAt={waitingEndsAt}
             error={error}
+            bonusBalance={bonusBalance}
             onPlaceBet={placeBet}
             onCashout={cashout}
           />

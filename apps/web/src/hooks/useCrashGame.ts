@@ -78,9 +78,9 @@ export function useCrashGame() {
     return () => { socket.disconnect() }
   }, [])
 
-  const placeBet = useCallback((grossStake: number, autoCashoutAt?: number) => {
+  const placeBet = useCallback((grossStake: number, autoCashoutAt?: number, fundSource?: 'cash' | 'bonus') => {
     setError(null)
-    socketRef.current?.emit('bet:place', { grossStake, autoCashoutAt })
+    socketRef.current?.emit('bet:place', { grossStake, autoCashoutAt, fundSource })
   }, [])
 
   const cashout = useCallback(() => {

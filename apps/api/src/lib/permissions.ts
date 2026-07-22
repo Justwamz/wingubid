@@ -58,6 +58,10 @@ export const PERMISSION_CATALOG: PermissionGroup[] = [
     { key: 'settings.view', label: 'View game settings' },
     { key: 'settings.edit', label: 'Edit game settings' },
   ] },
+  { area: 'bonuses', label: 'Bonuses', permissions: [
+    { key: 'bonuses.view', label: 'View bonuses' },
+    { key: 'bonuses.grant', label: 'Grant bonuses' },
+  ] },
   { area: 'staff', label: 'Staff', permissions: [
     { key: 'staff.view', label: 'View staff' },
     { key: 'staff.create', label: 'Create staff' },

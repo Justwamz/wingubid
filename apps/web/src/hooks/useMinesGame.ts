@@ -44,11 +44,11 @@ export function useMinesGame() {
     return () => { cancelled = true }
   }, [])
 
-  const startGame = useCallback(async (grossStake: number, gridSize: number, mineCount: number) => {
+  const startGame = useCallback(async (grossStake: number, gridSize: number, mineCount: number, fundSource?: 'cash' | 'bonus') => {
     setLoading(true); setError(null)
     const { data, error: err } = await apiFetch<{
       gameId: string; serverSeedHash: string; clientSeed: string; gridSize: number; mineCount: number
-    }>('/games/mines/start', { method: 'POST', body: JSON.stringify({ grossStake, gridSize, mineCount }) })
+    }>('/games/mines/start', { method: 'POST', body: JSON.stringify({ grossStake, gridSize, mineCount, fundSource }) })
     setLoading(false)
     if (err) { setError(err.message); return }
     setGame({ gameId: data!.gameId, gridSize: data!.gridSize, mineCount: data!.mineCount,

@@ -7,6 +7,7 @@ import { AppError } from '../../lib/errors.js'
 
 const buyBody = z.object({
   stake: z.number({ invalid_type_error: 'Please choose a valid stake.' }).int('Please choose a valid stake.').positive('Please choose a stake greater than zero.'),
+  fundSource: z.enum(['cash', 'bonus']).default('cash'),
 })
 
 const rotateBody = z.object({
@@ -22,7 +23,7 @@ export async function scratchRoutes(app: FastifyInstance) {
       })
     }
     try {
-      const result = await buyScratchCard(req.playerId, parsed.data.stake)
+      const result = await buyScratchCard(req.playerId, parsed.data.stake, parsed.data.fundSource)
       return reply.send(result)
     } catch (err) {
       if (err instanceof AppError) {

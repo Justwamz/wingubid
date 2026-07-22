@@ -9,6 +9,7 @@ const body = z.object({
   grossStake: z.number({ invalid_type_error: 'Please enter a valid bet amount.' }).int('Please enter a valid bet amount.').positive('Please enter a bet greater than zero.'),
   target: z.number().int().min(1, 'Choose a target between 1 and 98.').max(98, 'Choose a target between 1 and 98.'),
   direction: z.enum(['over', 'under'], { errorMap: () => ({ message: 'Choose whether to roll over or under.' }) }),
+  fundSource: z.enum(['cash', 'bonus']).default('cash'),
 })
 
 const rotateBody = z.object({
@@ -22,8 +23,8 @@ export async function diceRoutes(app: FastifyInstance) {
       return reply.status(400).send({ error: { code: 'VALIDATION_ERROR', message: parsed.error.issues[0].message } })
     }
     try {
-      const { grossStake, target, direction } = parsed.data
-      return reply.send(await rollDice(req.playerId, grossStake, target, direction))
+      const { grossStake, target, direction, fundSource } = parsed.data
+      return reply.send(await rollDice(req.playerId, grossStake, target, direction, fundSource))
     } catch (err) {
       if (err instanceof AppError) return reply.status(err.statusCode).send({ error: { code: err.code, message: err.message } })
       throw err
