@@ -3,8 +3,16 @@ import { pool } from '@betting/db'
 import { AppError } from '../lib/errors.js'
 import { grantBonus } from './wallet.service.js'
 import { evaluateBonusEligibility } from './bonus-eligibility.service.js'
+import { playerMatchesCriteria, type Criteria } from './bonus-criteria.service.js'
 
 const BLOCKING_TYPES = new Set(['prior_bonus', 'device_bonus', 'ip_bonus'])
+
+export async function resolveCampaignByCode(code: string): Promise<string | null> {
+  const { rows } = await pool.query<{ id: string }>(
+    `SELECT id FROM bonus_campaigns WHERE code = $1`, [code.trim().toUpperCase()],
+  )
+  return rows.length ? rows[0].id : null
+}
 
 // Self-service claim of a campaign bonus. Strict abuse enforcement (no admin to
 // review): hard-signal flags block the claim. Best-effort claim-signal capture.
@@ -13,12 +21,24 @@ export async function claimCampaignBonus(
   campaignId: string,
   ip: string | undefined,
   deviceId: string | undefined,
+  code?: string,
 ): Promise<{ amountCents: number }> {
+  // Responsible-gambling gate: suspended/self-excluded players can never be
+  // lured with a bonus. Checked first, before any campaign/claim logic.
+  const { rows: playerRows } = await pool.query<{ status: string }>(
+    `SELECT status FROM players WHERE id = $1`, [playerId],
+  )
+  if (playerRows.length === 0 || playerRows[0].status !== 'active') {
+    throw new AppError('NOT_ELIGIBLE', "You're not eligible for this bonus.", 422)
+  }
+
   const { rows: camp } = await pool.query<{
     amount_cents: string; expiry_days: number; status: string
     starts_at: string | null; ends_at: string | null
+    code: string | null; criteria: Criteria | null
   }>(
-    `SELECT amount_cents, expiry_days, status, starts_at, ends_at FROM bonus_campaigns WHERE id = $1`,
+    `SELECT amount_cents, expiry_days, status, starts_at, ends_at, code, criteria
+     FROM bonus_campaigns WHERE id = $1`,
     [campaignId],
   )
   if (camp.length === 0) throw new AppError('CAMPAIGN_UNAVAILABLE', 'This bonus is not available.', 422)
@@ -28,6 +48,17 @@ export async function claimCampaignBonus(
   const ended = c.ends_at && new Date(c.ends_at).getTime() < now
   if (c.status !== 'active' || notStarted || ended) {
     throw new AppError('CAMPAIGN_UNAVAILABLE', 'This bonus is not available.', 422)
+  }
+
+  // Promo code gate.
+  if (c.code) {
+    if (!code || code.trim().toUpperCase() !== c.code.toUpperCase()) {
+      throw new AppError('INVALID_CODE', 'That promo code is not valid.', 422)
+    }
+  }
+  // Audience targeting gate (generic message; no criteria detail leaked).
+  if (c.criteria && !(await playerMatchesCriteria(playerId, c.criteria))) {
+    throw new AppError('NOT_ELIGIBLE', "You're not eligible for this bonus.", 422)
   }
 
   const { rows: claimed } = await pool.query(
