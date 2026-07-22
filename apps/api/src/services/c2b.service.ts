@@ -2,6 +2,7 @@ import { pool } from '@betting/db'
 import { creditDeposit } from './wallet.service.js'
 import { normalizeKePhone } from '../lib/phone.js'
 import { AppError } from '../lib/errors.js'
+import { maybeGrantDepositMatch } from './deposit-match.service.js'
 
 export type C2bStatus = 'credited' | 'unresolved' | 'reposted' | 'refunded'
 
@@ -57,6 +58,7 @@ export async function recordC2bPayment(params: {
         [msisdn, amount, mpesaReceipt, playerId],
       )
       await client.query('COMMIT')
+      await maybeGrantDepositMatch(playerId, amount)
       return { status: 'credited', playerId }
     }
 
@@ -125,6 +127,7 @@ export async function listC2bPayments(): Promise<{
 export async function repostC2bPayment(id: string, phone: string, adminId: string): Promise<void> {
   const normalized = normalizeKePhone(phone) ?? phone
   const client = await pool.connect()
+  let credited: { playerId: string; amount: number } | null = null
   try {
     await client.query('BEGIN')
     const { rows } = await client.query<{ amount: string; mpesa_receipt: string; status: C2bStatus }>(
@@ -150,12 +153,14 @@ export async function repostC2bPayment(id: string, phone: string, adminId: strin
       [id, playerId, adminId],
     )
     await client.query('COMMIT')
+    credited = { playerId, amount: Number(rows[0].amount) }
   } catch (err) {
     await client.query('ROLLBACK')
     throw err
   } finally {
     client.release()
   }
+  if (credited) await maybeGrantDepositMatch(credited.playerId, credited.amount)
 }
 
 /** Mark an unresolved payment as refunded (records the decision + audit). */

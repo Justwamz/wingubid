@@ -5,9 +5,11 @@ vi.mock('./wallet.service.js', () => ({
   creditDeposit: vi.fn(async () => ({ transactionId: 'tx-1', walletId: 'w-1' })),
 }))
 vi.mock('../lib/phone.js', () => ({ normalizeKePhone: (p: string) => p }))
+vi.mock('./deposit-match.service.js', () => ({ maybeGrantDepositMatch: vi.fn() }))
 
 import { pool } from '@betting/db'
 import { creditDeposit } from './wallet.service.js'
+import { maybeGrantDepositMatch } from './deposit-match.service.js'
 import { recordC2bPayment } from './c2b.service.js'
 
 const mockConnect = vi.mocked(pool.connect)
@@ -33,6 +35,7 @@ describe('recordC2bPayment', () => {
 
     expect(res).toEqual({ status: 'credited', playerId: 'p-1' })
     expect(creditDeposit).toHaveBeenCalledWith(client, 'p-1', 5000, 'c2b:RCPT1', expect.any(Object))
+    expect(maybeGrantDepositMatch).toHaveBeenCalledWith('p-1', 5000)
   })
 
   it('holds the payment as unresolved when no user matches', async () => {
@@ -44,6 +47,7 @@ describe('recordC2bPayment', () => {
 
     expect(res).toEqual({ status: 'unresolved' })
     expect(creditDeposit).not.toHaveBeenCalled()
+    expect(maybeGrantDepositMatch).not.toHaveBeenCalled()
   })
 
   it('is idempotent: a duplicate receipt does not credit again', async () => {
@@ -55,6 +59,7 @@ describe('recordC2bPayment', () => {
 
     expect(res).toEqual({ status: 'credited', duplicate: true })
     expect(creditDeposit).not.toHaveBeenCalled()
+    expect(maybeGrantDepositMatch).not.toHaveBeenCalled()
   })
 
   it('rejects a non-positive amount', async () => {
