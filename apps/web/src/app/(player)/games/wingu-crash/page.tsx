@@ -19,7 +19,7 @@ const HOW_TO_PLAY = [
 ]
 
 export default function WinguCrashPage() {
-  const { status, multiplier, myBet, crashPoint, waitingEndsAt, recentCrashes, feed, error, connected, cashoutResult, placeBet, cashout } =
+  const { status, multiplier, myBet, crashPoint, waitingEndsAt, recentCrashes, feed, error, connected, cashoutResult, settledCount, placeBet, cashout } =
     useCrashGame()
 
   const [chartPoints, setChartPoints] = useState<number[]>([])
@@ -102,7 +102,7 @@ export default function WinguCrashPage() {
           <RoundHistory crashes={recentCrashes} />
           <ChatPanel />
           <LiveLeaderboard feed={feed} />
-          <GameBetHistory game="crash" />
+          <GameBetHistory game="crash" refreshKey={settledCount} />
         </div>
       </div>
     </div>

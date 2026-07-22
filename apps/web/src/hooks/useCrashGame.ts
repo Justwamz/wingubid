@@ -31,6 +31,12 @@ export function useCrashGame() {
   const [error, setError] = useState<string | null>(null)
   const [connected, setConnected] = useState(false)
   const [cashoutResult, setCashoutResult] = useState<{ multiplier: number; winnings: number } | null>(null)
+  // Bumped whenever the player's bet settles (cashout win, or a loss when the
+  // round crashes on an active bet). The page passes it to GameBetHistory as a
+  // refreshKey so the bet-history panel reloads after each settlement - crash is
+  // socket-driven, so without this the panel only ever showed the state at load.
+  const [settledCount, setSettledCount] = useState(0)
+  const hadBetRef = useRef(false)
 
   useEffect(() => {
     const socket = io(API_URL, {
@@ -60,13 +66,22 @@ export function useCrashGame() {
       setStatus('crashed')
       setCrashPoint(data.crashPoint)
       setMyBet(null)
+      // A loss: the player's active bet was just settled to 'lost' server-side
+      // (settleLostBets commits before this event is emitted), so refresh history.
+      if (hadBetRef.current) {
+        hadBetRef.current = false
+        setSettledCount(c => c + 1)
+      }
       setRecentCrashes(prev => [data.crashPoint, ...prev].slice(0, 20))
       refreshBalance()
     })
-    socket.on('bet:confirmed', (data: MyBet) => { setMyBet(data); refreshBalance() })
+    socket.on('bet:confirmed', (data: MyBet) => { setMyBet(data); hadBetRef.current = true; refreshBalance() })
     socket.on('cashout:confirmed', (data: { multiplier: number; winnings: number }) => {
       setMyBet(null)
+      hadBetRef.current = false
       setCashoutResult(data)
+      // A win: cashout() has committed status='won' before this event, so refresh.
+      setSettledCount(c => c + 1)
       refreshBalance()
     })
     socket.on('cashout:broadcast', (data: CashoutFeed) => {
@@ -87,5 +102,5 @@ export function useCrashGame() {
     socketRef.current?.emit('bet:cashout')
   }, [])
 
-  return { status, multiplier, myBet, crashPoint, waitingEndsAt, recentCrashes, feed, error, connected, cashoutResult, placeBet, cashout }
+  return { status, multiplier, myBet, crashPoint, waitingEndsAt, recentCrashes, feed, error, connected, cashoutResult, settledCount, placeBet, cashout }
 }
