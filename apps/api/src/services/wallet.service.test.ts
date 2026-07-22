@@ -11,6 +11,7 @@ import {
   settleWithdrawal,
   creditWinnings,
   refundBet,
+  grantBonus,
   settleBonusWin,
   sweepExpiredBonuses,
 } from './wallet.service.js'
@@ -185,6 +186,24 @@ describe('settleWithdrawal', () => {
     expect(updateCall[0]).toContain('balance = balance + $2')
     const insertCall = client.query.mock.calls[2] as unknown as [string, unknown[]]
     expect(insertCall[1]).toContain('failed')
+  })
+})
+
+describe('grantBonus campaign source', () => {
+  it('writes source=campaign + campaign_id when opts provided', async () => {
+    const calls: Array<{ sql: string; params: unknown[] }> = []
+    const client = { query: vi.fn(async (sql: string, params: unknown[] = []) => {
+      calls.push({ sql, params })
+      if (sql.includes('SELECT id, balance')) return { rows: [{ id: 'w1', balance: '0', currency: 'KES' }] }
+      if (sql.includes('INSERT INTO bonus_grants')) return { rows: [{ id: 'g1' }] }
+      if (sql.startsWith('UPDATE wallets')) return { rows: [{ bonus_balance: '5000' }] }
+      return { rows: [{ id: 'tx1' }] }
+    }) } as never
+    const { grantId } = await grantBonus(client, 'p1', 5000, null, new Date(), { source: 'campaign', campaignId: 'c1' })
+    expect(grantId).toBe('g1')
+    const insert = calls.find(c => c.sql.includes('INSERT INTO bonus_grants'))!
+    expect(insert.params).toContain('campaign')
+    expect(insert.params).toContain('c1')
   })
 })
 
