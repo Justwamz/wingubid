@@ -254,14 +254,17 @@ export async function grantBonus(
   client: PoolClient,
   playerId: string,
   amount: number,
-  grantedBy: string,
+  grantedBy: string | null,
   expiresAt: Date,
+  opts: { source?: 'manual' | 'campaign'; campaignId?: string | null } = {},
 ): Promise<{ grantId: string }> {
+  const source = opts.source ?? 'manual'
+  const campaignId = opts.campaignId ?? null
   const wallet = await selectWalletForUpdate(client, playerId)
   const { rows: grantRows } = await client.query<{ id: string }>(
-    `INSERT INTO bonus_grants (player_id, wallet_id, source, amount_granted, remaining, status, granted_by, expires_at)
-     VALUES ($1, $2, 'manual', $3, $3, 'active', $4, $5) RETURNING id`,
-    [playerId, wallet.id, amount, grantedBy, expiresAt],
+    `INSERT INTO bonus_grants (player_id, wallet_id, source, campaign_id, amount_granted, remaining, status, granted_by, expires_at)
+     VALUES ($1, $2, $3, $4, $5, $5, 'active', $6, $7) RETURNING id`,
+    [playerId, wallet.id, source, campaignId, amount, grantedBy, expiresAt],
   )
   const { rows: updated } = await client.query<{ bonus_balance: string }>(
     `UPDATE wallets SET bonus_balance = bonus_balance + $1 WHERE player_id = $2 RETURNING bonus_balance`,
@@ -270,7 +273,7 @@ export async function grantBonus(
   await client.query(
     `INSERT INTO transactions (wallet_id, player_id, type, amount, balance_after, status, metadata)
      VALUES ($1, $2, 'bonus_granted', $3, $4, 'completed', $5::jsonb)`,
-    [wallet.id, playerId, amount, Number(updated[0].bonus_balance), JSON.stringify({ grantId: grantRows[0].id, grantedBy })],
+    [wallet.id, playerId, amount, Number(updated[0].bonus_balance), JSON.stringify({ grantId: grantRows[0].id, grantedBy, source, campaignId })],
   )
   return { grantId: grantRows[0].id }
 }

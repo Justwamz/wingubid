@@ -32,7 +32,7 @@ export async function evaluateBonusEligibility(playerId: string): Promise<{ flag
      WHERE ps.player_id <> $1
        AND ps.device_id IN (
          SELECT device_id FROM player_signals
-         WHERE player_id = $1 AND kind = 'signup' AND device_id IS NOT NULL)`,
+         WHERE player_id = $1 AND kind IN ('signup','claim') AND device_id IS NOT NULL)`,
     [playerId],
   )
   if (dev.length > 0) {
@@ -49,7 +49,7 @@ export async function evaluateBonusEligibility(playerId: string): Promise<{ flag
      WHERE ps.player_id <> $1
        AND ps.ip IN (
          SELECT ip FROM player_signals
-         WHERE player_id = $1 AND kind = 'signup' AND ip IS NOT NULL)`,
+         WHERE player_id = $1 AND kind IN ('signup','claim') AND ip IS NOT NULL)`,
     [playerId],
   )
   if (ipb.length > 0) {
@@ -62,10 +62,10 @@ export async function evaluateBonusEligibility(playerId: string): Promise<{ flag
   const { rows: vel } = await pool.query<{ n: string }>(
     `SELECT COUNT(DISTINCT player_id) AS n
      FROM player_signals
-     WHERE kind = 'signup'
+     WHERE kind IN ('signup','claim')
        AND ip IN (
          SELECT ip FROM player_signals
-         WHERE player_id = $1 AND kind = 'signup' AND ip IS NOT NULL)`,
+         WHERE player_id = $1 AND kind IN ('signup','claim') AND ip IS NOT NULL)`,
     [playerId],
   )
   const n = Number(vel[0].n)
