@@ -20,6 +20,9 @@ export async function lotteryRoutes(app: FastifyInstance) {
   })
 
   app.post('/games/lottery/tickets', { preHandler: authenticate }, async (req, reply) => {
+    if ((req.body as { fundSource?: string })?.fundSource === 'bonus') {
+      return reply.status(422).send({ error: { code: 'BONUS_NOT_ALLOWED', message: 'Bonus funds cannot be used on Wingu Lotto.' } })
+    }
     const parsed = buyBody.safeParse(req.body)
     if (!parsed.success) {
       return reply.status(400).send({
