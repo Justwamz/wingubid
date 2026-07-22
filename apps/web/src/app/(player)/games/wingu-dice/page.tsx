@@ -74,6 +74,12 @@ export default function WinguDicePage() {
     })
   }, [fundSource, bonusBalance])
 
+  // If the bonus balance is depleted while betting with bonus, fall back to
+  // cash so betting doesn't silently no-op / get rejected by the server.
+  useEffect(() => {
+    if (bonusBalance <= 0 && fundSource === 'bonus') setFundSource('cash')
+  }, [bonusBalance, fundSource])
+
   function updateStake(v: string) {
     if (fundSource === 'bonus') {
       const capKes = bonusBalance / 100

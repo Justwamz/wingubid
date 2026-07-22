@@ -54,6 +54,12 @@ export default function WinguMinesPage() {
     })
   }, [fundSource, bonusBalance])
 
+  // If the bonus balance is depleted while betting with bonus, fall back to
+  // cash so betting doesn't silently no-op / get rejected by the server.
+  useEffect(() => {
+    if (bonusBalance <= 0 && fundSource === 'bonus') setFundSource('cash')
+  }, [bonusBalance, fundSource])
+
   function updateStake(v: string) {
     if (fundSource === 'bonus') {
       const capKes = bonusBalance / 100
@@ -124,7 +130,7 @@ export default function WinguMinesPage() {
                 />
               </div>
               <button
-                onClick={() => startGame(parseInt(stake) * 100, gridSize, mineCount, fundSource)}
+                onClick={() => startGame(Math.floor(parseFloat(stake) * 100), gridSize, mineCount, fundSource)}
                 disabled={loading || !stake}
                 className="w-full py-3.5 rounded-xl font-bold text-base disabled:opacity-40 transition-all"
                 style={{ background: 'linear-gradient(135deg, #80508B, #a06090)', color: '#fff' }}
