@@ -23,6 +23,15 @@ export async function claimCampaignBonus(
   deviceId: string | undefined,
   code?: string,
 ): Promise<{ amountCents: number }> {
+  // Responsible-gambling gate: suspended/self-excluded players can never be
+  // lured with a bonus. Checked first, before any campaign/claim logic.
+  const { rows: playerRows } = await pool.query<{ status: string }>(
+    `SELECT status FROM players WHERE id = $1`, [playerId],
+  )
+  if (playerRows.length === 0 || playerRows[0].status !== 'active') {
+    throw new AppError('NOT_ELIGIBLE', "You're not eligible for this bonus.", 422)
+  }
+
   const { rows: camp } = await pool.query<{
     amount_cents: string; expiry_days: number; status: string
     starts_at: string | null; ends_at: string | null

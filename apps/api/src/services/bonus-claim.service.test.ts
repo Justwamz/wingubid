@@ -42,10 +42,12 @@ function makeMockClient(rows: any[][] = []) {
   }
 }
 
-// Seeds the three pre-checks that always run before the eligibility check:
-// campaign lookup, already-claimed check, active-bonus check.
+// Seeds the player-status gate plus the three pre-checks that always run
+// before the eligibility check: campaign lookup, already-claimed check,
+// active-bonus check.
 function seedPreChecks(campaignRows: unknown[], claimedRows: unknown[] = [], activeRows: unknown[] = []) {
   mockQuery
+    .mockResolvedValueOnce({ rows: [{ status: 'active' }] } as never) // player status
     .mockResolvedValueOnce({ rows: campaignRows } as never) // campaign lookup
     .mockResolvedValueOnce({ rows: claimedRows } as never)  // already-claimed
     .mockResolvedValueOnce({ rows: activeRows } as never)   // active bonus
@@ -103,7 +105,9 @@ describe('claimCampaignBonus', () => {
   })
 
   it('rejects a paused campaign', async () => {
-    mockQuery.mockResolvedValueOnce({ rows: [{ ...activeCampaign, status: 'paused' }] } as never)
+    mockQuery
+      .mockResolvedValueOnce({ rows: [{ status: 'active' }] } as never) // player status
+      .mockResolvedValueOnce({ rows: [{ ...activeCampaign, status: 'paused' }] } as never)
 
     await expect(claimCampaignBonus(PLAYER_ID, CAMPAIGN_ID, undefined, undefined))
       .rejects.toMatchObject({ code: 'CAMPAIGN_UNAVAILABLE', statusCode: 422 })
@@ -112,7 +116,9 @@ describe('claimCampaignBonus', () => {
 
   it('rejects a campaign outside its start/end window', async () => {
     const future = new Date(Date.now() + 86_400_000).toISOString()
-    mockQuery.mockResolvedValueOnce({ rows: [{ ...activeCampaign, starts_at: future }] } as never)
+    mockQuery
+      .mockResolvedValueOnce({ rows: [{ status: 'active' }] } as never) // player status
+      .mockResolvedValueOnce({ rows: [{ ...activeCampaign, starts_at: future }] } as never)
 
     await expect(claimCampaignBonus(PLAYER_ID, CAMPAIGN_ID, undefined, undefined))
       .rejects.toMatchObject({ code: 'CAMPAIGN_UNAVAILABLE', statusCode: 422 })
@@ -149,7 +155,9 @@ describe('claimCampaignBonus', () => {
   })
 
   it('rejects a code campaign when no code is provided', async () => {
-    mockQuery.mockResolvedValueOnce({ rows: [{ ...activeCampaign, code: 'SUMMER25' }] } as never)
+    mockQuery
+      .mockResolvedValueOnce({ rows: [{ status: 'active' }] } as never) // player status
+      .mockResolvedValueOnce({ rows: [{ ...activeCampaign, code: 'SUMMER25' }] } as never)
 
     await expect(claimCampaignBonus(PLAYER_ID, CAMPAIGN_ID, undefined, undefined))
       .rejects.toMatchObject({ code: 'INVALID_CODE', statusCode: 422 })
@@ -157,7 +165,9 @@ describe('claimCampaignBonus', () => {
   })
 
   it('rejects a code campaign when the wrong code is provided', async () => {
-    mockQuery.mockResolvedValueOnce({ rows: [{ ...activeCampaign, code: 'SUMMER25' }] } as never)
+    mockQuery
+      .mockResolvedValueOnce({ rows: [{ status: 'active' }] } as never) // player status
+      .mockResolvedValueOnce({ rows: [{ ...activeCampaign, code: 'SUMMER25' }] } as never)
 
     await expect(claimCampaignBonus(PLAYER_ID, CAMPAIGN_ID, undefined, undefined, 'WINTER10'))
       .rejects.toMatchObject({ code: 'INVALID_CODE', statusCode: 422 })
@@ -177,7 +187,9 @@ describe('claimCampaignBonus', () => {
   })
 
   it('rejects a targeted campaign the player does not match, without granting', async () => {
-    mockQuery.mockResolvedValueOnce({ rows: [{ ...activeCampaign, criteria: { depositStatus: 'has' } }] } as never)
+    mockQuery
+      .mockResolvedValueOnce({ rows: [{ status: 'active' }] } as never) // player status
+      .mockResolvedValueOnce({ rows: [{ ...activeCampaign, criteria: { depositStatus: 'has' } }] } as never)
     mockCriteria.mockResolvedValueOnce(false)
 
     await expect(claimCampaignBonus(PLAYER_ID, CAMPAIGN_ID, undefined, undefined))
@@ -198,6 +210,29 @@ describe('claimCampaignBonus', () => {
 
     expect(result).toEqual({ amountCents: 5000 })
     expect(mockGrant).toHaveBeenCalled()
+  })
+
+  it.each(['suspended', 'self_excluded'])(
+    'rejects a claim from a %s player with 422 NOT_ELIGIBLE, without granting',
+    async (status) => {
+      mockQuery.mockResolvedValueOnce({ rows: [{ status }] } as never) // player status
+
+      await expect(claimCampaignBonus(PLAYER_ID, CAMPAIGN_ID, undefined, undefined))
+        .rejects.toMatchObject({ code: 'NOT_ELIGIBLE', statusCode: 422 })
+      expect(mockGrant).not.toHaveBeenCalled()
+      expect(mockConnect).not.toHaveBeenCalled()
+      // Only the player-status lookup ran; the claim never touched the campaign.
+      expect(mockQuery).toHaveBeenCalledTimes(1)
+    },
+  )
+
+  it('rejects a claim when the player id does not exist, without granting', async () => {
+    mockQuery.mockResolvedValueOnce({ rows: [] } as never) // player status: no such player
+
+    await expect(claimCampaignBonus(PLAYER_ID, CAMPAIGN_ID, undefined, undefined))
+      .rejects.toMatchObject({ code: 'NOT_ELIGIBLE', statusCode: 422 })
+    expect(mockGrant).not.toHaveBeenCalled()
+    expect(mockConnect).not.toHaveBeenCalled()
   })
 })
 
