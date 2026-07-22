@@ -16,6 +16,7 @@ const body = z.object({
     return age >= 18
   }, 'You must be at least 18 years old to register.'),
   password: z.string({ required_error: 'Please create a password.' }).min(4, 'Your password must be at least 4 characters.'),
+  deviceId: z.string().max(64).optional(),
 })
 
 export async function registerRoutes(app: FastifyInstance) {
@@ -31,7 +32,12 @@ export async function registerRoutes(app: FastifyInstance) {
     const currencyMap: Record<string, string> = { KE: 'KES', UG: 'UGX', TZ: 'TZS', RW: 'RWF' }
 
     try {
-      const tokens = await registerPlayer({ ...parsed.data, currency: currencyMap[country] })
+      const tokens = await registerPlayer({
+        ...parsed.data,
+        currency: currencyMap[country],
+        ip: req.ip,
+        deviceId: parsed.data.deviceId,
+      })
       if (tokens) {
         reply.setCookie('refresh_token', tokens.refreshToken, {
           httpOnly: true,

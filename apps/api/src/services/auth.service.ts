@@ -24,6 +24,8 @@ export interface RegisterInput {
   currency: string
   date_of_birth: string
   password: string
+  ip?: string
+  deviceId?: string
 }
 
 const CURRENCY_BY_COUNTRY: Record<string, string> = {
@@ -73,6 +75,16 @@ export async function registerPlayer(
       await client.query(
         `UPDATE wallets SET balance = 1000000 WHERE id = $1`,
         [walletRows[0].id],
+      )
+    }
+
+    // Abuse signal: record the signup IP + device for later bonus eligibility
+    // checks. Best-effort; only write when we actually have something.
+    if (input.ip || input.deviceId) {
+      await client.query(
+        `INSERT INTO player_signals (player_id, kind, ip, device_id)
+         VALUES ($1, 'signup', $2, $3)`,
+        [playerId, input.ip ?? null, input.deviceId ? input.deviceId.slice(0, 64) : null],
       )
     }
 

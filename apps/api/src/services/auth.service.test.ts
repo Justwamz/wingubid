@@ -67,6 +67,59 @@ describe('registerPlayer', () => {
     expect(mockClient.release).toHaveBeenCalledOnce()
   })
 
+  it('records a signup player_signals row with ip + deviceId', async () => {
+    mockClientQuery
+      .mockResolvedValueOnce({ rows: [] } as any)              // BEGIN
+      .mockResolvedValueOnce({ rows: [] } as any)              // phone check - not taken
+      .mockResolvedValueOnce({ rows: [{ id: 'new-id' }] } as any) // insert player
+      .mockResolvedValueOnce({ rows: [] } as any)              // insert wallet
+      .mockResolvedValueOnce({ rows: [] } as any)              // insert player_signals
+      .mockResolvedValueOnce({ rows: [] } as any)              // COMMIT
+
+    await registerPlayer({
+      phone: '+254700000000',
+      name: 'Alice',
+      country: 'KE',
+      currency: 'KES',
+      date_of_birth: '1990-01-01',
+      password: 'Password1!',
+      ip: '41.90.12.34',
+      deviceId: 'device-abc-123',
+    })
+
+    expect(mockClientQuery).toHaveBeenCalledTimes(6)
+    const signalCall = mockClientQuery.mock.calls.find(([sql]) =>
+      typeof sql === 'string' && sql.includes('INSERT INTO player_signals'),
+    )
+    expect(signalCall).toBeDefined()
+    expect(signalCall![0]).toContain("'signup'")
+    expect(signalCall![1]).toEqual(['new-id', '41.90.12.34', 'device-abc-123'])
+  })
+
+  it('does not write a player_signals row when ip and deviceId are absent', async () => {
+    mockClientQuery
+      .mockResolvedValueOnce({ rows: [] } as any)              // BEGIN
+      .mockResolvedValueOnce({ rows: [] } as any)              // phone check - not taken
+      .mockResolvedValueOnce({ rows: [{ id: 'new-id' }] } as any) // insert player
+      .mockResolvedValueOnce({ rows: [] } as any)              // insert wallet
+      .mockResolvedValueOnce({ rows: [] } as any)              // COMMIT
+
+    await registerPlayer({
+      phone: '+254700000000',
+      name: 'Alice',
+      country: 'KE',
+      currency: 'KES',
+      date_of_birth: '1990-01-01',
+      password: 'Password1!',
+    })
+
+    expect(mockClientQuery).toHaveBeenCalledTimes(5)
+    const signalCall = mockClientQuery.mock.calls.find(([sql]) =>
+      typeof sql === 'string' && sql.includes('INSERT INTO player_signals'),
+    )
+    expect(signalCall).toBeUndefined()
+  })
+
   it('throws PHONE_TAKEN when phone already exists', async () => {
     mockClientQuery
       .mockResolvedValueOnce({ rows: [] } as any)              // BEGIN
