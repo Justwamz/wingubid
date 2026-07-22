@@ -2,17 +2,46 @@
 import { useCallback, useEffect, useState } from 'react'
 import { apiFetch } from '@/lib/api'
 
+interface Criteria {
+  registeredWithinDays?: number
+  depositStatus?: 'has' | 'none'
+  minTotalDepositCents?: number
+  bettingActivity?: 'has' | 'none'
+}
+
 interface CampaignRow {
   id: string; key: string; name: string; description: string | null; type: string
   amount_cents: number; expiry_days: number | null; starts_at: string | null; ends_at: string | null
-  status: string; claim_count: number
+  status: string; claim_count: number; code: string | null; criteria: Criteria | null
 }
 
 const STATUSES = ['active', 'paused', 'ended'] as const
 
 function kes(cents: number) { return `KES ${(cents / 100).toLocaleString('en-KE')}` }
 
-const emptyForm = { key: '', name: '', description: '', type: 'welcome', amount: '', expiryDays: '', startsAt: '', endsAt: '' }
+function criteriaSummary(c: Criteria | null | undefined): string {
+  if (!c) return ''
+  const parts: string[] = []
+  if (c.registeredWithinDays) parts.push(`registered <=${c.registeredWithinDays}d`)
+  if (c.depositStatus) parts.push(`deposit: ${c.depositStatus}`)
+  if (c.minTotalDepositCents) parts.push(`min deposit ${kes(c.minTotalDepositCents)}`)
+  if (c.bettingActivity) parts.push(`betting: ${c.bettingActivity}`)
+  return parts.join(', ')
+}
+
+const emptyForm = {
+  key: '', name: '', description: '', type: 'welcome', amount: '', expiryDays: '', startsAt: '', endsAt: '',
+  code: '', registeredWithinDays: '', depositStatus: '', minTotalDepositCents: '', bettingActivity: '',
+}
+
+function buildCriteria(form: typeof emptyForm): Criteria | undefined {
+  const c: Criteria = {}
+  if (form.registeredWithinDays) c.registeredWithinDays = parseInt(form.registeredWithinDays)
+  if (form.depositStatus) c.depositStatus = form.depositStatus as 'has' | 'none'
+  if (form.minTotalDepositCents) c.minTotalDepositCents = Math.round(parseFloat(form.minTotalDepositCents) * 100)
+  if (form.bettingActivity) c.bettingActivity = form.bettingActivity as 'has' | 'none'
+  return Object.keys(c).length ? c : undefined
+}
 
 export function CampaignsTab() {
   const [rows, setRows] = useState<CampaignRow[]>([])
@@ -21,6 +50,8 @@ export function CampaignsTab() {
   const [msg, setMsg] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
   const [statusBusyId, setStatusBusyId] = useState<string | null>(null)
+  const [previewCount, setPreviewCount] = useState<number | null>(null)
+  const [previewLoading, setPreviewLoading] = useState(false)
 
   const load = useCallback(async () => {
     setLoading(true)
@@ -29,6 +60,21 @@ export function CampaignsTab() {
     setLoading(false)
   }, [])
   useEffect(() => { load() }, [load])
+
+  useEffect(() => {
+    const criteria = buildCriteria(form)
+    if (!criteria) { setPreviewCount(null); setPreviewLoading(false); return }
+    setPreviewLoading(true)
+    const timer = setTimeout(async () => {
+      const { data } = await apiFetch<{ count: number }>('/admin/campaigns/preview-count', {
+        method: 'POST', body: JSON.stringify({ criteria }),
+      })
+      setPreviewLoading(false)
+      if (data) setPreviewCount(data.count)
+    }, 400)
+    return () => clearTimeout(timer)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [form.registeredWithinDays, form.depositStatus, form.minTotalDepositCents, form.bettingActivity])
 
   async function create(e: React.FormEvent) {
     e.preventDefault()
@@ -43,11 +89,14 @@ export function CampaignsTab() {
     if (form.expiryDays) body.expiryDays = parseInt(form.expiryDays)
     if (form.startsAt) body.startsAt = new Date(form.startsAt).toISOString()
     if (form.endsAt) body.endsAt = new Date(form.endsAt).toISOString()
+    if (form.code.trim()) body.code = form.code.trim().toUpperCase()
+    const criteria = buildCriteria(form)
+    if (criteria) body.criteria = criteria
 
     const { error } = await apiFetch('/admin/campaigns', { method: 'POST', body: JSON.stringify(body) })
     setBusy(false)
     setMsg(error ? error.message : 'Campaign created.')
-    if (!error) { setForm(emptyForm); await load() }
+    if (!error) { setForm(emptyForm); setPreviewCount(null); await load() }
   }
 
   async function setStatus(id: string, status: string) {
@@ -68,6 +117,8 @@ export function CampaignsTab() {
           className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm" />
         <input required placeholder="Name" value={form.name} onChange={e => setForm({ ...form, name: e.target.value })}
           className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm" />
+        <input placeholder="Promo code (optional)" value={form.code} onChange={e => setForm({ ...form, code: e.target.value })}
+          className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm uppercase placeholder:normal-case" />
         <textarea placeholder="Description (optional)" value={form.description} onChange={e => setForm({ ...form, description: e.target.value })}
           rows={2} className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm resize-none" />
         <select value={form.type} onChange={e => setForm({ ...form, type: e.target.value })}
@@ -91,6 +142,42 @@ export function CampaignsTab() {
               className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm" />
           </div>
         </div>
+
+        <div className="border-t border-gray-800 pt-3 space-y-2">
+          <h4 className="text-xs font-semibold text-gray-400 uppercase">Targeting</h4>
+          <input type="number" placeholder="Registered within days (optional)" value={form.registeredWithinDays}
+            onChange={e => setForm({ ...form, registeredWithinDays: e.target.value })}
+            className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm" />
+          <div className="grid grid-cols-2 gap-2">
+            <div>
+              <label className="text-xs text-gray-500 block mb-1">Deposit status</label>
+              <select value={form.depositStatus} onChange={e => setForm({ ...form, depositStatus: e.target.value })}
+                className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm">
+                <option value="">Any</option>
+                <option value="has">Has deposited</option>
+                <option value="none">No deposit</option>
+              </select>
+            </div>
+            <div>
+              <label className="text-xs text-gray-500 block mb-1">Betting activity</label>
+              <select value={form.bettingActivity} onChange={e => setForm({ ...form, bettingActivity: e.target.value })}
+                className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm">
+                <option value="">Any</option>
+                <option value="has">Has bet</option>
+                <option value="none">Never bet</option>
+              </select>
+            </div>
+          </div>
+          <input type="number" step="0.01" placeholder="Min total deposit KES (optional)" value={form.minTotalDepositCents}
+            onChange={e => setForm({ ...form, minTotalDepositCents: e.target.value })}
+            className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm" />
+          <div className="text-xs text-gray-500">
+            {previewLoading ? 'Checking match count...'
+              : previewCount !== null ? `Matches ${previewCount} players`
+              : 'Set targeting fields to preview the matching players.'}
+          </div>
+        </div>
+
         <button type="submit" disabled={busy} className="w-full bg-cyan-600 hover:bg-cyan-500 disabled:opacity-50 text-white font-semibold text-sm py-2 rounded-lg">
           {busy ? 'Creating...' : 'Create campaign'}
         </button>
@@ -110,8 +197,18 @@ export function CampaignsTab() {
             : rows.map(c => (
               <tr key={c.id} className="border-b border-gray-800/50">
                 <td className="px-4 py-3">
-                  <div>{c.name}</div>
+                  <div className="flex items-center gap-2">
+                    <span>{c.name}</span>
+                    {c.code && (
+                      <span className="font-mono text-[10px] bg-gray-800 border border-gray-700 rounded px-1.5 py-0.5 text-cyan-300">
+                        {c.code}
+                      </span>
+                    )}
+                  </div>
                   <div className="text-xs text-gray-500">{c.key}</div>
+                  {criteriaSummary(c.criteria) && (
+                    <div className="text-xs text-gray-600 mt-0.5">{criteriaSummary(c.criteria)}</div>
+                  )}
                 </td>
                 <td className="px-4 py-3 capitalize text-gray-400">{c.type}</td>
                 <td className="px-4 py-3 text-right font-mono">{kes(c.amount_cents)}</td>
