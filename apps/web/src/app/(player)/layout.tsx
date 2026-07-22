@@ -9,7 +9,7 @@ import { Gamepad2, CreditCard, User, LogOut } from 'lucide-react'
 interface PlayerProfile {
   name: string
   currency: string
-  wallet: { balance: number }
+  wallet: { balance: number; bonus_balance: number }
 }
 
 export default function PlayerLayout({ children }: { children: React.ReactNode }) {
@@ -86,6 +86,14 @@ export default function PlayerLayout({ children }: { children: React.ReactNode }
                     {(profile.wallet.balance / 100).toLocaleString('en-KE', { minimumFractionDigits: 2 })}
                   </span>
                 </div>
+                {profile.wallet.bonus_balance > 0 && (
+                  <div className="flex items-center gap-2 bg-violet-500/10 border border-violet-500/20 rounded-lg px-3 py-1.5">
+                    <span className="text-violet-300 text-xs hidden sm:block">Bonus</span>
+                    <span className="font-mono font-bold text-sm text-violet-300">
+                      {(profile.wallet.bonus_balance / 100).toLocaleString('en-KE', { minimumFractionDigits: 2 })}
+                    </span>
+                  </div>
+                )}
                 <Link
                   href="/wallet/deposit"
                   className="px-3 py-1.5 rounded-lg bg-accent-cyan text-black font-bold text-xs hover:brightness-110 transition-all whitespace-nowrap"

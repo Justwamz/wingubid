@@ -5,6 +5,7 @@ import { apiFetch } from '@/lib/apiFetch'
 import { refreshBalance } from '@/lib/auth'
 import { HowToPlay } from '@/components/game/HowToPlay'
 import { BetHistory, type BetHistoryEntry } from '@/components/game/BetHistory'
+import { BonusToggle } from '@/components/game/BonusToggle'
 import { DEFAULT_STAKE_KES } from '@/lib/gameConfig'
 import { DollarSign, Ticket, Trophy } from 'lucide-react'
 
@@ -140,6 +141,8 @@ export default function WinguScratchPage() {
   const [selectedStake, setSelectedStake] = useState(DEFAULT_STAKE_CENTS)
   const [buying, setBuying] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [fundSource, setFundSource] = useState<'cash' | 'bonus'>('cash')
+  const [bonusBalance, setBonusBalance] = useState(0)
 
   const [card, setCard] = useState<BuyResponse | null>(null)
   const [revealed, setRevealed] = useState(false)
@@ -158,6 +161,29 @@ export default function WinguScratchPage() {
       .catch(() => setHistoryLoaded(true))
   }, [])
 
+  // Load the player's bonus balance; refetch on the same event the header uses.
+  useEffect(() => {
+    function loadBonusBalance() {
+      apiFetch<{ bonus_balance: number }>('/wallet/balance')
+        .then(d => setBonusBalance(d.bonus_balance ?? 0))
+        .catch(() => {})
+    }
+    loadBonusBalance()
+    window.addEventListener('balanceRefresh', loadBonusBalance)
+    return () => window.removeEventListener('balanceRefresh', loadBonusBalance)
+  }, [])
+
+  // Stakes here are fixed tiles rather than a free-typed amount. Bonus and cash
+  // cannot be mixed in a single bet, so when betting with bonus, cap the
+  // selection to the largest tile the bonus balance can cover.
+  useEffect(() => {
+    if (fundSource !== 'bonus') return
+    if (selectedStake > bonusBalance) {
+      const affordable = [...STAKES].reverse().find(s => s.cents <= bonusBalance)
+      setSelectedStake(affordable ? affordable.cents : STAKES[0].cents)
+    }
+  }, [fundSource, bonusBalance, selectedStake])
+
   async function handleBuy() {
     setBuying(true)
     setError(null)
@@ -168,7 +194,7 @@ export default function WinguScratchPage() {
     try {
       const data = await apiFetch<BuyResponse>('/games/scratch/buy', {
         method: 'POST',
-        body: JSON.stringify({ stake: selectedStake }),
+        body: JSON.stringify({ stake: selectedStake, fundSource }),
       })
 
       setCard(data)
@@ -248,20 +274,26 @@ export default function WinguScratchPage() {
               Select Stake
             </p>
             <div className="grid grid-cols-4 gap-2">
-              {STAKES.map(s => (
-                <button
-                  key={s.cents}
-                  onClick={() => setSelectedStake(s.cents)}
-                  className={`py-2.5 rounded-xl font-mono font-bold text-sm border transition-all ${
-                    selectedStake === s.cents
-                      ? 'border-yellow-400 text-yellow-300 bg-yellow-500/10 shadow-lg shadow-yellow-900/20'
-                      : 'border-game-border text-gray-400 hover:border-gray-500'
-                  }`}
-                >
-                  {s.label}
-                </button>
-              ))}
+              {STAKES.map(s => {
+                const disabled = fundSource === 'bonus' && s.cents > bonusBalance
+                return (
+                  <button
+                    key={s.cents}
+                    onClick={() => setSelectedStake(s.cents)}
+                    disabled={disabled}
+                    className={`py-2.5 rounded-xl font-mono font-bold text-sm border transition-all disabled:opacity-30 disabled:cursor-not-allowed ${
+                      selectedStake === s.cents
+                        ? 'border-yellow-400 text-yellow-300 bg-yellow-500/10 shadow-lg shadow-yellow-900/20'
+                        : 'border-game-border text-gray-400 hover:border-gray-500'
+                    }`}
+                  >
+                    {s.label}
+                  </button>
+                )
+              })}
             </div>
+
+            <BonusToggle bonusBalance={bonusBalance} value={fundSource} onChange={setFundSource} disabled={buying} />
 
             {error && (
               <p className="text-warning-coral text-sm bg-red-500/5 border border-red-500/20 rounded-xl px-4 py-2">

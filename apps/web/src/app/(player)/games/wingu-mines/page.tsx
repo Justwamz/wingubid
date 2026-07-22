@@ -5,7 +5,9 @@ import { MinesGrid } from '@/components/game/MinesGrid'
 import { GameBetHistory } from '@/components/game/GameBetHistory'
 import { HowToPlay } from '@/components/game/HowToPlay'
 import { QuickStakes } from '@/components/game/QuickStakes'
+import { BonusToggle } from '@/components/game/BonusToggle'
 import { DEFAULT_STAKE_KES } from '@/lib/gameConfig'
+import { apiFetch } from '@/lib/api'
 import { Gem, Search, DollarSign } from 'lucide-react'
 
 const HOW_TO_PLAY = [
@@ -19,6 +21,8 @@ export default function WinguMinesPage() {
   const [stake, setStake] = useState(String(DEFAULT_STAKE_KES))
   const [gridSize, setGridSize] = useState(3)
   const [mineCount, setMineCount] = useState(2)
+  const [fundSource, setFundSource] = useState<'cash' | 'bonus'>('cash')
+  const [bonusBalance, setBonusBalance] = useState(0)
 
   const isActive = game?.status === 'active'
   const isOver = game?.status === 'won' || game?.status === 'lost'
@@ -26,6 +30,38 @@ export default function WinguMinesPage() {
   // Reload bet history each time a game settles.
   const [settledCount, setSettledCount] = useState(0)
   useEffect(() => { if (isOver) setSettledCount(c => c + 1) }, [isOver])
+
+  // Load the player's bonus balance; refetch on the same event the header uses.
+  useEffect(() => {
+    function loadBonusBalance() {
+      apiFetch<{ bonus_balance: number }>('/wallet/balance').then(({ data }) => {
+        if (data) setBonusBalance(data.bonus_balance ?? 0)
+      })
+    }
+    loadBonusBalance()
+    window.addEventListener('balanceRefresh', loadBonusBalance)
+    return () => window.removeEventListener('balanceRefresh', loadBonusBalance)
+  }, [])
+
+  // Bonus and cash cannot be mixed in a single bet - cap the stake at the
+  // available bonus whenever the player is betting with bonus funds.
+  useEffect(() => {
+    if (fundSource !== 'bonus') return
+    const capKes = bonusBalance / 100
+    setStake(prev => {
+      const num = parseFloat(prev) || 0
+      return num > capKes ? String(capKes) : prev
+    })
+  }, [fundSource, bonusBalance])
+
+  function updateStake(v: string) {
+    if (fundSource === 'bonus') {
+      const capKes = bonusBalance / 100
+      const num = parseFloat(v)
+      if (!isNaN(num) && num > capKes) v = String(capKes)
+    }
+    setStake(v)
+  }
 
   return (
     <div className="max-w-7xl mx-auto px-4 py-6 space-y-4">
@@ -46,15 +82,16 @@ export default function WinguMinesPage() {
           )}
           {!isActive && !hydrating && (
             <div className="bg-game-card border border-game-border rounded-2xl p-5 space-y-4">
+              <BonusToggle bonusBalance={bonusBalance} value={fundSource} onChange={setFundSource} disabled={loading} />
               <input
                 type="number"
                 placeholder="Stake (KES)"
                 value={stake}
-                onChange={e => setStake(e.target.value)}
+                onChange={e => updateStake(e.target.value)}
                 className="w-full bg-game-bg border border-game-border rounded-xl px-4 py-3 text-white font-mono focus:outline-none focus:border-accent-violet text-sm"
               />
               <QuickStakes
-                onSelect={v => setStake(String(v))}
+                onSelect={v => updateStake(String(v))}
                 activeValue={parseInt(stake) || undefined}
               />
               <div>
@@ -87,7 +124,7 @@ export default function WinguMinesPage() {
                 />
               </div>
               <button
-                onClick={() => startGame(parseInt(stake) * 100, gridSize, mineCount)}
+                onClick={() => startGame(parseInt(stake) * 100, gridSize, mineCount, fundSource)}
                 disabled={loading || !stake}
                 className="w-full py-3.5 rounded-xl font-bold text-base disabled:opacity-40 transition-all"
                 style={{ background: 'linear-gradient(135deg, #80508B, #a06090)', color: '#fff' }}
