@@ -166,4 +166,30 @@ describe('maybeGrantDepositMatch', () => {
 
     expect(mockGrant).not.toHaveBeenCalled()
   })
+
+  it('resolves (never throws) when pool.connect() rejects', async () => {
+    seedPreChecks([campaign])
+    mockConnect.mockRejectedValueOnce(new Error('connect fail'))
+
+    await expect(maybeGrantDepositMatch(PLAYER_ID, 10001)).resolves.toBeUndefined()
+
+    expect(mockGrant).not.toHaveBeenCalled()
+  })
+
+  it('rolls back, releases, and swallows quietly on a non-23505 error inside the transaction', async () => {
+    seedPreChecks([campaign])
+    mockGrant.mockRejectedValueOnce(new Error('boom'))
+    const client = {
+      query: vi.fn()
+        .mockResolvedValueOnce({ rows: [] }) // BEGIN
+        .mockResolvedValueOnce({ rows: [] }), // ROLLBACK
+      release: vi.fn(),
+    }
+    mockConnect.mockResolvedValueOnce(client as never)
+
+    await expect(maybeGrantDepositMatch(PLAYER_ID, 10001)).resolves.toBeUndefined()
+
+    expect(client.query).toHaveBeenCalledWith('ROLLBACK')
+    expect(client.release).toHaveBeenCalled()
+  })
 })
