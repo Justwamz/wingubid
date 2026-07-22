@@ -15,10 +15,11 @@ export async function minesRoutes(app: FastifyInstance) {
       grossStake: z.number({ invalid_type_error: 'Please enter a valid bet amount.' }).int('Please enter a valid bet amount.').positive('Please enter a bet greater than zero.'),
       gridSize: z.number().int().min(3, 'Please choose a valid grid size.').max(5, 'Please choose a valid grid size.'),
       mineCount: z.number().int().min(1, 'Please choose a valid number of mines.'),
+      fundSource: z.enum(['cash', 'bonus']).default('cash'),
     }).safeParse(req.body)
     if (!parsed.success) return reply.status(400).send({ error: { code: 'VALIDATION_ERROR', message: parsed.error.issues[0].message } })
     try {
-      return reply.status(201).send(await startGame(req.playerId, parsed.data.grossStake, parsed.data.gridSize, parsed.data.mineCount))
+      return reply.status(201).send(await startGame(req.playerId, parsed.data.grossStake, parsed.data.gridSize, parsed.data.mineCount, parsed.data.fundSource))
     } catch (err) {
       if (err instanceof AppError) return reply.status(err.statusCode).send({ error: { code: err.code, message: err.message } })
       throw err

@@ -1,10 +1,10 @@
 import { randomBytes, createHash } from 'crypto'
 import { pool } from '@betting/db'
 import { getRedis } from '../lib/redis.js'
-import { debitForBet, creditWinnings } from './wallet.service.js'
+import { debitForBet, creditWinnings, debitBonusForBet, settleBonusWin, refundBonusBet } from './wallet.service.js'
 import { generateMinePositions } from '../lib/crash-rng.js'
 import { getHouseEdge } from './crash.service.js'
-import { assertGameEnabled } from './game-settings.service.js'
+import { assertGameEnabled, getBonusMaxWinCents } from './game-settings.service.js'
 import { AppError } from '../lib/errors.js'
 
 const GAME_TTL = 1800
@@ -33,6 +33,7 @@ function payoutMultiplier(m: number): number {
 
 export async function startGame(
   playerId: string, grossStake: number, gridSize: number, mineCount: number,
+  fundSource: 'cash' | 'bonus' = 'cash',
 ): Promise<{ gameId: string; serverSeedHash: string; clientSeed: string; gridSize: number; mineCount: number }> {
   await assertGameEnabled('mines')
   const redis = getRedis()
@@ -56,11 +57,19 @@ export async function startGame(
   const client = await pool.connect()
   try {
     await client.query('BEGIN')
-    const { walletId } = await debitForBet(client, playerId, grossStake, grossStake, { game: 'mines', gameId })
+    let walletId: string
+    let bonusGrantId: string | null = null
+    if (fundSource === 'bonus') {
+      const r = await debitBonusForBet(client, playerId, grossStake, { game: 'mines', gameId })
+      walletId = r.walletId; bonusGrantId = r.grantId
+    } else {
+      const r = await debitForBet(client, playerId, grossStake, grossStake, { game: 'mines', gameId })
+      walletId = r.walletId
+    }
     const { rows } = await client.query<{ id: string }>(
-      `INSERT INTO bets (player_id, wallet_id, game_type, gross_stake, wager_tax, effective_stake)
-       VALUES ($1, $2, 'mines', $3, 0, $4) RETURNING id`,
-      [playerId, walletId, grossStake, grossStake],
+      `INSERT INTO bets (player_id, wallet_id, game_type, gross_stake, wager_tax, effective_stake, fund_source, bonus_grant_id)
+       VALUES ($1, $2, 'mines', $3, 0, $4, $5, $6) RETURNING id`,
+      [playerId, walletId, grossStake, grossStake, fundSource, bonusGrantId],
     )
     await client.query('COMMIT')
 
@@ -125,16 +134,20 @@ export async function revealTile(
       await client.query('BEGIN')
       // Lock the bet row and only settle if it is still active, so a mine-hit
       // racing a cashout (or a duplicate reveal) can't double-release the stake.
-      const { rows } = await client.query<{ effective_stake: string }>(
-        `SELECT effective_stake FROM bets
+      const { rows } = await client.query<{ effective_stake: string; fund_source: 'cash' | 'bonus' }>(
+        `SELECT effective_stake, fund_source FROM bets
          WHERE id = $1 AND player_id = $2 AND status = 'active' FOR UPDATE`,
         [state.betId, playerId],
       )
       if (rows.length > 0) {
-        await client.query(
-          `UPDATE wallets SET locked_balance = locked_balance - $1 WHERE player_id = $2`,
-          [Number(rows[0].effective_stake), playerId],
-        )
+        // Bonus-funded bets never reserve locked_balance (the stake left
+        // bonus_balance outright at debit), so only cash bets release it here.
+        if (rows[0].fund_source === 'cash') {
+          await client.query(
+            `UPDATE wallets SET locked_balance = locked_balance - $1 WHERE player_id = $2`,
+            [Number(rows[0].effective_stake), playerId],
+          )
+        }
         await client.query(
           `UPDATE bets SET status = 'lost', settled_at = NOW() WHERE id = $1`, [state.betId],
         )
@@ -181,8 +194,8 @@ export async function cashoutMines(
     // Atomic guard: lock the bet and only pay out if it is still active. A
     // second concurrent cashout (or a racing mine-hit) blocks here, then finds
     // 0 rows and is rejected - closing the double-payout race.
-    const { rows } = await client.query<{ effective_stake: string }>(
-      `SELECT effective_stake FROM bets
+    const { rows } = await client.query<{ effective_stake: string; fund_source: 'cash' | 'bonus'; bonus_grant_id: string | null }>(
+      `SELECT effective_stake, fund_source, bonus_grant_id FROM bets
        WHERE id = $1 AND player_id = $2 AND status = 'active' FOR UPDATE`,
       [state.betId, playerId],
     )
@@ -192,11 +205,16 @@ export async function cashoutMines(
     const paidMultiplier = payoutMultiplier(state.currentMultiplier)
     winnings = Math.floor(effectiveStake * paidMultiplier)
 
-    await creditWinnings(client, playerId, winnings, { game: 'mines', gameId, multiplier: paidMultiplier })
-    await client.query(
-      `UPDATE wallets SET locked_balance = locked_balance - $1 WHERE player_id = $2`,
-      [effectiveStake, playerId],
-    )
+    if (rows[0].fund_source === 'bonus') {
+      await settleBonusWin(client, playerId, rows[0].bonus_grant_id!, winnings, effectiveStake, state.betId, await getBonusMaxWinCents())
+      // Bonus stake was never locked, so there is no locked_balance to release.
+    } else {
+      await creditWinnings(client, playerId, winnings, { game: 'mines', gameId, multiplier: paidMultiplier })
+      await client.query(
+        `UPDATE wallets SET locked_balance = locked_balance - $1 WHERE player_id = $2`,
+        [effectiveStake, playerId],
+      )
+    }
     await client.query(
       `UPDATE bets SET status = 'won', cashout_multiplier = $1, winnings = $2, settled_at = NOW() WHERE id = $3`,
       [paidMultiplier, winnings, state.betId],
