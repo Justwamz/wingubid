@@ -14,7 +14,7 @@ import { ChatModerationTab } from '@/components/ChatModerationTab'
 import { StaffTab } from '@/components/StaffTab'
 import { BonusesTab } from '@/components/BonusesTab'
 import { fetchMe, type Me } from '@/lib/me'
-import { Users, Dice6, BarChart3, ArrowDownCircle, Landmark, DollarSign, Wallet, ArrowUpFromLine, RefreshCw, Bell } from 'lucide-react'
+import { Users, Dice6, BarChart3, ArrowDownCircle, Landmark, DollarSign, Wallet, ArrowUpFromLine, RefreshCw, Bell, Gift, HandCoins, Coins } from 'lucide-react'
 
 // ---------------------------------------------------------------------------
 // Types
@@ -29,6 +29,11 @@ interface Stats {
   totalHeldBalance: number
   totalWithdrawals: number
   totalBets: number
+  bonusGranted: number
+  bonusGrantCount: number
+  activeBonusLiability: number
+  bonusPayouts: number
+  bonusWagered: number
   recentBets: {
     id: string
     playerName: string
@@ -566,6 +571,10 @@ export default function AdminDashboardPage() {
     { label: 'Deposits (real)', value: kes(stats.totalDeposits), color: 'text-emerald-400', icon: <DollarSign size={16} /> },
     { label: 'Balance Held', value: kes(stats.totalHeldBalance), color: 'text-yellow-400', icon: <Wallet size={16} /> },
     { label: 'Withdrawals', value: kes(stats.totalWithdrawals), color: 'text-red-400', icon: <ArrowUpFromLine size={16} /> },
+    { label: `Bonuses Granted${stats.bonusGrantCount ? ` (${stats.bonusGrantCount})` : ''}`, value: kes(stats.bonusGranted), color: 'text-fuchsia-400', icon: <Gift size={16} /> },
+    { label: 'Active Bonus Liability', value: kes(stats.activeBonusLiability), color: 'text-amber-400', icon: <Coins size={16} /> },
+    { label: 'Bonus Payouts (cash)', value: kes(stats.bonusPayouts), color: 'text-red-400', icon: <HandCoins size={16} /> },
+    { label: 'Bonus Wagered', value: kes(stats.bonusWagered), color: 'text-violet-400', icon: <BarChart3 size={16} /> },
   ] : []
 
   return (

@@ -12,6 +12,10 @@ export async function adminStatsRoutes(app: FastifyInstance) {
       walletRes,
       betCountRes,
       withdrawalRes,
+      bonusGrantedRes,
+      bonusLiabilityRes,
+      bonusPayoutRes,
+      bonusWageredRes,
       recentBetsRes,
     ] = await Promise.all([
       pool.query<{ count: string }>(`SELECT COUNT(*) AS count FROM players`),
@@ -21,6 +25,12 @@ export async function adminStatsRoutes(app: FastifyInstance) {
       pool.query<{ total: string }>(`SELECT COALESCE(SUM(balance), 0) AS total FROM wallets`),
       pool.query<{ count: string }>(`SELECT COUNT(*) AS count FROM bets`),
       pool.query<{ total: string }>(`SELECT COALESCE(SUM(amount), 0) AS total FROM payment_transactions WHERE type = 'withdrawal' AND status = 'completed'`),
+      // Bonus KPIs: total granted (+ grant count), outstanding liability (active
+      // remaining), real cash cost (bonus_won), and bonus turnover (bonus_bet).
+      pool.query<{ total: string; count: string }>(`SELECT COALESCE(SUM(amount_granted), 0) AS total, COUNT(*) AS count FROM bonus_grants`),
+      pool.query<{ total: string }>(`SELECT COALESCE(SUM(remaining), 0) AS total FROM bonus_grants WHERE status = 'active'`),
+      pool.query<{ total: string }>(`SELECT COALESCE(SUM(amount), 0) AS total FROM transactions WHERE type = 'bonus_won'`),
+      pool.query<{ total: string }>(`SELECT COALESCE(SUM(amount), 0) AS total FROM transactions WHERE type = 'bonus_bet'`),
       pool.query<{
         id: string; player_name: string; game_type: string
         gross_stake: string; winnings: string | null; status: string; created_at: string
@@ -46,6 +56,11 @@ export async function adminStatsRoutes(app: FastifyInstance) {
       totalHeldBalance:  Number(walletRes.rows[0].total),
       totalBets:         Number(betCountRes.rows[0].count),
       totalWithdrawals:  Number(withdrawalRes.rows[0].total),
+      bonusGranted:          Number(bonusGrantedRes.rows[0].total),
+      bonusGrantCount:       Number(bonusGrantedRes.rows[0].count),
+      activeBonusLiability:  Number(bonusLiabilityRes.rows[0].total),
+      bonusPayouts:          Number(bonusPayoutRes.rows[0].total),
+      bonusWagered:          Number(bonusWageredRes.rows[0].total),
       recentBets: recentBetsRes.rows.map(b => ({
         id:         b.id,
         playerName: b.player_name,
