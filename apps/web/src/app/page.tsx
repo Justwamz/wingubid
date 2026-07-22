@@ -8,6 +8,7 @@ import { X } from 'lucide-react'
 import { TermsContent } from '@/components/TermsContent'
 import { normalizeKePhone, validateSafaricomPhone } from '@/lib/phone'
 import { applyGameOrder } from '@/lib/gameOrder'
+import { getDeviceId } from '@/lib/device'
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3001'
 
@@ -586,7 +587,7 @@ function LoginModal({ onClose, onSuccess, initialTab = 'login' }: { onClose: () 
     setLoading(true)
     const { data, error: err } = await apiFetch<{ access_token?: string }>('/auth/register', {
       method: 'POST',
-      body: JSON.stringify({ phone: check.e164, name, country: 'KE', date_of_birth: dob, password }),
+      body: JSON.stringify({ phone: check.e164, name, country: 'KE', date_of_birth: dob, password, deviceId: getDeviceId() }),
     })
     setLoading(false)
     if (err) { setError(err.message); return }
