@@ -5,6 +5,7 @@ import { authenticateAdmin } from '../../middleware/authenticateAdmin.js'
 import { requirePermission } from '../../middleware/requirePermission.js'
 import { grantBonus } from '../../services/wallet.service.js'
 import { getBonusDefaultExpiryDays } from '../../services/game-settings.service.js'
+import { evaluateBonusEligibility } from '../../services/bonus-eligibility.service.js'
 
 async function audit(adminId: string, action: string, entityId: string | null, after: unknown): Promise<void> {
   await pool.query(
@@ -24,6 +25,16 @@ export async function adminBonusRoutes(app: FastifyInstance) {
     return reply.send({ bonuses: rows })
   })
 
+  app.get('/admin/bonuses/eligibility', { preHandler: [authenticateAdmin, requirePermission('bonuses.view')] }, async (req, reply) => {
+    const q = req.query as { phone?: string; playerId?: string }
+    const { rows } = q.playerId
+      ? await pool.query<{ id: string }>(`SELECT id FROM players WHERE id = $1`, [q.playerId])
+      : await pool.query<{ id: string }>(`SELECT id FROM players WHERE phone = $1`, [(q.phone ?? '').trim()])
+    if (rows.length === 0) return reply.status(404).send({ error: { code: 'NOT_FOUND', message: 'No player found with that phone number.' } })
+    const { flags } = await evaluateBonusEligibility(rows[0].id)
+    return reply.send({ playerId: rows[0].id, flags })
+  })
+
   app.post('/admin/bonuses/grant', { preHandler: [authenticateAdmin, requirePermission('bonuses.grant')] }, async (req, reply) => {
     // Admins identify players by phone (the natural handle); a player UUID is
     // also accepted for flexibility. Exactly one is required.
@@ -32,6 +43,7 @@ export async function adminBonusRoutes(app: FastifyInstance) {
       playerId: z.string().uuid().optional(),
       amountCents: z.number().int().positive('Amount must be greater than zero.'),
       expiresInDays: z.number().int().min(1).max(365).optional(),
+      override: z.boolean().optional(),
     }).refine(d => Boolean(d.phone) || Boolean(d.playerId), { message: 'Enter a player phone number.' })
       .safeParse(req.body)
     if (!parsed.success) return reply.status(400).send({ error: { code: 'VALIDATION_ERROR', message: parsed.error.issues[0].message } })
@@ -49,6 +61,12 @@ export async function adminBonusRoutes(app: FastifyInstance) {
       return reply.status(409).send({ error: { code: 'ACTIVE_BONUS_EXISTS', message: 'This player already has an active bonus.' } })
     }
 
+    const { flags } = await evaluateBonusEligibility(playerId)
+    const blocked = flags.find(f => f.severity === 'block')
+    if (blocked && parsed.data.override !== true) {
+      return reply.status(409).send({ error: { code: 'ABUSE_BLOCKED', message: blocked.message }, flags })
+    }
+
     const days = parsed.data.expiresInDays ?? await getBonusDefaultExpiryDays()
     const expiresAt = new Date(Date.now() + days * 24 * 60 * 60 * 1000)
 
@@ -57,7 +75,7 @@ export async function adminBonusRoutes(app: FastifyInstance) {
       await client.query('BEGIN')
       const { grantId } = await grantBonus(client, playerId, parsed.data.amountCents, req.adminId, expiresAt)
       await client.query('COMMIT')
-      await audit(req.adminId, 'bonus_grant', grantId, { playerId, amountCents: parsed.data.amountCents, expiresAt })
+      await audit(req.adminId, 'bonus_grant', grantId, { playerId, amountCents: parsed.data.amountCents, expiresAt, flags, override: parsed.data.override === true })
       return reply.send({ grantId, remaining: parsed.data.amountCents })
     } catch (err) {
       await client.query('ROLLBACK')
