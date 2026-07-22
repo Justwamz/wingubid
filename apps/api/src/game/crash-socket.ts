@@ -10,6 +10,7 @@ import { addBetToRound, removeBetFromRound, getCurrentRound, sendCurrentStateTo 
 const betPlaceSchema = z.object({
   grossStake: z.number().int().positive(),
   autoCashoutAt: z.number().min(1.01).optional(),
+  fundSource: z.enum(['cash', 'bonus']).default('cash'),
 })
 
 export function registerCrashSocket(io: Server): void {
@@ -40,7 +41,7 @@ export function handleCrashSocket(io: Server, socket: Socket): void {
       socket.emit('bet:error', { code: 'VALIDATION_ERROR', message: parsed.error.issues[0].message })
       return
     }
-    const { grossStake, autoCashoutAt } = parsed.data
+    const { grossStake, autoCashoutAt, fundSource } = parsed.data
 
     const round = getCurrentRound()
 
@@ -54,7 +55,7 @@ export function handleCrashSocket(io: Server, socket: Socket): void {
     }
 
     try {
-      const bet = await placeBet(playerId, round.roundId, grossStake, autoCashoutAt)
+      const bet = await placeBet(playerId, round.roundId, grossStake, autoCashoutAt, fundSource)
       addBetToRound(playerId, bet.betId, bet.effectiveStake, autoCashoutAt)
       socket.emit('bet:confirmed', { betId: bet.betId, effectiveStake: bet.effectiveStake })
     } catch (err: any) {
