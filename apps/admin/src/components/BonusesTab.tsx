@@ -7,6 +7,8 @@ interface BonusRow {
   expires_at: string | null; created_at: string; player_name: string; player_phone: string
 }
 
+interface Flag { type: string; severity: 'warn' | 'block'; message: string; count?: number }
+
 function kes(cents: number) { return `KES ${(cents / 100).toLocaleString('en-KE')}` }
 
 export function BonusesTab() {
@@ -15,6 +17,9 @@ export function BonusesTab() {
   const [form, setForm] = useState({ phone: '', amount: '', expiresInDays: '' })
   const [msg, setMsg] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
+  const [flags, setFlags] = useState<Flag[]>([])
+  const [override, setOverride] = useState(false)
+  const hasBlock = flags.some(f => f.severity === 'block')
 
   const load = useCallback(async () => {
     setLoading(true)
@@ -24,15 +29,24 @@ export function BonusesTab() {
   }, [])
   useEffect(() => { load() }, [load])
 
+  async function checkEligibility() {
+    setFlags([]); setOverride(false)
+    const phone = form.phone.trim()
+    if (!phone) return
+    const { data } = await apiFetch<{ flags: Flag[] }>(`/admin/bonuses/eligibility?phone=${encodeURIComponent(phone)}`)
+    if (data) setFlags(data.flags)
+  }
+
   async function grant(e: React.FormEvent) {
     e.preventDefault()
     setBusy(true)
     const body: Record<string, unknown> = { phone: form.phone.trim(), amountCents: Math.round(parseFloat(form.amount) * 100) }
     if (form.expiresInDays) body.expiresInDays = parseInt(form.expiresInDays)
+    if (override) body.override = true
     const { error } = await apiFetch('/admin/bonuses/grant', { method: 'POST', body: JSON.stringify(body) })
     setBusy(false)
     setMsg(error ? error.message : 'Bonus granted.')
-    if (!error) { setForm({ phone: '', amount: '', expiresInDays: '' }); await load() }
+    if (!error) { setForm({ phone: '', amount: '', expiresInDays: '' }); setFlags([]); setOverride(false); await load() }
   }
 
   return (
@@ -42,12 +56,28 @@ export function BonusesTab() {
       <form onSubmit={grant} className="bg-gray-900 border border-gray-800 rounded-xl p-5 space-y-3 max-w-md">
         <h3 className="font-semibold text-sm">Grant a bonus</h3>
         <input required placeholder="Player phone (e.g. +254700000001)" value={form.phone} onChange={e => setForm({ ...form, phone: e.target.value })}
+          onBlur={checkEligibility}
           className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm" />
+        {flags.length > 0 && (
+          <div className="space-y-1">
+            {flags.map((f, i) => (
+              <p key={i} className={`text-xs ${f.severity === 'block' ? 'text-red-400' : 'text-amber-400'}`}>
+                {f.severity === 'block' ? 'BLOCK' : 'FLAG'}: {f.message}
+              </p>
+            ))}
+            {hasBlock && (
+              <label className="flex items-center gap-2 text-xs text-red-300">
+                <input type="checkbox" checked={override} onChange={e => setOverride(e.target.checked)} />
+                Override and grant anyway
+              </label>
+            )}
+          </div>
+        )}
         <input required type="number" step="0.01" placeholder="Amount (KES)" value={form.amount} onChange={e => setForm({ ...form, amount: e.target.value })}
           className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm" />
         <input type="number" placeholder="Expires in days (default 30)" value={form.expiresInDays} onChange={e => setForm({ ...form, expiresInDays: e.target.value })}
           className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm" />
-        <button type="submit" disabled={busy} className="w-full bg-cyan-600 hover:bg-cyan-500 disabled:opacity-50 text-white font-semibold text-sm py-2 rounded-lg">
+        <button type="submit" disabled={busy || (hasBlock && !override)} className="w-full bg-cyan-600 hover:bg-cyan-500 disabled:opacity-50 text-white font-semibold text-sm py-2 rounded-lg">
           {busy ? 'Granting...' : 'Grant bonus'}
         </button>
       </form>

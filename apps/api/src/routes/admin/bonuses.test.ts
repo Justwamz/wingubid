@@ -11,9 +11,13 @@ vi.mock('@betting/db', () => ({ pool: { query: vi.fn(), connect: vi.fn() } }))
 vi.mock('../../services/game-settings.service.js', () => ({
   getBonusDefaultExpiryDays: vi.fn(async () => 30),
 }))
+vi.mock('../../services/bonus-eligibility.service.js', () => ({
+  evaluateBonusEligibility: vi.fn(async () => ({ flags: [] })),
+}))
 
 import { buildServer } from '../../server.js'
 import { pool } from '@betting/db'
+import { evaluateBonusEligibility } from '../../services/bonus-eligibility.service.js'
 
 const mockQuery = vi.mocked(pool.query)
 const mockConnect = vi.mocked(pool.connect)
@@ -88,5 +92,56 @@ describe('POST /admin/bonuses/grant', () => {
     const res = await app.inject({ method: 'POST', url: '/admin/bonuses/grant', headers: { Authorization: 'Bearer t' },
       payload: { amountCents: 50000 } })
     expect(res.statusCode).toBe(400)
+  })
+})
+
+describe('GET /admin/bonuses/eligibility', () => {
+  const app = buildServer(); afterAll(() => app.close())
+  it('returns flags for a player looked up by phone', async () => {
+    mockQuery.mockResolvedValueOnce({ rows: [{ id: PLAYER_ID }] } as never) // player by phone
+    vi.mocked(evaluateBonusEligibility).mockResolvedValueOnce({ flags: [{ type: 'ip_velocity', severity: 'warn', message: '3 accounts share this IP.', count: 3 }] })
+    const res = await app.inject({ method: 'GET', url: '/admin/bonuses/eligibility?phone=%2B254700000001', headers: { Authorization: 'Bearer t' } })
+    expect(res.statusCode).toBe(200)
+    expect(res.json().flags[0].type).toBe('ip_velocity')
+  })
+
+  it('400s on a malformed playerId instead of 500ing', async () => {
+    const res = await app.inject({ method: 'GET', url: '/admin/bonuses/eligibility?playerId=abc', headers: { Authorization: 'Bearer t' } })
+    expect(res.statusCode).toBe(400)
+    expect(res.json().error.code).toBe('VALIDATION_ERROR')
+  })
+
+  it('400s when neither phone nor playerId is provided', async () => {
+    const res = await app.inject({ method: 'GET', url: '/admin/bonuses/eligibility', headers: { Authorization: 'Bearer t' } })
+    expect(res.statusCode).toBe(400)
+  })
+})
+
+describe('POST /admin/bonuses/grant abuse enforcement', () => {
+  const app = buildServer(); afterAll(() => app.close())
+  it('blocks 409 ABUSE_BLOCKED on a block flag without override', async () => {
+    mockQuery.mockResolvedValueOnce({ rows: [{ id: PLAYER_ID }] } as never) // player exists
+    mockQuery.mockResolvedValueOnce({ rows: [] } as never)                    // no active grant
+    vi.mocked(evaluateBonusEligibility).mockResolvedValueOnce({ flags: [{ type: 'ip_velocity', severity: 'block', message: 'blocked', count: 9 }] })
+    const res = await app.inject({ method: 'POST', url: '/admin/bonuses/grant', headers: { Authorization: 'Bearer t' },
+      payload: { phone: '+254700000001', amountCents: 50000 } })
+    expect(res.statusCode).toBe(409)
+    expect(res.json().error.code).toBe('ABUSE_BLOCKED')
+  })
+
+  it('allows the grant with override:true despite a block flag', async () => {
+    mockQuery.mockResolvedValueOnce({ rows: [{ id: PLAYER_ID }] } as never) // player exists
+    mockQuery.mockResolvedValueOnce({ rows: [] } as never)                    // no active grant
+    vi.mocked(evaluateBonusEligibility).mockResolvedValueOnce({ flags: [{ type: 'ip_velocity', severity: 'block', message: 'blocked', count: 9 }] })
+    mockConnect.mockResolvedValueOnce(fakeClient((sql) => {
+      if (sql.includes('SELECT id, balance')) return { rows: [{ id: 'w1', balance: '0', currency: 'KES' }] }
+      if (sql.includes('INSERT INTO bonus_grants')) return { rows: [{ id: 'g9' }] }
+      if (sql.startsWith('UPDATE wallets')) return { rows: [{ bonus_balance: '50000' }] }
+      return { rows: [] }
+    }) as never)
+    const res = await app.inject({ method: 'POST', url: '/admin/bonuses/grant', headers: { Authorization: 'Bearer t' },
+      payload: { phone: '+254700000001', amountCents: 50000, override: true } })
+    expect(res.statusCode).toBe(200)
+    expect(res.json().grantId).toBe('g9')
   })
 })

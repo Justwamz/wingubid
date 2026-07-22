@@ -176,3 +176,16 @@ export async function setGameOrderConfig(cfg: GameOrderConfig): Promise<void> {
     [JSON.stringify(cfg)],
   )
 }
+
+// ---- Bonus abuse detection config ------------------------------------------
+
+const BONUS_ABUSE_KEY = 'bonus_abuse'
+const DEFAULT_BONUS_ABUSE = { ipVelocityFlag: 3, ipVelocityBlock: 0 }
+
+export async function getBonusAbuseConfig(): Promise<{ ipVelocityFlag: number; ipVelocityBlock: number }> {
+  const { rows } = await pool.query<{ value: unknown }>(
+    `SELECT value FROM game_settings WHERE key = $1`, [BONUS_ABUSE_KEY],
+  )
+  if (rows.length === 0) return { ...DEFAULT_BONUS_ABUSE }
+  return { ...DEFAULT_BONUS_ABUSE, ...(rows[0].value as Partial<typeof DEFAULT_BONUS_ABUSE>) }
+}
