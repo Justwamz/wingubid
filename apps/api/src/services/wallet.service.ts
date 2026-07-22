@@ -244,3 +244,159 @@ export async function refundBet(
 
   return { transactionId: txRows[0].id, walletId: wallet.id }
 }
+
+// ---- Bonus wallet -----------------------------------------------------------
+
+// Credit a fresh manual bonus into the player's bonus wallet and open a grant.
+// The partial unique index on bonus_grants(player_id) WHERE status='active'
+// guarantees at most one active grant; a second concurrent grant violates it.
+export async function grantBonus(
+  client: PoolClient,
+  playerId: string,
+  amount: number,
+  grantedBy: string,
+  expiresAt: Date,
+): Promise<{ grantId: string }> {
+  const wallet = await selectWalletForUpdate(client, playerId)
+  const { rows: grantRows } = await client.query<{ id: string }>(
+    `INSERT INTO bonus_grants (player_id, wallet_id, source, amount_granted, remaining, status, granted_by, expires_at)
+     VALUES ($1, $2, 'manual', $3, $3, 'active', $4, $5) RETURNING id`,
+    [playerId, wallet.id, amount, grantedBy, expiresAt],
+  )
+  const { rows: updated } = await client.query<{ bonus_balance: string }>(
+    `UPDATE wallets SET bonus_balance = bonus_balance + $1 WHERE player_id = $2 RETURNING bonus_balance`,
+    [amount, playerId],
+  )
+  await client.query(
+    `INSERT INTO transactions (wallet_id, player_id, type, amount, balance_after, status, metadata)
+     VALUES ($1, $2, 'bonus_granted', $3, $4, 'completed', $5::jsonb)`,
+    [wallet.id, playerId, amount, Number(updated[0].bonus_balance), JSON.stringify({ grantId: grantRows[0].id, grantedBy })],
+  )
+  return { grantId: grantRows[0].id }
+}
+
+// Debit a bonus-funded stake from the active grant. No locked_balance: the stake
+// leaves the bonus wallet outright (never returned on a normal loss). Throws if
+// there is no usable active grant or it is expired / underfunded.
+export async function debitBonusForBet(
+  client: PoolClient,
+  playerId: string,
+  stake: number,
+  metadata: Record<string, unknown>,
+): Promise<{ walletId: string; grantId: string }> {
+  if (!Number.isInteger(stake) || stake <= 0) {
+    throw new AppError('INVALID_STAKE', "That bet amount isn't valid.", 400)
+  }
+  const wallet = await selectWalletForUpdate(client, playerId)
+  const { rows: grants } = await client.query<{ id: string; remaining: string; expires_at: string | null }>(
+    `SELECT id, remaining, expires_at FROM bonus_grants
+     WHERE player_id = $1 AND status = 'active' FOR UPDATE`,
+    [playerId],
+  )
+  if (grants.length === 0) throw new AppError('NO_ACTIVE_BONUS', "You don't have an active bonus.", 422)
+  const grant = grants[0]
+  if (grant.expires_at && new Date(grant.expires_at).getTime() <= Date.now()) {
+    await forfeitBonus(client, grant.id, 'expired')
+    throw new AppError('NO_ACTIVE_BONUS', 'Your bonus has expired.', 422)
+  }
+  if (Number(grant.remaining) < stake) {
+    throw new AppError('INSUFFICIENT_BONUS', "You don't have enough bonus for this.", 422)
+  }
+
+  const { rows: updated } = await client.query<{ bonus_balance: string }>(
+    `UPDATE wallets SET bonus_balance = bonus_balance - $1 WHERE player_id = $2 RETURNING bonus_balance`,
+    [stake, playerId],
+  )
+  const newRemaining = Number(grant.remaining) - stake
+  await client.query(
+    `UPDATE bonus_grants SET remaining = $1, status = CASE WHEN $1 = 0 THEN 'exhausted' ELSE status END WHERE id = $2`,
+    [newRemaining, grant.id],
+  )
+  await client.query(
+    `INSERT INTO transactions (wallet_id, player_id, type, amount, balance_after, status, metadata)
+     VALUES ($1, $2, 'bonus_bet', $3, $4, 'completed', $5::jsonb)`,
+    [wallet.id, playerId, stake, Number(updated[0].bonus_balance), JSON.stringify({ ...metadata, grantId: grant.id })],
+  )
+  return { walletId: wallet.id, grantId: grant.id }
+}
+
+// Settle a winning bonus bet: credit net = min(payout - stake, cap) to CASH.
+export async function settleBonusWin(
+  client: PoolClient,
+  playerId: string,
+  grantId: string,
+  payout: number,
+  stake: number,
+  betId: string,
+  maxWinCents: number,
+): Promise<{ net: number }> {
+  const net = Math.min(Math.max(payout - stake, 0), maxWinCents)
+  if (net <= 0) return { net: 0 }
+  const wallet = await selectWalletForUpdate(client, playerId)
+  const { rows: updated } = await client.query<{ balance: string }>(
+    `UPDATE wallets SET balance = balance + $1 WHERE player_id = $2 RETURNING balance`,
+    [net, playerId],
+  )
+  await client.query(
+    `INSERT INTO transactions (wallet_id, player_id, type, amount, balance_after, status, metadata)
+     VALUES ($1, $2, 'bonus_won', $3, $4, 'completed', $5::jsonb)`,
+    [wallet.id, playerId, net, Number(updated[0].balance), JSON.stringify({ grantId, betId, payout, stake })],
+  )
+  return { net }
+}
+
+// Return a bonus stake to the bonus wallet (voided in-flight round).
+export async function refundBonusBet(
+  client: PoolClient,
+  playerId: string,
+  grantId: string,
+  stake: number,
+  metadata: Record<string, unknown>,
+): Promise<void> {
+  const wallet = await selectWalletForUpdate(client, playerId)
+  const { rows: updated } = await client.query<{ bonus_balance: string }>(
+    `UPDATE wallets SET bonus_balance = bonus_balance + $1 WHERE player_id = $2 RETURNING bonus_balance`,
+    [stake, playerId],
+  )
+  await client.query(
+    `UPDATE bonus_grants SET remaining = remaining + $1,
+       status = CASE WHEN status = 'exhausted' THEN 'active' ELSE status END
+     WHERE id = $2`,
+    [stake, grantId],
+  )
+  await client.query(
+    `INSERT INTO transactions (wallet_id, player_id, type, amount, balance_after, status, metadata)
+     VALUES ($1, $2, 'bonus_refunded', $3, $4, 'completed', $5::jsonb)`,
+    [wallet.id, playerId, stake, Number(updated[0].bonus_balance), JSON.stringify({ ...metadata, grantId })],
+  )
+}
+
+// Zero out and close a grant (expiry / revoke). Writes a forfeited ledger row.
+export async function forfeitBonus(
+  client: PoolClient,
+  grantId: string,
+  reason: 'expired' | 'revoked',
+): Promise<void> {
+  const { rows } = await client.query<{ player_id: string; wallet_id: string; remaining: string }>(
+    `SELECT player_id, wallet_id, remaining FROM bonus_grants WHERE id = $1 FOR UPDATE`,
+    [grantId],
+  )
+  if (rows.length === 0) return
+  const g = rows[0]
+  const remaining = Number(g.remaining)
+  const { rows: updated } = await client.query<{ bonus_balance: string }>(
+    `UPDATE wallets SET bonus_balance = GREATEST(bonus_balance - $1, 0) WHERE id = $2 RETURNING bonus_balance`,
+    [remaining, g.wallet_id],
+  )
+  await client.query(
+    `UPDATE bonus_grants SET remaining = 0, status = $2 WHERE id = $1`,
+    [grantId, reason],
+  )
+  if (remaining > 0) {
+    await client.query(
+      `INSERT INTO transactions (wallet_id, player_id, type, amount, balance_after, status, metadata)
+       VALUES ($1, $2, 'bonus_forfeited', $3, $4, 'completed', $5::jsonb)`,
+      [g.wallet_id, g.player_id, remaining, Number(updated[0].bonus_balance), JSON.stringify({ grantId, reason })],
+    )
+  }
+}

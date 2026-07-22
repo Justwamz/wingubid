@@ -11,6 +11,7 @@ import {
   settleWithdrawal,
   creditWinnings,
   refundBet,
+  settleBonusWin,
 } from './wallet.service.js'
 
 const mockQuery = vi.mocked(pool.query)
@@ -181,5 +182,41 @@ describe('settleWithdrawal', () => {
     expect(updateCall[0]).toContain('balance = balance + $2')
     const insertCall = client.query.mock.calls[2] as unknown as [string, unknown[]]
     expect(insertCall[1]).toContain('failed')
+  })
+})
+
+describe('settleBonusWin', () => {
+  it('credits net = payout - stake to cash', async () => {
+    const calls: Array<{ sql: string; params: unknown[] }> = []
+    const client = { query: vi.fn(async (sql: string, params: unknown[]) => {
+      calls.push({ sql, params })
+      if (sql.includes('SELECT id, balance')) return { rows: [{ id: 'w1', balance: '0', currency: 'KES' }] }
+      if (sql.startsWith('UPDATE wallets')) return { rows: [{ balance: '15000' }] }
+      return { rows: [{ id: 'tx1' }] }
+    }) } as never
+    const { net } = await settleBonusWin(client, 'p1', 'g1', 25000, 10000, 'b1', 1_000_000)
+    expect(net).toBe(15000) // 25000 payout - 10000 stake
+  })
+
+  it('caps net at maxWinCents', async () => {
+    const client = { query: vi.fn(async (sql: string) => {
+      if (sql.includes('SELECT id, balance')) return { rows: [{ id: 'w1', balance: '0', currency: 'KES' }] }
+      if (sql.startsWith('UPDATE wallets')) return { rows: [{ balance: '1000000' }] }
+      return { rows: [{ id: 'tx1' }] }
+    }) } as never
+    const { net } = await settleBonusWin(client, 'p1', 'g1', 5_000_000, 100_000, 'b1', 1_000_000)
+    expect(net).toBe(1_000_000) // capped
+  })
+
+  it('credits nothing when payout <= stake', async () => {
+    const updates: string[] = []
+    const client = { query: vi.fn(async (sql: string) => {
+      if (sql.includes('SELECT id, balance')) return { rows: [{ id: 'w1', balance: '0', currency: 'KES' }] }
+      if (sql.startsWith('UPDATE wallets')) { updates.push(sql); return { rows: [{ balance: '0' }] } }
+      return { rows: [{ id: 'tx1' }] }
+    }) } as never
+    const { net } = await settleBonusWin(client, 'p1', 'g1', 5000, 10000, 'b1', 1_000_000)
+    expect(net).toBe(0)
+    expect(updates.length).toBe(0) // no cash credit performed
   })
 })

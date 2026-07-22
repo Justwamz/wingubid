@@ -59,6 +59,26 @@ export async function setWithdrawalThreshold(cents: number): Promise<void> {
   )
 }
 
+const BONUS_MAX_WIN_KEY = 'bonus_max_win_cents'
+const DEFAULT_BONUS_MAX_WIN = 1_000_000 // cents = KES 10,000
+
+export async function getBonusMaxWinCents(): Promise<number> {
+  const { rows } = await pool.query<{ value: unknown }>(
+    `SELECT value FROM game_settings WHERE key = $1`, [BONUS_MAX_WIN_KEY],
+  )
+  return rows.length ? Number(rows[0].value) : DEFAULT_BONUS_MAX_WIN
+}
+
+const BONUS_EXPIRY_DAYS_KEY = 'bonus_default_expiry_days'
+const DEFAULT_BONUS_EXPIRY_DAYS = 30
+
+export async function getBonusDefaultExpiryDays(): Promise<number> {
+  const { rows } = await pool.query<{ value: unknown }>(
+    `SELECT value FROM game_settings WHERE key = $1`, [BONUS_EXPIRY_DAYS_KEY],
+  )
+  return rows.length ? Number(rows[0].value) : DEFAULT_BONUS_EXPIRY_DAYS
+}
+
 // ---- Per-game availability (manual pause) ----------------------------------
 
 const enabledKey = (g: AnyGame) => `${g}_enabled`
