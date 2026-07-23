@@ -34,7 +34,7 @@ export default function PlayerLayout({ children }: { children: React.ReactNode }
   }, [profile])
 
   useEffect(() => {
-    if (profile === null) return
+    if (profile === null) { prevBonusRef.current = null; return }
     const current = profile.wallet.bonus_balance
     if (prevBonusRef.current !== null && current > prevBonusRef.current) {
       setBonusToast('Bonus added to your account!')
