@@ -74,6 +74,41 @@ describe('POST /admin/campaigns', () => {
     expect(res.statusCode).toBe(409)
     expect(res.json().error.code).toBe('CODE_TAKEN')
   })
+
+  it('creates a deposit_match campaign and returns its id', async () => {
+    mockQuery.mockResolvedValueOnce({ rows: [{ id: CAMPAIGN_ID }] } as never) // insert
+    mockQuery.mockResolvedValueOnce({ rows: [] } as never) // audit
+    const res = await app.inject({ method: 'POST', url: '/admin/campaigns', headers: { Authorization: 'Bearer t' },
+      payload: {
+        key: 'deposit_match_2026', name: 'Deposit Match', type: 'deposit_match', rewardKind: 'deposit_match',
+        matchPercent: 50, maxMatchCents: 100000, minDepositCents: 1000,
+      } })
+    expect(res.statusCode).toBe(200)
+    expect(res.json().id).toBe(CAMPAIGN_ID)
+    const insertCall = mockQuery.mock.calls[mockQuery.mock.calls.length - 2]
+    expect(insertCall[0]).toContain('reward_kind')
+    expect(insertCall[0]).toContain('match_percent')
+    expect(insertCall[0]).toContain('max_match_cents')
+    expect(insertCall[0]).toContain('min_deposit_cents')
+    const params = insertCall[1] as unknown[]
+    expect(params).toContain('deposit_match')
+    expect(params).toContain(50)
+    expect(params).toContain(100000)
+    expect(params).toContain(1000)
+    expect(params).toContain(null) // amount_cents should be null for deposit_match
+  })
+
+  it('rejects a deposit_match campaign missing matchPercent', async () => {
+    const res = await app.inject({ method: 'POST', url: '/admin/campaigns', headers: { Authorization: 'Bearer t' },
+      payload: { key: 'deposit_match_2026', name: 'Deposit Match', type: 'deposit_match', rewardKind: 'deposit_match', maxMatchCents: 100000 } })
+    expect(res.statusCode).toBe(400)
+  })
+
+  it('rejects a deposit_match campaign missing maxMatchCents', async () => {
+    const res = await app.inject({ method: 'POST', url: '/admin/campaigns', headers: { Authorization: 'Bearer t' },
+      payload: { key: 'deposit_match_2026', name: 'Deposit Match', type: 'deposit_match', rewardKind: 'deposit_match', matchPercent: 50 } })
+    expect(res.statusCode).toBe(400)
+  })
 })
 
 describe('POST /admin/campaigns/preview-count', () => {
