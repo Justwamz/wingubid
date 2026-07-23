@@ -111,9 +111,9 @@ export async function buyScratchCard(
     }
 
     const { rows } = await client.query<{ id: string }>(
-      `INSERT INTO scratch_cards (player_id, wallet_id, stake_cents, grid, prize_cents, status)
-       VALUES ($1, $2, $3, $4, $5, 'completed') RETURNING id`,
-      [playerId, walletId, stakeCents, grid, prizeCents],
+      `INSERT INTO scratch_cards (player_id, wallet_id, stake_cents, grid, prize_cents, status, fund_source, bonus_grant_id)
+       VALUES ($1, $2, $3, $4, $5, 'completed', $6, $7) RETURNING id`,
+      [playerId, walletId, stakeCents, grid, prizeCents, fundSource, bonusGrantId],
     )
     const cardId = rows[0].id
 
@@ -129,6 +129,11 @@ export async function buyScratchCard(
       }
     }
 
+    await client.query(
+      `UPDATE scratch_cards SET net_credited_cents = $1 WHERE id = $2`,
+      [netCredited, cardId],
+    )
+
     await client.query('COMMIT')
     return { cardId, grid, prizeCents, netCredited, fundSource, capped, serverSeedHash, clientSeed, nonce }
   } catch (err) {
@@ -140,12 +145,14 @@ export async function buyScratchCard(
 }
 
 export async function getScratchHistory(playerId: string): Promise<{
-  id: string; stakeCents: number; grid: number[]; prizeCents: number; createdAt: string
+  id: string; stakeCents: number; grid: number[]; prizeCents: number
+  fundSource: 'cash' | 'bonus'; netCreditedCents: number; createdAt: string
 }[]> {
   const { rows } = await pool.query<{
-    id: string; stake_cents: string; grid: number[]; prize_cents: string; created_at: string
+    id: string; stake_cents: string; grid: number[]; prize_cents: string
+    fund_source: 'cash' | 'bonus'; net_credited_cents: string | null; created_at: string
   }>(
-    `SELECT id, stake_cents, grid, prize_cents, created_at
+    `SELECT id, stake_cents, grid, prize_cents, fund_source, net_credited_cents, created_at
      FROM scratch_cards WHERE player_id = $1 ORDER BY created_at DESC LIMIT 20`,
     [playerId],
   )
@@ -154,6 +161,8 @@ export async function getScratchHistory(playerId: string): Promise<{
     stakeCents: Number(r.stake_cents),
     grid: r.grid,
     prizeCents: Number(r.prize_cents),
+    fundSource: r.fund_source as 'cash' | 'bonus',
+    netCreditedCents: Number(r.net_credited_cents ?? r.prize_cents),
     createdAt: r.created_at,
   }))
 }

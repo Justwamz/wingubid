@@ -18,11 +18,11 @@ vi.mock('./scratch-seed.service.js', () => ({
 }))
 
 import { pool } from '@betting/db'
-import { creditWinnings, debitBonusForBet, settleBonusWin } from './wallet.service.js'
+import { creditWinnings, debitBonusForBet, debitForBet, settleBonusWin } from './wallet.service.js'
 import { getBonusMaxWinCents } from './game-settings.service.js'
 import { nextScratchRoll } from './scratch-seed.service.js'
 import {
-  generateGridFromSeed, calculatePrize, SYMBOLS_EMOJI, buyScratchCard,
+  generateGridFromSeed, calculatePrize, SYMBOLS_EMOJI, buyScratchCard, getScratchHistory,
 } from './scratch.service.js'
 
 const mockConnect = vi.mocked(pool.connect)
@@ -129,6 +129,17 @@ describe('buyScratchCard', () => {
     )
     expect(getBonusMaxWinCents).toHaveBeenCalled()
     expect(creditWinnings).not.toHaveBeenCalled()
+
+    // INSERT records fund_source='bonus' + the grant id from debitBonusForBet.
+    const insertCall = client.query.mock.calls.find((c: any[]) => String(c[0]).includes('INSERT INTO scratch_cards'))
+    expect(insertCall[1]).toEqual(['p-1', 'w-1', 10000, result.grid, result.prizeCents, 'bonus', 'g-1'])
+
+    // The mocked settleBonusWin net (15000) is less than the gross prize,
+    // proving the persisted UPDATE uses the net, not the gross.
+    expect(result.netCredited).toBeLessThan(result.prizeCents)
+    expect(result.netCredited).toBe(15000)
+    const updateCall = client.query.mock.calls.find((c: any[]) => String(c[0]).includes('UPDATE scratch_cards SET net_credited_cents'))
+    expect(updateCall[1]).toEqual([15000, 'card-1'])
   })
 
   it('bonus loss debits the bonus grant but never calls settleBonusWin', async () => {
@@ -145,5 +156,83 @@ describe('buyScratchCard', () => {
     expect(debitBonusForBet).toHaveBeenCalled()
     expect(settleBonusWin).not.toHaveBeenCalled()
     expect(creditWinnings).not.toHaveBeenCalled()
+
+    // Losing card: net_credited_cents persisted as 0.
+    const updateCall = client.query.mock.calls.find((c: any[]) => String(c[0]).includes('UPDATE scratch_cards SET net_credited_cents'))
+    expect(updateCall[1]).toEqual([0, 'card-1'])
+  })
+
+  it('cash win debits from the cash wallet and credits full winnings, recording fund_source=cash', async () => {
+    // Same winning nonce=2 grid as the bonus win case above.
+    const client = scratchClient()
+    mockConnect.mockResolvedValueOnce(client as any)
+
+    const result = await buyScratchCard('p-1', 10000, 'cash')
+
+    expect(result.prizeCents).toBeGreaterThan(0)
+    expect(debitForBet).toHaveBeenCalledWith(client, 'p-1', 10000, 10000, expect.objectContaining({ game: 'scratch' }), { lock: false })
+    expect(creditWinnings).toHaveBeenCalledWith(client, 'p-1', result.prizeCents, expect.objectContaining({ game: 'scratch', cardId: 'card-1' }))
+    expect(settleBonusWin).not.toHaveBeenCalled()
+
+    // INSERT records fund_source='cash' with a null bonus_grant_id.
+    const insertCall = client.query.mock.calls.find((c: any[]) => String(c[0]).includes('INSERT INTO scratch_cards'))
+    expect(insertCall[1]).toEqual(['p-1', 'w-1', 10000, result.grid, result.prizeCents, 'cash', null])
+
+    // Cash net credited equals the gross prize (no bonus cap applies).
+    expect(result.netCredited).toBe(result.prizeCents)
+    const updateCall = client.query.mock.calls.find((c: any[]) => String(c[0]).includes('UPDATE scratch_cards SET net_credited_cents'))
+    expect(updateCall[1]).toEqual([result.prizeCents, 'card-1'])
+  })
+
+  it('losing cash card persists net_credited_cents as 0', async () => {
+    mockNextScratchRoll.mockResolvedValueOnce({
+      serverSeed: 'srv', serverSeedHash: 'hash', clientSeed: 'cli', nonce: 0,
+    })
+    const client = scratchClient()
+    mockConnect.mockResolvedValueOnce(client as any)
+
+    const result = await buyScratchCard('p-1', 10000, 'cash')
+
+    expect(result.prizeCents).toBe(0)
+    expect(creditWinnings).not.toHaveBeenCalled()
+
+    const updateCall = client.query.mock.calls.find((c: any[]) => String(c[0]).includes('UPDATE scratch_cards SET net_credited_cents'))
+    expect(updateCall[1]).toEqual([0, 'card-1'])
+  })
+})
+
+describe('getScratchHistory', () => {
+  const mockPoolQuery = vi.mocked(pool.query)
+
+  it('returns fundSource and netCreditedCents (COALESCE net, prize) per row', async () => {
+    mockPoolQuery.mockResolvedValueOnce({
+      rows: [
+        {
+          id: 'card-1', stake_cents: '10000', grid: [0, 0, 0, 1, 2, 3, 4, 5, 5],
+          prize_cents: '190000', fund_source: 'bonus', net_credited_cents: '150000',
+          created_at: '2026-01-01T00:00:00Z',
+        },
+        {
+          id: 'card-2', stake_cents: '5000', grid: [5, 5, 5, 0, 1, 2, 3, 4, 1],
+          prize_cents: '0', fund_source: 'cash', net_credited_cents: null,
+          created_at: '2026-01-01T00:01:00Z',
+        },
+      ],
+    } as any)
+
+    const history = await getScratchHistory('p-1')
+
+    expect(history).toEqual([
+      {
+        id: 'card-1', stakeCents: 10000, grid: [0, 0, 0, 1, 2, 3, 4, 5, 5],
+        prizeCents: 190000, fundSource: 'bonus', netCreditedCents: 150000,
+        createdAt: '2026-01-01T00:00:00Z',
+      },
+      {
+        id: 'card-2', stakeCents: 5000, grid: [5, 5, 5, 0, 1, 2, 3, 4, 1],
+        prizeCents: 0, fundSource: 'cash', netCreditedCents: 0,
+        createdAt: '2026-01-01T00:01:00Z',
+      },
+    ])
   })
 })
