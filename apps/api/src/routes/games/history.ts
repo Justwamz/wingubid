@@ -27,16 +27,16 @@ export async function gameHistoryRoutes(app: FastifyInstance) {
     const { rows } = await pool.query(
       `SELECT id::text AS id, game_type::text AS game, gross_stake AS stake,
               cashout_multiplier AS multiplier, COALESCE(winnings, 0) AS payout,
-              status::text AS status, created_at
+              status::text AS status, created_at, fund_source::varchar AS fund_source
          FROM bets WHERE player_id = $1
        UNION ALL
        SELECT id::text, 'scratch', stake_cents, NULL::numeric,
-              COALESCE(prize_cents, 0),
-              CASE WHEN prize_cents > 0 THEN 'won' ELSE 'lost' END, created_at
+              COALESCE(net_credited_cents, prize_cents),
+              CASE WHEN prize_cents > 0 THEN 'won' ELSE 'lost' END, created_at, fund_source::varchar
          FROM scratch_cards WHERE player_id = $1
        UNION ALL
        SELECT id::text, 'lotto', ticket_price, NULL::numeric,
-              COALESCE(prize_cents, 0), status::text, created_at
+              COALESCE(prize_cents, 0), status::text, created_at, 'cash'::varchar
          FROM lottery_tickets WHERE player_id = $1
        ORDER BY created_at DESC
        LIMIT 50`,
@@ -50,6 +50,7 @@ export async function gameHistoryRoutes(app: FastifyInstance) {
       payout: Number(r.payout),
       status: r.status,
       createdAt: r.created_at,
+      fundSource: r.fund_source,
     })))
   })
 }
