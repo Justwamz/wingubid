@@ -90,12 +90,15 @@ describe('POST /admin/campaigns', () => {
     expect(insertCall[0]).toContain('match_percent')
     expect(insertCall[0]).toContain('max_match_cents')
     expect(insertCall[0]).toContain('min_deposit_cents')
+    // Positional order in the INSERT (see campaigns.ts CREATE handler):
+    // [key, name, description, type, amount_cents, expiry_days, starts_at, ends_at,
+    //  created_by, code, criteria, reward_kind, match_percent, max_match_cents, min_deposit_cents]
     const params = insertCall[1] as unknown[]
-    expect(params).toContain('deposit_match')
-    expect(params).toContain(50)
-    expect(params).toContain(100000)
-    expect(params).toContain(1000)
-    expect(params).toContain(null) // amount_cents should be null for deposit_match
+    expect(params[4]).toBeNull() // amount_cents should be null for deposit_match
+    expect(params[11]).toBe('deposit_match') // reward_kind
+    expect(params[12]).toBe(50) // match_percent
+    expect(params[13]).toBe(100000) // max_match_cents
+    expect(params[14]).toBe(1000) // min_deposit_cents
   })
 
   it('rejects a deposit_match campaign missing matchPercent', async () => {
