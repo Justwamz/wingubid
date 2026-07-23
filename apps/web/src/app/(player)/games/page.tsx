@@ -81,9 +81,9 @@ const GAMES = [
   {
     href: '/games/wingu-lotto',
     name: 'WINGU LOTTO',
-    tagline: 'Pick 3, draw every hour',
+    tagline: 'Pick 6, draw every hour',
     image: '/games/wingu-lotto-logo.webp',
-    description: 'Choose three numbers and wait for the hourly draw. Match all three to win big. Simple to play, huge potential payouts every hour.',
+    description: 'Choose six numbers and wait for the hourly draw. Match 3 or more to win, all 6 for the jackpot. Simple to play, huge potential payouts every hour.',
     gradient: 'from-yellow-500/20 to-orange-600/10',
     border: 'border-yellow-500/30',
     accent: '#F59E0B',

@@ -11,43 +11,42 @@ export const TICKET_PRICES: Record<string, number> = {
 }
 
 export const PRIZE_MULTIPLIERS: Record<string, Record<number, number>> = {
-  hourly: { 3: 100, 2: 5,  1: 1, 0: 0 },
-  daily:  { 3: 300, 2: 8,  1: 1, 0: 0 },
-  weekly: { 3: 1000, 2: 15, 1: 1, 0: 0 },
+  hourly: { 6: 200000, 5: 800, 4: 40, 3: 3 },
+  daily:  { 6: 200000, 5: 800, 4: 40, 3: 3 },
+  weekly: { 6: 200000, 5: 800, 4: 40, 3: 3 },
 }
 
-// Number pool players pick from (3 distinct numbers of 1..36). Used to derive
+// Number pool players pick from (6 distinct numbers of 1..36). Used to derive
 // the fixed match odds for the read-only margin readout.
 export const LOTTERY_POOL = 36
-export const LOTTERY_PICK = 3
+export const LOTTERY_PICK = 6
 
-export function draw3Numbers(): number[] {
+export function drawNumbers(): number[] {
   const numbers = new Set<number>()
-  while (numbers.size < 3) {
-    const bytes = randomBytes(4)
-    const val = bytes.readUInt32BE(0)
-    // Reject values above floor(2^32/36)*36 to avoid modulo bias
-    const max = Math.floor(0xffffffff / 36) * 36
-    if (val <= max) numbers.add((val % 36) + 1)
+  const max = Math.floor(0xffffffff / LOTTERY_POOL) * LOTTERY_POOL
+  while (numbers.size < LOTTERY_PICK) {
+    const val = randomBytes(4).readUInt32BE(0)
+    // Reject values above floor(2^32/LOTTERY_POOL)*LOTTERY_POOL to avoid modulo bias
+    if (val <= max) numbers.add((val % LOTTERY_POOL) + 1)
   }
   return [...numbers].sort((a, b) => a - b)
 }
 
 /**
- * Deterministically derive the 3 winning numbers from a draw's server seed, so
- * a player can reproduce (and thus verify) the result once the seed is revealed.
- * Same modulo-bias rejection as draw3Numbers, drawing 4-byte words from
- * HMAC(serverSeed, `draw-<counter>`).
+ * Deterministically derive the LOTTERY_PICK winning numbers from a draw's
+ * server seed, so a player can reproduce (and thus verify) the result once
+ * the seed is revealed. Same modulo-bias rejection as drawNumbers, drawing
+ * 4-byte words from HMAC(serverSeed, `draw-<counter>`).
  */
-export function draw3NumbersFromSeed(serverSeed: string): number[] {
+export function drawNumbersFromSeed(serverSeed: string): number[] {
   const numbers = new Set<number>()
-  const max = Math.floor(0xffffffff / 36) * 36
+  const max = Math.floor(0xffffffff / LOTTERY_POOL) * LOTTERY_POOL
   let counter = 0
-  while (numbers.size < 3) {
+  while (numbers.size < LOTTERY_PICK) {
     const digest = createHmac('sha256', serverSeed).update(`draw-${counter}`).digest()
-    for (let off = 0; off + 4 <= digest.length && numbers.size < 3; off += 4) {
+    for (let off = 0; off + 4 <= digest.length && numbers.size < LOTTERY_PICK; off += 4) {
       const val = digest.readUInt32BE(off)
-      if (val <= max) numbers.add((val % 36) + 1)
+      if (val <= max) numbers.add((val % LOTTERY_POOL) + 1)
     }
     counter++
   }
@@ -76,14 +75,14 @@ export async function buyTicket(
     throw new AppError('INVALID_DRAW_TYPE', "That lottery draw isn't available.", 400)
   }
   await assertGameEnabled('lottery')
-  if (pickedNumbers.length !== 3) {
-    throw new AppError('INVALID_NUMBERS', 'Please pick exactly 3 numbers.', 400)
+  if (pickedNumbers.length !== 6) {
+    throw new AppError('INVALID_NUMBERS', 'Please pick exactly 6 numbers.', 400)
   }
   if (pickedNumbers.some(n => n < 1 || n > 36 || !Number.isInteger(n))) {
     throw new AppError('INVALID_NUMBERS', 'Your numbers must be whole numbers between 1 and 36.', 400)
   }
-  if (new Set(pickedNumbers).size !== 3) {
-    throw new AppError('INVALID_NUMBERS', 'Your 3 numbers must all be different.', 400)
+  if (new Set(pickedNumbers).size !== 6) {
+    throw new AppError('INVALID_NUMBERS', 'Your 6 numbers must all be different.', 400)
   }
 
   const { rows: drawRows } = await pool.query<{ id: string; scheduled_at: string; ticket_price: string }>(
@@ -195,7 +194,7 @@ export async function getUpcomingDraws(): Promise<{
   )
   return rows.map(r => {
     const ticketPrice = Number(r.ticket_price)
-    const mult = PRIZE_MULTIPLIERS[r.draw_type]?.[3] ?? 0
+    const mult = PRIZE_MULTIPLIERS[r.draw_type]?.[6] ?? 0
     return {
       id: r.id,
       drawType: r.draw_type,

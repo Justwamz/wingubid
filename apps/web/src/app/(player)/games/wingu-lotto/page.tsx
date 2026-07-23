@@ -8,8 +8,8 @@ import { Target, Hash, Trophy } from 'lucide-react'
 
 const HOW_TO_PLAY = [
   { icon: <Target size={16} />, text: 'Pick a draw tier: Hourly (KES 20), Daily (KES 100) or Weekly (KES 500). Each has bigger jackpots.' },
-  { icon: <Hash size={16} />, text: 'Choose exactly 3 numbers from 1 to 36 and buy your ticket before the countdown reaches zero.' },
-  { icon: <Trophy size={16} />, text: 'Match 3 numbers to win the jackpot. Match 2 for a bonus, match 1 to break even. Results appear in My Tickets.' },
+  { icon: <Hash size={16} />, text: 'Choose exactly 6 numbers from 1 to 36 and buy your ticket before the countdown.' },
+  { icon: <Trophy size={16} />, text: 'Match 3 or more numbers to win; match all 6 for the jackpot. Results appear in My Tickets.' },
 ]
 
 // --- Types --------------------------------------------------------------------
@@ -147,7 +147,7 @@ function TierCard({ draw, selected, onSelect }: TierCardProps) {
       <p className={`text-2xl font-extrabold font-mono ${c.accent} leading-tight`}>
         {formatCents(draw.jackpot)}
       </p>
-      <p className="text-xs text-gray-500 mb-3">jackpot (3-match)</p>
+      <p className="text-xs text-gray-500 mb-3">jackpot (6-match)</p>
 
       {/* Ticket price */}
       <div className="flex items-center justify-between text-sm">
@@ -178,7 +178,7 @@ function NumberPicker({ selected, onToggle }: NumberPickerProps) {
     <div className="grid grid-cols-6 gap-2">
       {Array.from({ length: 36 }, (_, i) => i + 1).map(n => {
         const isSelected = selected.includes(n)
-        const atMax = selected.length >= 3
+        const atMax = selected.length >= 6
         return (
           <button
             key={n}
@@ -322,7 +322,7 @@ export default function WinguLottoPage() {
   function toggleNumber(n: number) {
     setPickedNumbers(prev => {
       if (prev.includes(n)) return prev.filter(x => x !== n)
-      if (prev.length >= 3) return prev
+      if (prev.length >= 6) return prev
       return [...prev, n]
     })
   }
@@ -334,7 +334,7 @@ export default function WinguLottoPage() {
   }
 
   async function handleBuyTicket() {
-    if (!selectedDrawType || pickedNumbers.length !== 3) return
+    if (!selectedDrawType || pickedNumbers.length !== 6) return
     setBuying(true)
     setBuyError(null)
     setConfirmation(null)
@@ -355,7 +355,7 @@ export default function WinguLottoPage() {
   }
 
   const selectedDraw = draws.find(d => d.drawType === selectedDrawType) ?? null
-  const canBuy = selectedDrawType !== null && pickedNumbers.length === 3
+  const canBuy = selectedDrawType !== null && pickedNumbers.length === 6
 
   const pendingTickets = tickets.filter(t => t.status === 'pending')
   const settledTickets = tickets.filter(t => t.status !== 'pending')
@@ -395,7 +395,7 @@ export default function WinguLottoPage() {
       {/* Number picker + buy */}
       <div className="bg-game-card border border-game-border rounded-2xl p-5 space-y-4">
         <div className="flex items-center justify-between gap-3">
-          <p className="text-sm font-bold text-gray-300">Pick 3 Numbers</p>
+          <p className="text-sm font-bold text-gray-300">Pick 6 Numbers</p>
           <div className="flex gap-1.5">
             {pickedNumbers.map(n => (
               <span
@@ -405,7 +405,7 @@ export default function WinguLottoPage() {
                 {n}
               </span>
             ))}
-            {Array.from({ length: 3 - pickedNumbers.length }).map((_, i) => (
+            {Array.from({ length: 6 - pickedNumbers.length }).map((_, i) => (
               <span
                 key={`empty-${i}`}
                 className="inline-flex items-center justify-center w-7 h-7 rounded-lg border border-dashed border-gray-600 text-gray-600 text-xs"
@@ -466,8 +466,8 @@ export default function WinguLottoPage() {
             ? 'Buying...'
             : !selectedDrawType
             ? 'Select a draw tier'
-            : pickedNumbers.length < 3
-            ? `Pick ${3 - pickedNumbers.length} more number${3 - pickedNumbers.length !== 1 ? 's' : ''}`
+            : pickedNumbers.length < 6
+            ? `Pick ${6 - pickedNumbers.length} more number${6 - pickedNumbers.length !== 1 ? 's' : ''}`
             : `Buy Ticket · ${selectedDraw ? formatCents(selectedDraw.ticketPrice) : ''}`}
         </button>
       </div>

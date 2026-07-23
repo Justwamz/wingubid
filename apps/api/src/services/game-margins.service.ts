@@ -22,24 +22,24 @@ function combinations(n: number, k: number): number {
 
 export interface LotteryMargin {
   drawType: string
-  prizes: { match3: number; match2: number; match1: number }
+  prizes: { match3: number; match4: number; match5: number; match6: number }
   rtpPct: number
   edgePct: number
 }
 
 export function getLotteryMargins(): LotteryMargin[] {
-  const totalCombos = combinations(LOTTERY_POOL, LOTTERY_PICK) // C(36,3) = 7140
-  const others = LOTTERY_POOL - LOTTERY_PICK
-  // Probability of matching exactly k of the drawn numbers.
-  const p3 = 1 / totalCombos
-  const p2 = (combinations(LOTTERY_PICK, 2) * combinations(others, 1)) / totalCombos
-  const p1 = (combinations(LOTTERY_PICK, 1) * combinations(others, 2)) / totalCombos
+  const totalCombos = combinations(LOTTERY_POOL, LOTTERY_PICK) // C(36,6) = 1,947,792
+  const others = LOTTERY_POOL - LOTTERY_PICK // 30
+  // Probability of matching exactly k of the LOTTERY_PICK drawn numbers.
+  const pk = (k: number) =>
+    (combinations(LOTTERY_PICK, k) * combinations(others, LOTTERY_PICK - k)) / totalCombos
+  const p3 = pk(3), p4 = pk(4), p5 = pk(5), p6 = pk(6)
 
   return Object.entries(LOTTERY_PRIZES).map(([drawType, m]) => {
-    const rtp = p3 * m[3] + p2 * m[2] + p1 * m[1]
+    const rtp = p3 * (m[3] ?? 0) + p4 * (m[4] ?? 0) + p5 * (m[5] ?? 0) + p6 * (m[6] ?? 0)
     return {
       drawType,
-      prizes: { match3: m[3], match2: m[2], match1: m[1] },
+      prizes: { match3: m[3] ?? 0, match4: m[4] ?? 0, match5: m[5] ?? 0, match6: m[6] ?? 0 },
       rtpPct: Math.round(rtp * 10000) / 100,
       edgePct: Math.round((1 - rtp) * 10000) / 100,
     }

@@ -7,7 +7,7 @@ type GameKey = 'crash' | 'mines' | 'dice'
 
 interface LotteryMargin {
   drawType: string
-  prizes: { match3: number; match2: number; match1: number }
+  prizes: { match3: number; match4: number; match5: number; match6: number }
   rtpPct: number
   edgePct: number
 }
@@ -324,7 +324,7 @@ export function GameSettingsTab() {
             <thead>
               <tr className="text-xs text-gray-500 border-b border-gray-800">
                 <th className="text-left px-4 py-2">Draw</th>
-                <th className="text-right px-4 py-2">Match 3 / 2 / 1</th>
+                <th className="text-right px-4 py-2">Match 3/4/5/6</th>
                 <th className="text-right px-4 py-2">RTP</th>
                 <th className="text-right px-4 py-2">House edge</th>
               </tr>
@@ -334,7 +334,7 @@ export function GameSettingsTab() {
                 <tr key={l.drawType} className="border-b border-gray-800/50">
                   <td className="px-4 py-2 capitalize">{l.drawType}</td>
                   <td className="px-4 py-2 text-right font-mono text-gray-300">
-                    {l.prizes.match3}× / {l.prizes.match2}× / {l.prizes.match1}×
+                    {l.prizes.match3}× / {l.prizes.match4}× / {l.prizes.match5}× / {l.prizes.match6}×
                   </td>
                   <td className="px-4 py-2 text-right font-mono text-gray-300">{l.rtpPct}%</td>
                   <td className={`px-4 py-2 text-right font-mono font-semibold ${edgeColor(l.edgePct)}`}>{l.edgePct}%</td>

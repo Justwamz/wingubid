@@ -10,7 +10,7 @@ import { AppError } from '../../lib/errors.js'
 
 const buyBody = z.object({
   drawType: z.enum(['hourly', 'daily', 'weekly'], { errorMap: () => ({ message: 'Please choose a lottery draw.' }) }),
-  pickedNumbers: z.array(z.number().int().min(1, 'Your numbers must be between 1 and 36.').max(36, 'Your numbers must be between 1 and 36.'), { invalid_type_error: 'Please pick your numbers.' }).length(3, 'Please pick exactly 3 numbers.'),
+  pickedNumbers: z.array(z.number().int().min(1, 'Your numbers must be between 1 and 36.').max(36, 'Your numbers must be between 1 and 36.'), { invalid_type_error: 'Please pick your numbers.' }).length(6, 'Please pick exactly 6 numbers.'),
 })
 
 export async function lotteryRoutes(app: FastifyInstance) {
