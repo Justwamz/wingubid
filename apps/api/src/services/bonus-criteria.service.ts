@@ -16,9 +16,10 @@ export const criteriaSchema = z.object({
 }).strict()
 
 // Turn criteria into a parameterized WHERE fragment over players (alias `pl`).
-// Empty/null -> 'TRUE'. Reused for the per-player check and the admin count.
+// Always requires pl.status = 'active' first; empty/null criteria -> just that.
+// Reused for the per-player check and the admin count.
 export function buildCriteria(criteria: Criteria | null | undefined): { where: string; params: unknown[] } {
-  const conds: string[] = []
+  const conds: string[] = [`pl.status = 'active'`]
   const params: unknown[] = []
   const p = (v: unknown) => { params.push(v); return `$${params.length}` }
   if (criteria) {
@@ -39,12 +40,11 @@ export function buildCriteria(criteria: Criteria | null | undefined): { where: s
       conds.push(`NOT EXISTS (SELECT 1 FROM bets b WHERE b.player_id = pl.id)`)
     }
   }
-  return { where: conds.length ? conds.join(' AND ') : 'TRUE', params }
+  return { where: conds.join(' AND '), params }
 }
 
 export async function playerMatchesCriteria(playerId: string, criteria: Criteria | null | undefined): Promise<boolean> {
   const { where, params } = buildCriteria(criteria)
-  if (where === 'TRUE') return true
   params.push(playerId)
   const { rows } = await pool.query<{ m: boolean }>(
     `SELECT EXISTS (SELECT 1 FROM players pl WHERE (${where}) AND pl.id = $${params.length}) AS m`,
