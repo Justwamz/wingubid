@@ -112,6 +112,16 @@ describe('POST /admin/campaigns', () => {
       payload: { key: 'deposit_match_2026', name: 'Deposit Match', type: 'deposit_match', rewardKind: 'deposit_match', matchPercent: 50 } })
     expect(res.statusCode).toBe(400)
   })
+
+  it('rejects a deposit_match campaign that also sets a promo code', async () => {
+    const res = await app.inject({ method: 'POST', url: '/admin/campaigns', headers: { Authorization: 'Bearer t' },
+      payload: {
+        key: 'deposit_match_2026', name: 'Deposit Match', type: 'deposit_match', rewardKind: 'deposit_match',
+        matchPercent: 50, maxMatchCents: 100000, code: 'MATCH50',
+      } })
+    expect(res.statusCode).toBe(400)
+    expect(res.json().error.code).toBe('VALIDATION_ERROR')
+  })
 })
 
 describe('POST /admin/campaigns/preview-count', () => {
@@ -122,6 +132,26 @@ describe('POST /admin/campaigns/preview-count', () => {
       payload: { criteria: { depositStatus: 'none' } } })
     expect(res.statusCode).toBe(200)
     expect(res.json().count).toBe(42)
+  })
+})
+
+describe('PUT /admin/campaigns/:id', () => {
+  const app = buildServer(); afterAll(() => app.close())
+
+  it('rejects setting a promo code on a deposit_match campaign', async () => {
+    const res = await app.inject({ method: 'PUT', url: `/admin/campaigns/${CAMPAIGN_ID}`, headers: { Authorization: 'Bearer t' },
+      payload: { rewardKind: 'deposit_match', code: 'MATCH50' } })
+    expect(res.statusCode).toBe(400)
+    expect(res.json().error.code).toBe('VALIDATION_ERROR')
+  })
+
+  it('allows updating a fixed campaign with a code', async () => {
+    mockQuery.mockResolvedValueOnce({ rowCount: 1 } as never) // update
+    mockQuery.mockResolvedValueOnce({ rows: [] } as never) // audit
+    const res = await app.inject({ method: 'PUT', url: `/admin/campaigns/${CAMPAIGN_ID}`, headers: { Authorization: 'Bearer t' },
+      payload: { rewardKind: 'fixed', code: 'WELCOME10' } })
+    expect(res.statusCode).toBe(200)
+    expect(res.json().ok).toBe(true)
   })
 })
 

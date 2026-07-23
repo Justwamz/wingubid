@@ -29,12 +29,17 @@ const upsertBodyShape = z.object({
   criteria: criteriaSchema.optional(),
 })
 
-const upsertBody = upsertBodyShape.refine(
-  d => d.rewardKind === 'deposit_match'
-    ? (d.matchPercent != null && d.maxMatchCents != null)
-    : (d.amountCents != null && d.amountCents > 0),
-  { message: 'Provide an amount for a fixed bonus, or match percent + cap for a deposit match.' },
-)
+const upsertBody = upsertBodyShape
+  .refine(
+    d => d.rewardKind === 'deposit_match'
+      ? (d.matchPercent != null && d.maxMatchCents != null)
+      : (d.amountCents != null && d.amountCents > 0),
+    { message: 'Provide an amount for a fixed bonus, or match percent + cap for a deposit match.' },
+  )
+  .refine(
+    d => !(d.rewardKind === 'deposit_match' && d.code != null),
+    { message: 'Deposit-match bonuses cannot use a promo code.' },
+  )
 
 export async function adminCampaignRoutes(app: FastifyInstance) {
   app.get('/admin/campaigns', { preHandler: [authenticateAdmin, requirePermission('campaigns.view')] }, async (_req, reply) => {
@@ -83,6 +88,9 @@ export async function adminCampaignRoutes(app: FastifyInstance) {
     const parsed = upsertBodyShape.partial().safeParse(req.body)
     if (!parsed.success) return reply.status(400).send({ error: { code: 'VALIDATION_ERROR', message: parsed.error.issues[0].message } })
     const d = parsed.data
+    if (d.rewardKind === 'deposit_match' && d.code != null) {
+      return reply.status(400).send({ error: { code: 'VALIDATION_ERROR', message: 'Deposit-match bonuses cannot use a promo code.' } })
+    }
     try {
       const { rowCount } = await pool.query(
         `UPDATE bonus_campaigns SET

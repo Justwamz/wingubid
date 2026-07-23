@@ -29,6 +29,8 @@ export async function recordC2bPayment(params: {
   const msisdn = normalizeKePhone(params.msisdn) ?? params.msisdn
 
   const client = await pool.connect()
+  let credited: { playerId: string; amount: number } | null = null
+  let result: C2bResult
   try {
     await client.query('BEGIN')
 
@@ -39,42 +41,44 @@ export async function recordC2bPayment(params: {
     )
     if (dup.rows.length > 0) {
       await client.query('COMMIT')
-      return { status: dup.rows[0].status, duplicate: true }
-    }
-
-    const player = await client.query<{ id: string }>(
-      `SELECT id FROM players WHERE phone = $1`,
-      [msisdn],
-    )
-
-    if (player.rows.length > 0) {
-      const playerId = player.rows[0].id
-      await creditDeposit(client, playerId, amount, `c2b:${mpesaReceipt}`, {
-        source: 'c2b', msisdn, mpesaReceipt,
-      })
-      await client.query(
-        `INSERT INTO c2b_payments (msisdn, amount, mpesa_receipt, status, player_id)
-         VALUES ($1, $2, $3, 'credited', $4)`,
-        [msisdn, amount, mpesaReceipt, playerId],
+      result = { status: dup.rows[0].status, duplicate: true }
+    } else {
+      const player = await client.query<{ id: string }>(
+        `SELECT id FROM players WHERE phone = $1`,
+        [msisdn],
       )
-      await client.query('COMMIT')
-      await maybeGrantDepositMatch(playerId, amount)
-      return { status: 'credited', playerId }
-    }
 
-    await client.query(
-      `INSERT INTO c2b_payments (msisdn, amount, mpesa_receipt, status)
-       VALUES ($1, $2, $3, 'unresolved')`,
-      [msisdn, amount, mpesaReceipt],
-    )
-    await client.query('COMMIT')
-    return { status: 'unresolved' }
+      if (player.rows.length > 0) {
+        const playerId = player.rows[0].id
+        await creditDeposit(client, playerId, amount, `c2b:${mpesaReceipt}`, {
+          source: 'c2b', msisdn, mpesaReceipt,
+        })
+        await client.query(
+          `INSERT INTO c2b_payments (msisdn, amount, mpesa_receipt, status, player_id)
+           VALUES ($1, $2, $3, 'credited', $4)`,
+          [msisdn, amount, mpesaReceipt, playerId],
+        )
+        await client.query('COMMIT')
+        credited = { playerId, amount }
+        result = { status: 'credited', playerId }
+      } else {
+        await client.query(
+          `INSERT INTO c2b_payments (msisdn, amount, mpesa_receipt, status)
+           VALUES ($1, $2, $3, 'unresolved')`,
+          [msisdn, amount, mpesaReceipt],
+        )
+        await client.query('COMMIT')
+        result = { status: 'unresolved' }
+      }
+    }
   } catch (err) {
     await client.query('ROLLBACK')
     throw err
   } finally {
     client.release()
   }
+  if (credited) await maybeGrantDepositMatch(credited.playerId, credited.amount)
+  return result
 }
 
 export interface C2bPaymentRow {
