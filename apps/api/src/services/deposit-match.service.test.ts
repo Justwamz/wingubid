@@ -192,4 +192,21 @@ describe('maybeGrantDepositMatch', () => {
     expect(client.query).toHaveBeenCalledWith('ROLLBACK')
     expect(client.release).toHaveBeenCalled()
   })
+
+  it('never throws and destroys the connection when ROLLBACK itself rejects', async () => {
+    seedPreChecks([campaign])
+    mockGrant.mockRejectedValueOnce(new Error('boom'))
+    const client = {
+      query: vi.fn()
+        .mockResolvedValueOnce({ rows: [] }) // BEGIN
+        .mockRejectedValueOnce(new Error('rollback failed')), // ROLLBACK
+      release: vi.fn(),
+    }
+    mockConnect.mockResolvedValueOnce(client as never)
+
+    await expect(maybeGrantDepositMatch(PLAYER_ID, 10001)).resolves.toBeUndefined()
+
+    expect(client.query).toHaveBeenCalledWith('ROLLBACK')
+    expect(client.release).toHaveBeenCalledWith(expect.anything())
+  })
 })

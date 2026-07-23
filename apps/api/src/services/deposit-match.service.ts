@@ -55,12 +55,18 @@ export async function maybeGrantDepositMatch(playerId: string, depositAmountCent
         [chosen.id, playerId, grantId],
       )
       await client.query('COMMIT')
+      client.release()
     } catch (err) {
-      await client.query('ROLLBACK')
+      try {
+        await client.query('ROLLBACK')
+        client.release()
+      } catch (rollbackErr) {
+        // ROLLBACK failed: the connection may be poisoned. Destroy it (release
+        // with an error) instead of returning it to the pool.
+        client.release(rollbackErr as Error)
+      }
       // 23505 = already matched (race with the one-active/one-per-campaign guards)
       if ((err as { code?: string }).code !== '23505') throw err
-    } finally {
-      client.release()
     }
   } catch (err) {
     // Best-effort: a deposit must never fail because of the bonus match.
