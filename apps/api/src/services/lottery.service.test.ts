@@ -107,6 +107,15 @@ describe('drawNumbersFromSeed', () => {
   it('differs across seeds', () => {
     expect(drawNumbersFromSeed('seed-a')).not.toEqual(drawNumbersFromSeed('seed-b'))
   })
+
+  // Golden vector: locks the exact provable-fair derivation (HMAC-SHA256 label
+  // format, byte offset/order, modulo-bias rejection, pick count) for a fixed
+  // seed. If the derivation ever changes (e.g. label, offsets, or count), this
+  // hard-coded expected output will fail, flagging the break instead of
+  // silently producing different draws for players trying to verify a result.
+  it('matches the known golden vector for a fixed seed (provable-fair lock)', () => {
+    expect(drawNumbersFromSeed('golden-seed-vector-1')).toEqual([18, 24, 30, 33, 34, 36])
+  })
 })
 
 describe('countMatches', () => {
