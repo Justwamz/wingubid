@@ -44,6 +44,8 @@ interface HistoryCard {
   stakeCents: number
   grid: number[]
   prizeCents: number
+  fundSource?: 'cash' | 'bonus'
+  netCreditedCents?: number
   createdAt: string
 }
 
@@ -133,7 +135,7 @@ function cardToEntry(card: HistoryCard): BetHistoryEntry {
     id: card.id,
     stake: card.stakeCents,
     status: card.prizeCents > 0 ? 'won' : 'lost',
-    payout: card.prizeCents,
+    payout: card.netCreditedCents ?? card.prizeCents,
     multiplier: null,
     createdAt: card.createdAt,
   }
