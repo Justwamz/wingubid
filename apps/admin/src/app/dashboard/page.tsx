@@ -59,6 +59,8 @@ interface Banner {
   gradient: string
   active: boolean
   createdAt: string
+  campaignId?: string | null
+  campaignName?: string | null
 }
 
 interface BannersResponse {
@@ -163,6 +165,7 @@ interface NewBannerForm {
   ctaUrl: string
   imageUrl: string
   gradient: string
+  campaignId: string
 }
 
 function defaultForm(placement: Placement): NewBannerForm {
@@ -173,6 +176,7 @@ function defaultForm(placement: Placement): NewBannerForm {
     ctaUrl: placement === 'landing' ? '/register' : '/wallet/deposit',
     imageUrl: '',
     gradient: GRADIENT_PRESETS[6].value,
+    campaignId: '',
   }
 }
 
@@ -199,6 +203,15 @@ function BannerSection({
   const [actionLoading, setActionLoading] = useState<string | null>(null)
   const [imageMode, setImageMode] = useState<'url' | 'upload'>('url')
   const [imageError, setImageError] = useState<string | null>(null)
+  const [campaignOptions, setCampaignOptions] = useState<{ id: string; name: string; code: string | null }[]>([])
+
+  useEffect(() => {
+    if (!open) return
+    apiFetch<{ campaigns: { id: string; name: string; code: string | null }[] }>('/admin/banners/campaign-options')
+      .then(({ data }) => {
+        if (data) setCampaignOptions(data.campaigns)
+      })
+  }, [open])
 
   function handleImageUpload(e: React.ChangeEvent<HTMLInputElement>) {
     setImageError(null)
@@ -259,6 +272,7 @@ function BannerSection({
                   <th className="text-left px-5 py-3">Headline</th>
                   <th className="text-left px-5 py-3">Active</th>
                   <th className="text-left px-5 py-3">CTA Text</th>
+                  <th className="text-left px-5 py-3">Campaign</th>
                   <th className="text-left px-5 py-3">Created</th>
                   <th className="text-left px-5 py-3">Actions</th>
                 </tr>
@@ -279,6 +293,15 @@ function BannerSection({
                       )}
                     </td>
                     <td className="px-5 py-3 text-gray-400">{b.ctaText || <span className="text-gray-600 italic text-xs">none</span>}</td>
+                    <td className="px-5 py-3 text-gray-400">
+                      {b.campaignName ? (
+                        <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold bg-cyan-900/50 text-cyan-400 border border-cyan-700/50">
+                          {b.campaignName}
+                        </span>
+                      ) : (
+                        <span className="text-gray-600 italic text-xs">none</span>
+                      )}
+                    </td>
                     <td className="px-5 py-3 text-gray-500 text-xs">
                       {new Date(b.createdAt).toLocaleDateString()}
                     </td>
@@ -378,6 +401,21 @@ function BannerSection({
                   className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-cyan-600"
                 />
               </div>
+            </div>
+
+            {/* Link to campaign */}
+            <div>
+              <label className="text-xs text-gray-400 block mb-1">Link to campaign <span className="text-gray-600">(optional)</span></label>
+              <select
+                value={form.campaignId}
+                onChange={e => update('campaignId', e.target.value)}
+                className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-cyan-600"
+              >
+                <option value="">None (use CTA URL)</option>
+                {campaignOptions.map(c => (
+                  <option key={c.id} value={c.id}>{c.name + (c.code ? ` (${c.code})` : '')}</option>
+                ))}
+              </select>
             </div>
 
             {/* Image field - Upload or URL */}
@@ -558,7 +596,7 @@ export default function AdminDashboardPage() {
   async function handleCreate(placement: Placement, form: NewBannerForm) {
     await apiFetch('/admin/banners', {
       method: 'POST',
-      body: JSON.stringify({ placement, ...form }),
+      body: JSON.stringify({ placement, ...form, campaignId: form.campaignId || null }),
     })
     await fetchBanners()
   }

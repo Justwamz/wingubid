@@ -1,6 +1,7 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { Suspense, useEffect, useRef, useState } from 'react'
+import { useSearchParams } from 'next/navigation'
 import { apiFetch } from '@/lib/apiFetch'
 import { getDeviceId } from '@/lib/device'
 import { Gift } from 'lucide-react'
@@ -23,7 +24,10 @@ interface ClaimResponse {
   amountCents: number
 }
 
-export default function RewardsPage() {
+function RewardsPageInner() {
+  const searchParams = useSearchParams()
+  const prefilledRef = useRef(false)
+
   const [campaigns, setCampaigns] = useState<Campaign[]>([])
   const [loading, setLoading] = useState(true)
   const [loadError, setLoadError] = useState(false)
@@ -54,6 +58,15 @@ export default function RewardsPage() {
       .finally(() => { if (!cancelled) setLoading(false) })
     return () => { cancelled = true }
   }, [])
+
+  useEffect(() => {
+    if (prefilledRef.current) return
+    prefilledRef.current = true
+    const code = searchParams.get('code')
+    if (code && code.trim()) {
+      setPromoCode(code.trim().toUpperCase())
+    }
+  }, [searchParams])
 
   async function handleClaim(campaign: Campaign) {
     setClaimingId(campaign.id)
@@ -185,5 +198,13 @@ export default function RewardsPage() {
         </div>
       ))}
     </div>
+  )
+}
+
+export default function RewardsPage() {
+  return (
+    <Suspense fallback={<p className="text-gray-500 text-sm px-4 py-6">Loading rewards...</p>}>
+      <RewardsPageInner />
+    </Suspense>
   )
 }
