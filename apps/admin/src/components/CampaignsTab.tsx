@@ -13,11 +13,20 @@ interface CampaignRow {
   id: string; key: string; name: string; description: string | null; type: string
   amount_cents: number; expiry_days: number | null; starts_at: string | null; ends_at: string | null
   status: string; claim_count: number; code: string | null; criteria: Criteria | null
+  reward_kind?: 'fixed' | 'deposit_match' | null
+  match_percent?: number | null; max_match_cents?: number | null; min_deposit_cents?: number | null
 }
 
 const STATUSES = ['active', 'paused', 'ended'] as const
 
 function kes(cents: number) { return `KES ${(cents / 100).toLocaleString('en-KE')}` }
+
+function rewardSummary(c: CampaignRow): string {
+  if (c.reward_kind === 'deposit_match') {
+    return `${c.match_percent}% up to ${kes(c.max_match_cents ?? 0)}, min ${kes(c.min_deposit_cents ?? 0)}`
+  }
+  return kes(c.amount_cents)
+}
 
 function criteriaSummary(c: Criteria | null | undefined): string {
   if (!c) return ''
@@ -32,6 +41,7 @@ function criteriaSummary(c: Criteria | null | undefined): string {
 const emptyForm = {
   key: '', name: '', description: '', type: 'welcome', amount: '', expiryDays: '', startsAt: '', endsAt: '',
   code: '', registeredWithinDays: '', depositStatus: '', minTotalDepositCents: '', bettingActivity: '',
+  rewardKind: 'fixed' as 'fixed' | 'deposit_match', matchPercent: '', maxMatch: '', minDeposit: '',
 }
 
 function buildCriteria(form: typeof emptyForm): Criteria | undefined {
@@ -82,8 +92,17 @@ export function CampaignsTab() {
     const body: Record<string, unknown> = {
       key: form.key.trim(),
       name: form.name.trim(),
-      type: form.type,
-      amountCents: Math.round(parseFloat(form.amount) * 100),
+    }
+    if (form.rewardKind === 'deposit_match') {
+      body.type = 'deposit_match'
+      body.rewardKind = 'deposit_match'
+      body.matchPercent = parseInt(form.matchPercent)
+      body.maxMatchCents = Math.round(parseFloat(form.maxMatch) * 100)
+      body.minDepositCents = Math.round(parseFloat(form.minDeposit) * 100)
+    } else {
+      body.type = form.type
+      body.rewardKind = 'fixed'
+      body.amountCents = Math.round(parseFloat(form.amount) * 100)
     }
     if (form.description.trim()) body.description = form.description.trim()
     if (form.expiryDays) body.expiryDays = parseInt(form.expiryDays)
@@ -121,13 +140,37 @@ export function CampaignsTab() {
           className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm uppercase placeholder:normal-case" />
         <textarea placeholder="Description (optional)" value={form.description} onChange={e => setForm({ ...form, description: e.target.value })}
           rows={2} className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm resize-none" />
-        <select value={form.type} onChange={e => setForm({ ...form, type: e.target.value })}
-          className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm">
-          <option value="welcome">Welcome</option>
-          <option value="custom">Custom</option>
-        </select>
-        <input required type="number" step="0.01" placeholder="Amount (KES)" value={form.amount} onChange={e => setForm({ ...form, amount: e.target.value })}
-          className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm" />
+        <div>
+          <label className="text-xs text-gray-500 block mb-1">Reward kind</label>
+          <select value={form.rewardKind} onChange={e => setForm({ ...form, rewardKind: e.target.value as 'fixed' | 'deposit_match' })}
+            className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm">
+            <option value="fixed">Fixed amount</option>
+            <option value="deposit_match">Deposit match</option>
+          </select>
+        </div>
+        {form.rewardKind === 'fixed' && (
+          <select value={form.type} onChange={e => setForm({ ...form, type: e.target.value })}
+            className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm">
+            <option value="welcome">Welcome</option>
+            <option value="custom">Custom</option>
+          </select>
+        )}
+        {form.rewardKind === 'fixed' ? (
+          <input required type="number" step="0.01" placeholder="Amount (KES)" value={form.amount} onChange={e => setForm({ ...form, amount: e.target.value })}
+            className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm" />
+        ) : (
+          <>
+            <input required type="number" step="1" min="1" max="100" placeholder="Match % (1-100)" value={form.matchPercent}
+              onChange={e => setForm({ ...form, matchPercent: e.target.value })}
+              className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm" />
+            <input required type="number" step="0.01" placeholder="Max match (KES)" value={form.maxMatch}
+              onChange={e => setForm({ ...form, maxMatch: e.target.value })}
+              className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm" />
+            <input required type="number" step="0.01" placeholder="Min deposit (KES)" value={form.minDeposit}
+              onChange={e => setForm({ ...form, minDeposit: e.target.value })}
+              className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm" />
+          </>
+        )}
         <input type="number" placeholder="Expiry in days (optional)" value={form.expiryDays} onChange={e => setForm({ ...form, expiryDays: e.target.value })}
           className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm" />
         <div className="grid grid-cols-2 gap-2">
@@ -187,7 +230,7 @@ export function CampaignsTab() {
         <table className="w-full text-sm">
           <thead><tr className="text-xs text-gray-500 uppercase border-b border-gray-800">
             <th className="text-left px-4 py-3">Name</th><th className="text-left px-4 py-3">Type</th>
-            <th className="text-right px-4 py-3">Amount</th><th className="text-left px-4 py-3">Expiry</th>
+            <th className="text-right px-4 py-3">Reward</th><th className="text-left px-4 py-3">Expiry</th>
             <th className="text-left px-4 py-3">Window</th><th className="text-left px-4 py-3">Status</th>
             <th className="text-right px-4 py-3">Claims</th><th className="text-left px-4 py-3">Actions</th>
           </tr></thead>
@@ -211,7 +254,7 @@ export function CampaignsTab() {
                   )}
                 </td>
                 <td className="px-4 py-3 capitalize text-gray-400">{c.type}</td>
-                <td className="px-4 py-3 text-right font-mono">{kes(c.amount_cents)}</td>
+                <td className="px-4 py-3 text-right font-mono">{rewardSummary(c)}</td>
                 <td className="px-4 py-3 text-gray-500 text-xs">{c.expiry_days ? `${c.expiry_days} days` : 'never'}</td>
                 <td className="px-4 py-3 text-gray-500 text-xs">
                   {c.starts_at ? new Date(c.starts_at).toLocaleDateString() : 'any'}
