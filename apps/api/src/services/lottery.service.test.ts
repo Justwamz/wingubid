@@ -134,6 +134,26 @@ describe('countMatches', () => {
   it('returns 0 when no numbers match', () => {
     expect(countMatches([1, 2, 3], [4, 5, 6])).toBe(0)
   })
+
+  it('returns 6 when all 6 picked numbers match (pick-6)', () => {
+    expect(countMatches([1, 2, 3, 4, 5, 6], [1, 2, 3, 4, 5, 6])).toBe(6)
+  })
+
+  it('returns 5 when 5 of 6 picked numbers match (pick-6)', () => {
+    expect(countMatches([1, 2, 3, 4, 5, 6], [1, 2, 3, 4, 5, 30])).toBe(5)
+  })
+
+  it('returns 4 when 4 of 6 picked numbers match (pick-6)', () => {
+    expect(countMatches([1, 2, 3, 4, 5, 6], [1, 2, 3, 4, 20, 30])).toBe(4)
+  })
+
+  it('returns 3 when 3 of 6 picked numbers match (pick-6)', () => {
+    expect(countMatches([1, 2, 3, 4, 5, 6], [1, 2, 3, 10, 20, 30])).toBe(3)
+  })
+
+  it('returns 0 when no numbers match (pick-6)', () => {
+    expect(countMatches([1, 2, 3, 4, 5, 6], [7, 8, 9, 10, 11, 12])).toBe(0)
+  })
 })
 
 describe('calculateLotteryPrize', () => {

@@ -16,6 +16,7 @@ import * as authService from '../../services/auth.service.js'
 
 const mockRegister = vi.mocked(authService.registerPlayer)
 const mockLogin = vi.mocked(authService.loginPlayer)
+const mockVerifyOtp = vi.mocked(authService.verifyPlayerOtp)
 
 describe('POST /auth/register', () => {
   const app = buildServer()
@@ -82,5 +83,56 @@ describe('POST /auth/login', () => {
     })
     expect(res.statusCode).toBe(200)
     expect(res.json().access_token).toBe('tok')
+  })
+})
+
+describe('rate limiting', () => {
+  const app = buildServer()
+  afterAll(() => app.close())
+
+  it('returns 429 TOO_MANY_REQUESTS on the 11th /auth/login request from the same IP within the window', async () => {
+    mockLogin.mockResolvedValue({ accessToken: 'tok', refreshToken: 'ref' })
+
+    for (let i = 0; i < 10; i++) {
+      const res = await app.inject({
+        method: 'POST',
+        url: '/auth/login',
+        headers: { 'x-forwarded-for': '203.0.113.10' },
+        payload: { phone: '+254700000000', password: 'Password1!' },
+      })
+      expect(res.statusCode).toBe(200)
+    }
+
+    const res = await app.inject({
+      method: 'POST',
+      url: '/auth/login',
+      headers: { 'x-forwarded-for': '203.0.113.10' },
+      payload: { phone: '+254700000000', password: 'Password1!' },
+    })
+    expect(res.statusCode).toBe(429)
+    expect(res.json().error.code).toBe('TOO_MANY_REQUESTS')
+  })
+
+  it('returns 429 TOO_MANY_REQUESTS on the 11th /auth/verify-otp request from the same IP within the window', async () => {
+    mockVerifyOtp.mockResolvedValue({ accessToken: 'tok', refreshToken: 'ref' })
+
+    for (let i = 0; i < 10; i++) {
+      const res = await app.inject({
+        method: 'POST',
+        url: '/auth/verify-otp',
+        headers: { 'x-forwarded-for': '203.0.113.11' },
+        payload: { phone: '+254700000000', code: '123456' },
+      })
+      expect(res.statusCode).toBe(200)
+    }
+
+    const res = await app.inject({
+      method: 'POST',
+      url: '/auth/verify-otp',
+      headers: { 'x-forwarded-for': '203.0.113.11' },
+      payload: { phone: '+254700000000', code: '123456' },
+    })
+    expect(res.statusCode).toBe(429)
+    expect(res.json().error.code).toBe('TOO_MANY_REQUESTS')
   })
 })
