@@ -153,6 +153,38 @@ describe('PUT /admin/campaigns/:id', () => {
     expect(res.statusCode).toBe(200)
     expect(res.json().ok).toBe(true)
   })
+
+  it('rejects setting a code-only edit on an existing deposit_match campaign (no rewardKind in payload)', async () => {
+    mockQuery.mockResolvedValueOnce({ rows: [{ reward_kind: 'deposit_match' }] } as never) // lookup of persisted reward_kind
+    const queryCallsBefore = mockQuery.mock.calls.length
+    const res = await app.inject({ method: 'PUT', url: `/admin/campaigns/${CAMPAIGN_ID}`, headers: { Authorization: 'Bearer t' },
+      payload: { code: 'FOO' } })
+    expect(res.statusCode).toBe(400)
+    expect(res.json().error.code).toBe('VALIDATION_ERROR')
+    expect(res.json().error.message).toBe('Deposit-match bonuses cannot use a promo code.')
+    // Only the SELECT lookup ran — the UPDATE (and audit) must never have been issued.
+    expect(mockQuery.mock.calls.length).toBe(queryCallsBefore + 1)
+    expect(mockQuery.mock.calls[queryCallsBefore][0]).toMatch(/SELECT reward_kind FROM bonus_campaigns/)
+  })
+
+  it('allows a code-only edit on an existing fixed campaign (no rewardKind in payload)', async () => {
+    mockQuery.mockResolvedValueOnce({ rows: [{ reward_kind: 'fixed' }] } as never) // lookup of persisted reward_kind
+    mockQuery.mockResolvedValueOnce({ rowCount: 1 } as never) // update
+    mockQuery.mockResolvedValueOnce({ rows: [] } as never) // audit
+    const res = await app.inject({ method: 'PUT', url: `/admin/campaigns/${CAMPAIGN_ID}`, headers: { Authorization: 'Bearer t' },
+      payload: { code: 'FOO' } })
+    expect(res.statusCode).toBe(200)
+    expect(res.json().ok).toBe(true)
+  })
+
+  it('allows editing non-code fields on an existing deposit_match campaign without a lookup', async () => {
+    mockQuery.mockResolvedValueOnce({ rowCount: 1 } as never) // update
+    mockQuery.mockResolvedValueOnce({ rows: [] } as never) // audit
+    const res = await app.inject({ method: 'PUT', url: `/admin/campaigns/${CAMPAIGN_ID}`, headers: { Authorization: 'Bearer t' },
+      payload: { name: 'Renamed Deposit Match' } })
+    expect(res.statusCode).toBe(200)
+    expect(res.json().ok).toBe(true)
+  })
 })
 
 describe('PUT /admin/campaigns/:id/status', () => {

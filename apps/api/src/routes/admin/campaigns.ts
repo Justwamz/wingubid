@@ -88,8 +88,19 @@ export async function adminCampaignRoutes(app: FastifyInstance) {
     const parsed = upsertBodyShape.partial().safeParse(req.body)
     if (!parsed.success) return reply.status(400).send({ error: { code: 'VALIDATION_ERROR', message: parsed.error.issues[0].message } })
     const d = parsed.data
-    if (d.rewardKind === 'deposit_match' && d.code != null) {
-      return reply.status(400).send({ error: { code: 'VALIDATION_ERROR', message: 'Deposit-match bonuses cannot use a promo code.' } })
+    if (d.code != null) {
+      let effectiveRewardKind = d.rewardKind
+      if (effectiveRewardKind == null) {
+        const { rows: existingRows } = await pool.query<{ reward_kind: string }>(
+          `SELECT reward_kind FROM bonus_campaigns WHERE id = $1`,
+          [id],
+        )
+        if (!existingRows.length) return reply.status(404).send({ error: { code: 'NOT_FOUND', message: 'Campaign not found.' } })
+        effectiveRewardKind = existingRows[0].reward_kind as 'fixed' | 'deposit_match'
+      }
+      if (effectiveRewardKind === 'deposit_match') {
+        return reply.status(400).send({ error: { code: 'VALIDATION_ERROR', message: 'Deposit-match bonuses cannot use a promo code.' } })
+      }
     }
     try {
       const { rowCount } = await pool.query(
