@@ -1,5 +1,5 @@
 import { pool } from '@betting/db'
-import { draw3NumbersFromSeed, settleTickets, TICKET_PRICES } from '../services/lottery.service.js'
+import { drawNumbersFromSeed, settleTickets, TICKET_PRICES } from '../services/lottery.service.js'
 import { newServerSeed } from '../services/player-seed.service.js'
 
 type DrawType = 'hourly' | 'daily' | 'weekly'
@@ -86,7 +86,7 @@ async function runLoop(drawType: DrawType): Promise<void> {
         `SELECT server_seed FROM lottery_draws WHERE id = $1`,
         [drawId],
       )
-      const winningNumbers = draw3NumbersFromSeed(seedRows[0].server_seed)
+      const winningNumbers = drawNumbersFromSeed(seedRows[0].server_seed)
       await pool.query(
         `UPDATE lottery_draws SET status = 'completed', drawn_at = NOW(), winning_numbers = $1 WHERE id = $2`,
         [winningNumbers, drawId],
