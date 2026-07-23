@@ -101,14 +101,18 @@ export async function claimCampaignBonus(
       [campaignId, playerId, grantId],
     )
     await client.query('COMMIT')
+    client.release()
     return { amountCents: amount }
   } catch (err) {
-    await client.query('ROLLBACK')
+    try {
+      await client.query('ROLLBACK')
+      client.release()
+    } catch (rollbackErr) {
+      client.release(rollbackErr as Error)
+    }
     if ((err as { code?: string }).code === '23505') {
       throw new AppError('ALREADY_CLAIMED', "You've already claimed this bonus.", 422)
     }
     throw err
-  } finally {
-    client.release()
   }
 }

@@ -169,6 +169,23 @@ describe('claimCampaignBonus', () => {
     expect(client.release).toHaveBeenCalled()
   })
 
+  it('rejects with the original error and destroys the connection when ROLLBACK itself rejects', async () => {
+    seedPreChecks([activeCampaign])
+    mockGrant.mockRejectedValueOnce(new Error('boom'))
+    const client = {
+      query: vi.fn()
+        .mockResolvedValueOnce({ rows: [] }) // BEGIN
+        .mockRejectedValueOnce(new Error('rollback failed')), // ROLLBACK
+      release: vi.fn(),
+    }
+    mockConnect.mockResolvedValueOnce(client as never)
+
+    await expect(claimCampaignBonus(PLAYER_ID, CAMPAIGN_ID, undefined, undefined))
+      .rejects.toThrow('boom')
+    expect(client.query).toHaveBeenCalledWith('ROLLBACK')
+    expect(client.release).toHaveBeenCalledWith(expect.anything())
+  })
+
   it('rejects a code campaign when no code is provided', async () => {
     mockQuery
       .mockResolvedValueOnce({ rows: [{ status: 'active' }] } as never) // player status
