@@ -28,6 +28,7 @@ const activeCampaign = {
   ends_at: null,
   code: null,
   criteria: null,
+  reward_kind: 'fixed',
 }
 
 function makeMockClient(rows: any[][] = []) {
@@ -112,6 +113,17 @@ describe('claimCampaignBonus', () => {
     await expect(claimCampaignBonus(PLAYER_ID, CAMPAIGN_ID, undefined, undefined))
       .rejects.toMatchObject({ code: 'CAMPAIGN_UNAVAILABLE', statusCode: 422 })
     expect(mockGrant).not.toHaveBeenCalled()
+  })
+
+  it('rejects a deposit-match campaign with 422 CAMPAIGN_UNAVAILABLE, without granting', async () => {
+    mockQuery
+      .mockResolvedValueOnce({ rows: [{ status: 'active' }] } as never) // player status
+      .mockResolvedValueOnce({ rows: [{ ...activeCampaign, reward_kind: 'deposit_match' }] } as never)
+
+    await expect(claimCampaignBonus(PLAYER_ID, CAMPAIGN_ID, undefined, undefined))
+      .rejects.toMatchObject({ code: 'CAMPAIGN_UNAVAILABLE', statusCode: 422 })
+    expect(mockGrant).not.toHaveBeenCalled()
+    expect(mockConnect).not.toHaveBeenCalled()
   })
 
   it('rejects a campaign outside its start/end window', async () => {

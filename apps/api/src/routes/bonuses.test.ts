@@ -25,6 +25,11 @@ describe('GET /bonuses/available', () => {
     expect(res.statusCode).toBe(200)
     expect(res.json().campaigns[0].key).toBe('welcome')
   })
+  it('excludes deposit-match campaigns from the claimable list (filtered in SQL)', async () => {
+    mockQuery.mockResolvedValueOnce({ rows: [] } as never)
+    await app.inject({ method: 'GET', url: '/bonuses/available', headers: { Authorization: 'Bearer t' } })
+    expect(mockQuery.mock.calls.at(-1)![0]).toContain("c.reward_kind = 'fixed'")
+  })
 })
 
 describe('POST /bonuses/claim', () => {

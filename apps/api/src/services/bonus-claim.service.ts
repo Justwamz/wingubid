@@ -35,9 +35,9 @@ export async function claimCampaignBonus(
   const { rows: camp } = await pool.query<{
     amount_cents: string; expiry_days: number; status: string
     starts_at: string | null; ends_at: string | null
-    code: string | null; criteria: Criteria | null
+    code: string | null; criteria: Criteria | null; reward_kind: string
   }>(
-    `SELECT amount_cents, expiry_days, status, starts_at, ends_at, code, criteria
+    `SELECT amount_cents, expiry_days, status, starts_at, ends_at, code, criteria, reward_kind
      FROM bonus_campaigns WHERE id = $1`,
     [campaignId],
   )
@@ -47,6 +47,11 @@ export async function claimCampaignBonus(
   const notStarted = c.starts_at && new Date(c.starts_at).getTime() > now
   const ended = c.ends_at && new Date(c.ends_at).getTime() < now
   if (c.status !== 'active' || notStarted || ended) {
+    throw new AppError('CAMPAIGN_UNAVAILABLE', 'This bonus is not available.', 422)
+  }
+  // Deposit-match bonuses are granted automatically on a qualifying deposit;
+  // they can never be manually claimed.
+  if (c.reward_kind === 'deposit_match') {
     throw new AppError('CAMPAIGN_UNAVAILABLE', 'This bonus is not available.', 422)
   }
 

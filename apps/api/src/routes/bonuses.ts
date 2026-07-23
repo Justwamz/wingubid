@@ -20,6 +20,7 @@ export async function bonusPlayerRoutes(app: FastifyInstance) {
               (NOT EXISTS (SELECT 1 FROM bonus_grants g WHERE g.player_id = $1 AND g.status = 'active')) AS claimable
        FROM bonus_campaigns c
        WHERE c.status = 'active' AND c.code IS NULL
+         AND c.reward_kind = 'fixed'
          AND (c.starts_at IS NULL OR c.starts_at <= NOW())
          AND (c.ends_at IS NULL OR c.ends_at >= NOW())
          AND NOT EXISTS (SELECT 1 FROM bonus_claims bc WHERE bc.campaign_id = c.id AND bc.player_id = $1)
