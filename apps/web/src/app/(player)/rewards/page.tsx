@@ -58,6 +58,11 @@ export default function RewardsPage() {
   async function handleClaim(campaign: Campaign) {
     setClaimingId(campaign.id)
     setClaimError(prev => ({ ...prev, [campaign.id]: '' }))
+    setClaimSuccess(prev => {
+      const next = { ...prev }
+      delete next[campaign.id]
+      return next
+    })
     try {
       const data = await apiFetch<ClaimResponse>('/bonuses/claim', {
         method: 'POST',
@@ -81,6 +86,7 @@ export default function RewardsPage() {
     if (!code) return
     setPromoSubmitting(true)
     setPromoError('')
+    setPromoSuccess(null)
     try {
       const data = await apiFetch<ClaimResponse>('/bonuses/claim', {
         method: 'POST',
@@ -110,7 +116,7 @@ export default function RewardsPage() {
           <input
             type="text"
             value={promoCode}
-            onChange={e => setPromoCode(e.target.value)}
+            onChange={e => { setPromoCode(e.target.value); setPromoSuccess(null) }}
             placeholder="Enter promo code"
             className="flex-1 bg-black/30 border border-game-border rounded-xl px-4 py-2.5 text-white text-sm placeholder:text-gray-500 focus:outline-none focus:border-accent-cyan"
           />

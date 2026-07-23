@@ -72,10 +72,20 @@ export function buildServer() {
   // Rate limiting is opt-in per route (global: false); auth endpoints set their
   // own limits via `config.rateLimit`. In-memory store is fine for a single
   // instance; use the Redis store if the API is scaled horizontally.
+  // NOTE: @fastify/rate-limit throws whatever errorResponseBuilder returns and
+  // relies on the app's error handler (below) to render it, which reads
+  // top-level `statusCode`/`code`/`message` (not a nested `error` object) - so
+  // those must be set at the top level here, not nested.
   app.register(rateLimit, {
     global: false,
-    errorResponseBuilder: () => ({
-      error: { code: 'TOO_MANY_REQUESTS', message: "You're doing that too fast. Please wait a minute and try again." },
+    errorResponseBuilder: (_req, context) => ({
+      // The plugin's own context type omits `statusCode` even though it sets
+      // one internally (429, or 403 if `ban` is configured and tripped);
+      // `context.ban` is typed, so derive it the same way rather than reading
+      // the untyped property.
+      statusCode: context.ban ? 403 : 429,
+      code: 'TOO_MANY_REQUESTS',
+      message: "You're doing that too fast. Please wait a minute and try again.",
     }),
   })
 

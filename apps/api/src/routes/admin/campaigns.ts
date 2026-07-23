@@ -25,8 +25,8 @@ const upsertBodyShape = z.object({
   expiryDays: z.number().int().min(1).max(365).optional(),
   startsAt: z.string().datetime().optional(),
   endsAt: z.string().datetime().optional(),
-  code: z.string().trim().min(2).max(40).optional(),
-  criteria: criteriaSchema.optional(),
+  code: z.string().trim().min(2).max(40).nullish(),
+  criteria: criteriaSchema.nullish(),
 })
 
 const upsertBody = upsertBodyShape
@@ -102,22 +102,39 @@ export async function adminCampaignRoutes(app: FastifyInstance) {
         return reply.status(400).send({ error: { code: 'VALIDATION_ERROR', message: 'Deposit-match bonuses cannot use a promo code.' } })
       }
     }
+    const body = (req.body ?? {}) as Record<string, unknown>
+    const sets: string[] = [
+      'name = COALESCE($2, name)',
+      'description = COALESCE($3, description)',
+      'amount_cents = COALESCE($4, amount_cents)',
+      'expiry_days = COALESCE($5, expiry_days)',
+      'starts_at = COALESCE($6, starts_at)',
+      'ends_at = COALESCE($7, ends_at)',
+      'reward_kind = COALESCE($8, reward_kind)',
+      'match_percent = COALESCE($9, match_percent)',
+      'max_match_cents = COALESCE($10, max_match_cents)',
+      'min_deposit_cents = COALESCE($11, min_deposit_cents)',
+    ]
+    const vals: unknown[] = [
+      id,
+      d.name ?? null,
+      d.description ?? null,
+      d.amountCents ?? null,
+      d.expiryDays ?? null,
+      d.startsAt ?? null,
+      d.endsAt ?? null,
+      d.rewardKind ?? null,
+      d.matchPercent ?? null,
+      d.maxMatchCents ?? null,
+      d.minDepositCents ?? null,
+    ]
+    let n = vals.length
+    if ('code' in body) { sets.push(`code = $${++n}`); vals.push(d.code ? d.code.toUpperCase() : null) }
+    if ('criteria' in body) { sets.push(`criteria = $${++n}::jsonb`); vals.push(d.criteria == null ? null : JSON.stringify(d.criteria)) }
     try {
       const { rowCount } = await pool.query(
-        `UPDATE bonus_campaigns SET
-           name = COALESCE($2, name), description = COALESCE($3, description),
-           amount_cents = COALESCE($4, amount_cents), expiry_days = COALESCE($5, expiry_days),
-           starts_at = COALESCE($6, starts_at), ends_at = COALESCE($7, ends_at),
-           code = COALESCE($8, code), criteria = COALESCE($9::jsonb, criteria),
-           reward_kind = COALESCE($10, reward_kind), match_percent = COALESCE($11, match_percent),
-           max_match_cents = COALESCE($12, max_match_cents), min_deposit_cents = COALESCE($13, min_deposit_cents)
-         WHERE id = $1`,
-        [
-          id, d.name ?? null, d.description ?? null, d.amountCents ?? null, d.expiryDays ?? null, d.startsAt ?? null, d.endsAt ?? null,
-          d.code ? d.code.toUpperCase() : null,
-          d.criteria ? JSON.stringify(d.criteria) : null,
-          d.rewardKind ?? null, d.matchPercent ?? null, d.maxMatchCents ?? null, d.minDepositCents ?? null,
-        ],
+        `UPDATE bonus_campaigns SET ${sets.join(', ')} WHERE id = $1`,
+        vals,
       )
       if (!rowCount) return reply.status(404).send({ error: { code: 'NOT_FOUND', message: 'Campaign not found.' } })
       await audit(req.adminId, 'campaign_update', id, d)

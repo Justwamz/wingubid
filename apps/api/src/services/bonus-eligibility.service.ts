@@ -11,6 +11,13 @@ export interface EligibilityFlag {
   matchedPlayerIds?: string[]
 }
 
+const HARD_BLOCK_TYPES = new Set<FlagType>(['prior_bonus', 'device_bonus', 'ip_bonus'])
+
+// A hard block means no self-service bonus may be claimed by this player.
+export function isBonusBlocked(flags: EligibilityFlag[]): boolean {
+  return flags.some(f => HARD_BLOCK_TYPES.has(f.type) || (f.type === 'ip_velocity' && f.severity === 'block'))
+}
+
 // Cross-account duplicate signals for a bonus. Never blocks on its own except an
 // (off-by-default) IP-velocity auto-block; the caller decides what to do.
 export async function evaluateBonusEligibility(playerId: string): Promise<{ flags: EligibilityFlag[] }> {

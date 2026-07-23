@@ -185,6 +185,61 @@ describe('PUT /admin/campaigns/:id', () => {
     expect(res.statusCode).toBe(200)
     expect(res.json().ok).toBe(true)
   })
+
+  it('partial edit of name only leaves code/criteria out of the SET clause', async () => {
+    mockQuery.mockResolvedValueOnce({ rowCount: 1 } as never) // update
+    mockQuery.mockResolvedValueOnce({ rows: [] } as never) // audit
+    const res = await app.inject({ method: 'PUT', url: `/admin/campaigns/${CAMPAIGN_ID}`, headers: { Authorization: 'Bearer t' },
+      payload: { name: 'X' } })
+    expect(res.statusCode).toBe(200)
+    const updateCall = mockQuery.mock.calls[mockQuery.mock.calls.length - 2]
+    expect(updateCall[0]).not.toMatch(/code\s*=/)
+    expect(updateCall[0]).not.toMatch(/criteria\s*=/)
+    expect(updateCall[0]).toContain('name = COALESCE($2, name)')
+  })
+
+  it('clears a code when explicitly set to null', async () => {
+    mockQuery.mockResolvedValueOnce({ rowCount: 1 } as never) // update
+    mockQuery.mockResolvedValueOnce({ rows: [] } as never) // audit
+    const res = await app.inject({ method: 'PUT', url: `/admin/campaigns/${CAMPAIGN_ID}`, headers: { Authorization: 'Bearer t' },
+      payload: { code: null } })
+    expect(res.statusCode).toBe(200)
+    const updateCall = mockQuery.mock.calls[mockQuery.mock.calls.length - 2]
+    expect(updateCall[0]).toMatch(/code = \$\d+/)
+    const params = updateCall[1] as unknown[]
+    const idx = Number((updateCall[0] as string).match(/code = \$(\d+)/)![1]) - 1
+    expect(params[idx]).toBeNull()
+  })
+
+  it('clears criteria when explicitly set to null', async () => {
+    mockQuery.mockResolvedValueOnce({ rowCount: 1 } as never) // update
+    mockQuery.mockResolvedValueOnce({ rows: [] } as never) // audit
+    const res = await app.inject({ method: 'PUT', url: `/admin/campaigns/${CAMPAIGN_ID}`, headers: { Authorization: 'Bearer t' },
+      payload: { criteria: null } })
+    expect(res.statusCode).toBe(200)
+    const updateCall = mockQuery.mock.calls[mockQuery.mock.calls.length - 2]
+    expect(updateCall[0]).toMatch(/criteria = \$\d+::jsonb/)
+    const params = updateCall[1] as unknown[]
+    const idx = Number((updateCall[0] as string).match(/criteria = \$(\d+)::jsonb/)![1]) - 1
+    expect(params[idx]).toBeNull()
+  })
+
+  it('409s CODE_TAKEN when setting a code that collides', async () => {
+    mockQuery.mockRejectedValueOnce({ code: '23505', constraint: 'uq_bonus_campaigns_code' } as never)
+    const res = await app.inject({ method: 'PUT', url: `/admin/campaigns/${CAMPAIGN_ID}`, headers: { Authorization: 'Bearer t' },
+      payload: { rewardKind: 'fixed', code: 'TAKEN10' } })
+    expect(res.statusCode).toBe(409)
+    expect(res.json().error.code).toBe('CODE_TAKEN')
+  })
+
+  it('allows clearing a code on an existing deposit_match campaign', async () => {
+    mockQuery.mockResolvedValueOnce({ rowCount: 1 } as never) // update (no lookup needed: d.code is null, guard skipped)
+    mockQuery.mockResolvedValueOnce({ rows: [] } as never) // audit
+    const res = await app.inject({ method: 'PUT', url: `/admin/campaigns/${CAMPAIGN_ID}`, headers: { Authorization: 'Bearer t' },
+      payload: { code: null } })
+    expect(res.statusCode).toBe(200)
+    expect(res.json().ok).toBe(true)
+  })
 })
 
 describe('PUT /admin/campaigns/:id/status', () => {

@@ -5,7 +5,7 @@ vi.mock('./game-settings.service.js', () => ({ getBonusAbuseConfig: vi.fn() }))
 
 import { pool } from '@betting/db'
 import { getBonusAbuseConfig } from './game-settings.service.js'
-import { evaluateBonusEligibility } from './bonus-eligibility.service.js'
+import { evaluateBonusEligibility, isBonusBlocked, type EligibilityFlag } from './bonus-eligibility.service.js'
 
 const mockQuery = vi.mocked(pool.query)
 const mockCfg = vi.mocked(getBonusAbuseConfig)
@@ -43,6 +43,18 @@ describe('evaluateBonusEligibility', () => {
     expect(flags.find(f => f.type === 'ip_bonus')?.count).toBe(1)
   })
 
+  it('flags device_bonus with warn severity', async () => {
+    seed([], [{ player_id: 'p2' }], [], 1)
+    const { flags } = await evaluateBonusEligibility('p1')
+    expect(flags.find(f => f.type === 'device_bonus')?.severity).toBe('warn')
+  })
+
+  it('flags ip_bonus with warn severity', async () => {
+    seed([], [], [{ player_id: 'p3' }], 1)
+    const { flags } = await evaluateBonusEligibility('p1')
+    expect(flags.find(f => f.type === 'ip_bonus')?.severity).toBe('warn')
+  })
+
   it('warns on ip_velocity at the flag threshold', async () => {
     seed([], [], [], 3)
     const { flags } = await evaluateBonusEligibility('p1')
@@ -55,4 +67,28 @@ describe('evaluateBonusEligibility', () => {
     const { flags } = await evaluateBonusEligibility('p1')
     expect(flags.find(f => f.type === 'ip_velocity')?.severity).toBe('block')
   })
+})
+
+describe('isBonusBlocked', () => {
+  it('returns false for an empty flag list', () => {
+    expect(isBonusBlocked([])).toBe(false)
+  })
+
+  it('returns false for an ip_velocity warn flag alone', () => {
+    const flags: EligibilityFlag[] = [{ type: 'ip_velocity', severity: 'warn', message: 'x' }]
+    expect(isBonusBlocked(flags)).toBe(false)
+  })
+
+  it('returns true for an ip_velocity block flag', () => {
+    const flags: EligibilityFlag[] = [{ type: 'ip_velocity', severity: 'block', message: 'x' }]
+    expect(isBonusBlocked(flags)).toBe(true)
+  })
+
+  it.each(['prior_bonus', 'device_bonus', 'ip_bonus'] as const)(
+    'returns true when a %s flag is present, even though its severity is warn',
+    (type) => {
+      const flags: EligibilityFlag[] = [{ type, severity: 'warn', message: 'x' }]
+      expect(isBonusBlocked(flags)).toBe(true)
+    },
+  )
 })

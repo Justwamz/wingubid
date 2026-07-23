@@ -18,6 +18,8 @@ export default function PlayerLayout({ children }: { children: React.ReactNode }
   const [profile, setProfile] = useState<PlayerProfile | null>(null)
   const [balanceFlash, setBalanceFlash] = useState(false)
   const prevBalance = useRef<number | null>(null)
+  const prevBonusRef = useRef<number | null>(null)
+  const [bonusToast, setBonusToast] = useState<string | null>(null)
 
   useEffect(() => {
     if (profile === null) return
@@ -30,6 +32,21 @@ export default function PlayerLayout({ children }: { children: React.ReactNode }
     }
     prevBalance.current = current
   }, [profile])
+
+  useEffect(() => {
+    if (profile === null) return
+    const current = profile.wallet.bonus_balance
+    if (prevBonusRef.current !== null && current > prevBonusRef.current) {
+      setBonusToast('Bonus added to your account!')
+    }
+    prevBonusRef.current = current
+  }, [profile?.wallet.bonus_balance])
+
+  useEffect(() => {
+    if (bonusToast === null) return
+    const t = setTimeout(() => setBonusToast(null), 4000)
+    return () => clearTimeout(t)
+  }, [bonusToast])
 
   useEffect(() => {
     if (!isAuthenticated()) { router.replace('/?login=true'); return }
@@ -140,6 +157,14 @@ export default function PlayerLayout({ children }: { children: React.ReactNode }
           LOGOUT
         </button>
       </nav>
+
+      {/* Bonus toast */}
+      {bonusToast && (
+        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 flex items-center gap-2 bg-game-card border border-violet-500/30 rounded-full px-4 py-2.5 shadow-lg">
+          <Gift size={16} className="text-violet-300" />
+          <span className="text-sm font-semibold text-white">{bonusToast}</span>
+        </div>
+      )}
     </div>
   )
 }

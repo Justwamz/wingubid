@@ -2,7 +2,10 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 
 vi.mock('@betting/db', () => ({ pool: { query: vi.fn(), connect: vi.fn() } }))
 vi.mock('./wallet.service.js', () => ({ grantBonus: vi.fn() }))
-vi.mock('./bonus-eligibility.service.js', () => ({ evaluateBonusEligibility: vi.fn() }))
+vi.mock('./bonus-eligibility.service.js', async () => {
+  const actual = await vi.importActual<typeof import('./bonus-eligibility.service.js')>('./bonus-eligibility.service.js')
+  return { ...actual, evaluateBonusEligibility: vi.fn() }
+})
 vi.mock('./bonus-criteria.service.js', () => ({ playerMatchesCriteria: vi.fn() }))
 
 import { pool } from '@betting/db'
@@ -164,6 +167,23 @@ describe('claimCampaignBonus', () => {
     await expect(claimCampaignBonus(PLAYER_ID, CAMPAIGN_ID, undefined, undefined))
       .rejects.toMatchObject({ code: 'ALREADY_CLAIMED', statusCode: 422 })
     expect(client.release).toHaveBeenCalled()
+  })
+
+  it('rejects with the original error and destroys the connection when ROLLBACK itself rejects', async () => {
+    seedPreChecks([activeCampaign])
+    mockGrant.mockRejectedValueOnce(new Error('boom'))
+    const client = {
+      query: vi.fn()
+        .mockResolvedValueOnce({ rows: [] }) // BEGIN
+        .mockRejectedValueOnce(new Error('rollback failed')), // ROLLBACK
+      release: vi.fn(),
+    }
+    mockConnect.mockResolvedValueOnce(client as never)
+
+    await expect(claimCampaignBonus(PLAYER_ID, CAMPAIGN_ID, undefined, undefined))
+      .rejects.toThrow('boom')
+    expect(client.query).toHaveBeenCalledWith('ROLLBACK')
+    expect(client.release).toHaveBeenCalledWith(expect.anything())
   })
 
   it('rejects a code campaign when no code is provided', async () => {

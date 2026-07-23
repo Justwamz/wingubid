@@ -2,10 +2,8 @@ import net from 'net'
 import { pool } from '@betting/db'
 import { AppError } from '../lib/errors.js'
 import { grantBonus } from './wallet.service.js'
-import { evaluateBonusEligibility } from './bonus-eligibility.service.js'
+import { evaluateBonusEligibility, isBonusBlocked } from './bonus-eligibility.service.js'
 import { playerMatchesCriteria, type Criteria } from './bonus-criteria.service.js'
-
-const BLOCKING_TYPES = new Set(['prior_bonus', 'device_bonus', 'ip_bonus'])
 
 export async function resolveCampaignByCode(code: string): Promise<string | null> {
   const { rows } = await pool.query<{ id: string }>(
@@ -88,8 +86,7 @@ export async function claimCampaignBonus(
   }
 
   const { flags } = await evaluateBonusEligibility(playerId)
-  const blocked = flags.find(f => BLOCKING_TYPES.has(f.type) || (f.type === 'ip_velocity' && f.severity === 'block'))
-  if (blocked) {
+  if (isBonusBlocked(flags)) {
     throw new AppError('NOT_ELIGIBLE', "You're not eligible for this bonus.", 422)
   }
 
@@ -104,14 +101,18 @@ export async function claimCampaignBonus(
       [campaignId, playerId, grantId],
     )
     await client.query('COMMIT')
+    client.release()
     return { amountCents: amount }
   } catch (err) {
-    await client.query('ROLLBACK')
+    try {
+      await client.query('ROLLBACK')
+      client.release()
+    } catch (rollbackErr) {
+      client.release(rollbackErr as Error)
+    }
     if ((err as { code?: string }).code === '23505') {
       throw new AppError('ALREADY_CLAIMED', "You've already claimed this bonus.", 422)
     }
     throw err
-  } finally {
-    client.release()
   }
 }
