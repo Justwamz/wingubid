@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, afterAll } from 'vitest'
+import { describe, it, expect, vi, afterAll, beforeEach } from 'vitest'
 
 vi.mock('../middleware/authenticate.js', () => ({
   authenticate: vi.fn(async (req: { playerId: string }) => { req.playerId = 'player-1' }),
@@ -7,18 +7,26 @@ vi.mock('../services/bonus-claim.service.js', () => ({
   claimCampaignBonus: vi.fn(),
   resolveCampaignByCode: vi.fn(),
 }))
+vi.mock('../services/bonus-eligibility.service.js', async () => {
+  const actual = await vi.importActual<typeof import('../services/bonus-eligibility.service.js')>('../services/bonus-eligibility.service.js')
+  return { ...actual, evaluateBonusEligibility: vi.fn() }
+})
 vi.mock('@betting/db', () => ({ pool: { query: vi.fn() } }))
 
 import { buildServer } from '../server.js'
 import { pool } from '@betting/db'
 import { claimCampaignBonus, resolveCampaignByCode } from '../services/bonus-claim.service.js'
+import { evaluateBonusEligibility } from '../services/bonus-eligibility.service.js'
 
 const mockQuery = vi.mocked(pool.query)
 const mockResolveCode = vi.mocked(resolveCampaignByCode)
+const mockEligibility = vi.mocked(evaluateBonusEligibility)
 const CAMP = '11111111-1111-1111-1111-111111111111'
 
 describe('GET /bonuses/available', () => {
   const app = buildServer(); afterAll(() => app.close())
+  beforeEach(() => { mockEligibility.mockReset(); mockEligibility.mockResolvedValue({ flags: [] }) })
+
   it('lists claimable campaigns', async () => {
     mockQuery.mockResolvedValueOnce({ rows: [{ id: CAMP, key: 'welcome', name: 'Welcome', description: 'x', amount_cents: '5000', claimable: true }] } as never)
     const res = await app.inject({ method: 'GET', url: '/bonuses/available', headers: { Authorization: 'Bearer t' } })
@@ -29,6 +37,14 @@ describe('GET /bonuses/available', () => {
     mockQuery.mockResolvedValueOnce({ rows: [] } as never)
     await app.inject({ method: 'GET', url: '/bonuses/available', headers: { Authorization: 'Bearer t' } })
     expect(mockQuery.mock.calls.at(-1)![0]).toContain("c.reward_kind = 'fixed'")
+  })
+  it('returns an empty list without querying campaigns when the player is abuse-blocked', async () => {
+    mockEligibility.mockResolvedValueOnce({ flags: [{ type: 'device_bonus', severity: 'warn', message: 'shared device' }] })
+    const callsBefore = mockQuery.mock.calls.length
+    const res = await app.inject({ method: 'GET', url: '/bonuses/available', headers: { Authorization: 'Bearer t' } })
+    expect(res.statusCode).toBe(200)
+    expect(res.json()).toEqual({ campaigns: [] })
+    expect(mockQuery.mock.calls.length).toBe(callsBefore)
   })
 })
 

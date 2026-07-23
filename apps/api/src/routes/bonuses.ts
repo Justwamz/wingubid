@@ -5,6 +5,7 @@ import { authenticate } from '../middleware/authenticate.js'
 import { AppError } from '../lib/errors.js'
 import { claimCampaignBonus, resolveCampaignByCode } from '../services/bonus-claim.service.js'
 import { playerMatchesCriteria } from '../services/bonus-criteria.service.js'
+import { evaluateBonusEligibility, isBonusBlocked } from '../services/bonus-eligibility.service.js'
 
 export async function bonusPlayerRoutes(app: FastifyInstance) {
   // Active, in-window campaigns this player has not claimed. `claimable` is the
@@ -12,6 +13,9 @@ export async function bonusPlayerRoutes(app: FastifyInstance) {
   // Code-gated campaigns are excluded here (players must have the code); targeted
   // campaigns are filtered live against the player's criteria match.
   app.get('/bonuses/available', { preHandler: authenticate }, async (req, reply) => {
+    const { flags } = await evaluateBonusEligibility(req.playerId)
+    if (isBonusBlocked(flags)) return reply.send({ campaigns: [] })
+
     const { rows } = await pool.query<{
       id: string; key: string; name: string; description: string | null
       amount_cents: string; criteria: import('../services/bonus-criteria.service.js').Criteria | null; claimable: boolean

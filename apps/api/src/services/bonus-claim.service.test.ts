@@ -2,7 +2,10 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 
 vi.mock('@betting/db', () => ({ pool: { query: vi.fn(), connect: vi.fn() } }))
 vi.mock('./wallet.service.js', () => ({ grantBonus: vi.fn() }))
-vi.mock('./bonus-eligibility.service.js', () => ({ evaluateBonusEligibility: vi.fn() }))
+vi.mock('./bonus-eligibility.service.js', async () => {
+  const actual = await vi.importActual<typeof import('./bonus-eligibility.service.js')>('./bonus-eligibility.service.js')
+  return { ...actual, evaluateBonusEligibility: vi.fn() }
+})
 vi.mock('./bonus-criteria.service.js', () => ({ playerMatchesCriteria: vi.fn() }))
 
 import { pool } from '@betting/db'
