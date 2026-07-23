@@ -74,6 +74,54 @@ describe('POST /admin/campaigns', () => {
     expect(res.statusCode).toBe(409)
     expect(res.json().error.code).toBe('CODE_TAKEN')
   })
+
+  it('creates a deposit_match campaign and returns its id', async () => {
+    mockQuery.mockResolvedValueOnce({ rows: [{ id: CAMPAIGN_ID }] } as never) // insert
+    mockQuery.mockResolvedValueOnce({ rows: [] } as never) // audit
+    const res = await app.inject({ method: 'POST', url: '/admin/campaigns', headers: { Authorization: 'Bearer t' },
+      payload: {
+        key: 'deposit_match_2026', name: 'Deposit Match', type: 'deposit_match', rewardKind: 'deposit_match',
+        matchPercent: 50, maxMatchCents: 100000, minDepositCents: 1000,
+      } })
+    expect(res.statusCode).toBe(200)
+    expect(res.json().id).toBe(CAMPAIGN_ID)
+    const insertCall = mockQuery.mock.calls[mockQuery.mock.calls.length - 2]
+    expect(insertCall[0]).toContain('reward_kind')
+    expect(insertCall[0]).toContain('match_percent')
+    expect(insertCall[0]).toContain('max_match_cents')
+    expect(insertCall[0]).toContain('min_deposit_cents')
+    // Positional order in the INSERT (see campaigns.ts CREATE handler):
+    // [key, name, description, type, amount_cents, expiry_days, starts_at, ends_at,
+    //  created_by, code, criteria, reward_kind, match_percent, max_match_cents, min_deposit_cents]
+    const params = insertCall[1] as unknown[]
+    expect(params[4]).toBeNull() // amount_cents should be null for deposit_match
+    expect(params[11]).toBe('deposit_match') // reward_kind
+    expect(params[12]).toBe(50) // match_percent
+    expect(params[13]).toBe(100000) // max_match_cents
+    expect(params[14]).toBe(1000) // min_deposit_cents
+  })
+
+  it('rejects a deposit_match campaign missing matchPercent', async () => {
+    const res = await app.inject({ method: 'POST', url: '/admin/campaigns', headers: { Authorization: 'Bearer t' },
+      payload: { key: 'deposit_match_2026', name: 'Deposit Match', type: 'deposit_match', rewardKind: 'deposit_match', maxMatchCents: 100000 } })
+    expect(res.statusCode).toBe(400)
+  })
+
+  it('rejects a deposit_match campaign missing maxMatchCents', async () => {
+    const res = await app.inject({ method: 'POST', url: '/admin/campaigns', headers: { Authorization: 'Bearer t' },
+      payload: { key: 'deposit_match_2026', name: 'Deposit Match', type: 'deposit_match', rewardKind: 'deposit_match', matchPercent: 50 } })
+    expect(res.statusCode).toBe(400)
+  })
+
+  it('rejects a deposit_match campaign that also sets a promo code', async () => {
+    const res = await app.inject({ method: 'POST', url: '/admin/campaigns', headers: { Authorization: 'Bearer t' },
+      payload: {
+        key: 'deposit_match_2026', name: 'Deposit Match', type: 'deposit_match', rewardKind: 'deposit_match',
+        matchPercent: 50, maxMatchCents: 100000, code: 'MATCH50',
+      } })
+    expect(res.statusCode).toBe(400)
+    expect(res.json().error.code).toBe('VALIDATION_ERROR')
+  })
 })
 
 describe('POST /admin/campaigns/preview-count', () => {
@@ -84,6 +132,58 @@ describe('POST /admin/campaigns/preview-count', () => {
       payload: { criteria: { depositStatus: 'none' } } })
     expect(res.statusCode).toBe(200)
     expect(res.json().count).toBe(42)
+  })
+})
+
+describe('PUT /admin/campaigns/:id', () => {
+  const app = buildServer(); afterAll(() => app.close())
+
+  it('rejects setting a promo code on a deposit_match campaign', async () => {
+    const res = await app.inject({ method: 'PUT', url: `/admin/campaigns/${CAMPAIGN_ID}`, headers: { Authorization: 'Bearer t' },
+      payload: { rewardKind: 'deposit_match', code: 'MATCH50' } })
+    expect(res.statusCode).toBe(400)
+    expect(res.json().error.code).toBe('VALIDATION_ERROR')
+  })
+
+  it('allows updating a fixed campaign with a code', async () => {
+    mockQuery.mockResolvedValueOnce({ rowCount: 1 } as never) // update
+    mockQuery.mockResolvedValueOnce({ rows: [] } as never) // audit
+    const res = await app.inject({ method: 'PUT', url: `/admin/campaigns/${CAMPAIGN_ID}`, headers: { Authorization: 'Bearer t' },
+      payload: { rewardKind: 'fixed', code: 'WELCOME10' } })
+    expect(res.statusCode).toBe(200)
+    expect(res.json().ok).toBe(true)
+  })
+
+  it('rejects setting a code-only edit on an existing deposit_match campaign (no rewardKind in payload)', async () => {
+    mockQuery.mockResolvedValueOnce({ rows: [{ reward_kind: 'deposit_match' }] } as never) // lookup of persisted reward_kind
+    const queryCallsBefore = mockQuery.mock.calls.length
+    const res = await app.inject({ method: 'PUT', url: `/admin/campaigns/${CAMPAIGN_ID}`, headers: { Authorization: 'Bearer t' },
+      payload: { code: 'FOO' } })
+    expect(res.statusCode).toBe(400)
+    expect(res.json().error.code).toBe('VALIDATION_ERROR')
+    expect(res.json().error.message).toBe('Deposit-match bonuses cannot use a promo code.')
+    // Only the SELECT lookup ran — the UPDATE (and audit) must never have been issued.
+    expect(mockQuery.mock.calls.length).toBe(queryCallsBefore + 1)
+    expect(mockQuery.mock.calls[queryCallsBefore][0]).toMatch(/SELECT reward_kind FROM bonus_campaigns/)
+  })
+
+  it('allows a code-only edit on an existing fixed campaign (no rewardKind in payload)', async () => {
+    mockQuery.mockResolvedValueOnce({ rows: [{ reward_kind: 'fixed' }] } as never) // lookup of persisted reward_kind
+    mockQuery.mockResolvedValueOnce({ rowCount: 1 } as never) // update
+    mockQuery.mockResolvedValueOnce({ rows: [] } as never) // audit
+    const res = await app.inject({ method: 'PUT', url: `/admin/campaigns/${CAMPAIGN_ID}`, headers: { Authorization: 'Bearer t' },
+      payload: { code: 'FOO' } })
+    expect(res.statusCode).toBe(200)
+    expect(res.json().ok).toBe(true)
+  })
+
+  it('allows editing non-code fields on an existing deposit_match campaign without a lookup', async () => {
+    mockQuery.mockResolvedValueOnce({ rowCount: 1 } as never) // update
+    mockQuery.mockResolvedValueOnce({ rows: [] } as never) // audit
+    const res = await app.inject({ method: 'PUT', url: `/admin/campaigns/${CAMPAIGN_ID}`, headers: { Authorization: 'Bearer t' },
+      payload: { name: 'Renamed Deposit Match' } })
+    expect(res.statusCode).toBe(200)
+    expect(res.json().ok).toBe(true)
   })
 })
 

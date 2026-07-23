@@ -16,9 +16,11 @@ vi.mock('./providers/index.js', () => ({
     withdraw: vi.fn(async () => ({ providerRef: 'stub-ref-002' })),
   })),
 }))
+vi.mock('./deposit-match.service.js', () => ({ maybeGrantDepositMatch: vi.fn() }))
 
 import { pool } from '@betting/db'
 import { creditDeposit, settleWithdrawal } from './wallet.service.js'
+import { maybeGrantDepositMatch } from './deposit-match.service.js'
 import { initiateDeposit, confirmDeposit } from './payment.service.js'
 
 const mockQuery = vi.mocked(pool.query)
@@ -37,6 +39,7 @@ beforeEach(() => {
   vi.mocked(creditDeposit).mockReset()
   vi.mocked(settleWithdrawal).mockReset()
   vi.mocked(creditDeposit).mockResolvedValue({ transactionId: 'tx-1', walletId: 'w-1' })
+  vi.mocked(maybeGrantDepositMatch).mockReset()
 })
 
 describe('initiateDeposit', () => {
@@ -175,5 +178,31 @@ describe('confirmDeposit', () => {
     mockConnect.mockResolvedValueOnce(client as any)
     await confirmDeposit('stub-ref-001', true, undefined, { amount: 50000, currency: 'KES' })
     expect(creditDeposit).toHaveBeenCalledOnce()
+  })
+
+  it('grants a deposit-match bonus after a successful deposit commits', async () => {
+    const client = makeMockClient()
+    mockConnect.mockResolvedValueOnce(client as any)
+
+    client.query
+      .mockResolvedValueOnce({ rows: [] } as any) // BEGIN
+      .mockResolvedValueOnce({
+        rows: [{ id: 'pt-1', player_id: 'player-1', amount: 50000, status: 'awaiting_callback' }],
+      } as any)
+      .mockResolvedValueOnce({ rows: [] } as any) // UPDATE status=completed
+      .mockResolvedValueOnce({ rows: [] } as any) // COMMIT
+
+    await confirmDeposit('stub-ref-001', true)
+
+    expect(maybeGrantDepositMatch).toHaveBeenCalledWith('player-1', 50000)
+  })
+
+  it('does not grant a deposit-match bonus when the deposit is declined', async () => {
+    const client = pendingClient()
+    mockConnect.mockResolvedValueOnce(client as any)
+
+    await confirmDeposit('stub-ref-001', false, 'Insufficient funds')
+
+    expect(maybeGrantDepositMatch).not.toHaveBeenCalled()
   })
 })

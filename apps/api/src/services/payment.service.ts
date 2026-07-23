@@ -6,6 +6,7 @@ import { creditDeposit, lockForWithdrawal, settleWithdrawal } from './wallet.ser
 import { calculateTax } from './tax.service.js'
 import { getWithdrawalThreshold } from './game-settings.service.js'
 import { notifyWithdrawal } from './email.service.js'
+import { maybeGrantDepositMatch } from './deposit-match.service.js'
 
 // --- Deposit ----------------------------------------------------------------
 
@@ -104,6 +105,7 @@ export async function confirmDeposit(
   confirmed?: { amount?: number; currency?: string },
 ): Promise<void> {
   const client = await pool.connect()
+  let credited: { playerId: string; amount: number } | null = null
   try {
     await client.query('BEGIN')
 
@@ -148,6 +150,7 @@ export async function confirmDeposit(
 
     if (success) {
       await creditDeposit(client, pt.player_id, Number(pt.amount), pt.id, { providerRef })
+      credited = { playerId: pt.player_id, amount: Number(pt.amount) }
       await client.query(
         `UPDATE payment_transactions SET status = 'completed', updated_at = NOW() WHERE id = $1`,
         [pt.id],
@@ -168,6 +171,7 @@ export async function confirmDeposit(
   } finally {
     client.release()
   }
+  if (credited) await maybeGrantDepositMatch(credited.playerId, credited.amount)
 }
 
 // --- Withdrawal -------------------------------------------------------------
