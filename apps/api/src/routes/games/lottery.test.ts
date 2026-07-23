@@ -20,7 +20,7 @@ describe('POST /games/lottery/tickets', () => {
       method: 'POST',
       url: '/games/lottery/tickets',
       headers: { Authorization: 'Bearer t' },
-      payload: { drawType: 'hourly', pickedNumbers: [1, 2, 3], fundSource: 'bonus' },
+      payload: { drawType: 'hourly', pickedNumbers: [1, 2, 3, 4, 5, 6], fundSource: 'bonus' },
     })
     expect(res.statusCode).toBe(422)
     expect(res.json()).toEqual({
@@ -34,9 +34,61 @@ describe('POST /games/lottery/tickets', () => {
       method: 'POST',
       url: '/games/lottery/tickets',
       headers: { Authorization: 'Bearer t' },
-      payload: { drawType: 'hourly', pickedNumbers: [1, 2, 3] },
+      payload: { drawType: 'hourly', pickedNumbers: [1, 2, 3, 4, 5, 6] },
     })
     expect(res.statusCode).toBe(201)
     expect(buyTicket).toHaveBeenCalledOnce()
+  })
+
+  it('rejects 3 numbers with 400 VALIDATION_ERROR', async () => {
+    const res = await app.inject({
+      method: 'POST',
+      url: '/games/lottery/tickets',
+      headers: { Authorization: 'Bearer t' },
+      payload: { drawType: 'hourly', pickedNumbers: [1, 2, 3] },
+    })
+    expect(res.statusCode).toBe(400)
+    expect(res.json()).toEqual({
+      error: { code: 'VALIDATION_ERROR', message: 'Please pick exactly 6 numbers.' },
+    })
+  })
+
+  it('rejects 7 numbers with 400 VALIDATION_ERROR', async () => {
+    const res = await app.inject({
+      method: 'POST',
+      url: '/games/lottery/tickets',
+      headers: { Authorization: 'Bearer t' },
+      payload: { drawType: 'hourly', pickedNumbers: [1, 2, 3, 4, 5, 6, 7] },
+    })
+    expect(res.statusCode).toBe(400)
+    expect(res.json()).toEqual({
+      error: { code: 'VALIDATION_ERROR', message: 'Please pick exactly 6 numbers.' },
+    })
+  })
+
+  it('rejects a number below 1 with 400 VALIDATION_ERROR', async () => {
+    const res = await app.inject({
+      method: 'POST',
+      url: '/games/lottery/tickets',
+      headers: { Authorization: 'Bearer t' },
+      payload: { drawType: 'hourly', pickedNumbers: [0, 2, 3, 4, 5, 6] },
+    })
+    expect(res.statusCode).toBe(400)
+    expect(res.json()).toEqual({
+      error: { code: 'VALIDATION_ERROR', message: 'Your numbers must be between 1 and 36.' },
+    })
+  })
+
+  it('rejects a number above 36 with 400 VALIDATION_ERROR', async () => {
+    const res = await app.inject({
+      method: 'POST',
+      url: '/games/lottery/tickets',
+      headers: { Authorization: 'Bearer t' },
+      payload: { drawType: 'hourly', pickedNumbers: [1, 2, 3, 4, 5, 37] },
+    })
+    expect(res.statusCode).toBe(400)
+    expect(res.json()).toEqual({
+      error: { code: 'VALIDATION_ERROR', message: 'Your numbers must be between 1 and 36.' },
+    })
   })
 })
