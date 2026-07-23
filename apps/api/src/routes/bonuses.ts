@@ -35,7 +35,10 @@ export async function bonusPlayerRoutes(app: FastifyInstance) {
     return reply.send({ campaigns: out })
   })
 
-  app.post('/bonuses/claim', { preHandler: authenticate }, async (req, reply) => {
+  app.post('/bonuses/claim', {
+    preHandler: authenticate,
+    config: { rateLimit: { max: 5, timeWindow: '1 minute' } },
+  }, async (req, reply) => {
     const parsed = z.object({
       campaignId: z.string().uuid().optional(),
       code: z.string().min(1).max(40).optional(),
