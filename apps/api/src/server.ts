@@ -95,7 +95,7 @@ export function buildServer() {
   })
 
   app.setErrorHandler((err, req, reply) => {
-    // Our own, user-safe errors carry a friendly message already.
+    // Our own, user-safe errors carry a friendly message + code already.
     if (err instanceof AppError) {
       return reply.status(err.statusCode).send({ error: { code: err.code, message: err.message } })
     }
@@ -103,9 +103,16 @@ export function buildServer() {
     if ((err as { validation?: unknown }).validation || (err as { statusCode?: number }).statusCode === 400) {
       return reply.status(400).send({ error: { code: 'VALIDATION_ERROR', message: "Some of the details you entered don't look right. Please check them and try again." } })
     }
+    // Errors carrying an explicit client-error status + code (e.g. the rate
+    // limiter's thrown { statusCode, code, message }): surface them as-is.
+    const status = (err as { statusCode?: number }).statusCode ?? 500
+    const code = (err as { code?: string }).code
+    if (status >= 400 && status < 500 && code) {
+      return reply.status(status).send({ error: { code, message: err.message } })
+    }
     // Anything unexpected: log the real cause, show a calm message.
     req.log.error(err)
-    return reply.status(500).send({ error: { code: 'SERVER_ERROR', message: 'Something went wrong on our end. Please try again in a moment.' } })
+    return reply.status(status >= 500 ? status : 500).send({ error: { code: 'SERVER_ERROR', message: 'Something went wrong on our end. Please try again in a moment.' } })
   })
 
   app.register(healthRoutes)
@@ -162,16 +169,6 @@ export function buildServer() {
   app.register(chatRoutes)
   app.register(adminChatRoutes)
   app.register(providerGameRoutes)
-
-  app.setErrorHandler((error, _req, reply) => {
-    const statusCode = error.statusCode ?? 500
-    reply.status(statusCode).send({
-      error: {
-        code: error.code ?? 'INTERNAL_ERROR',
-        message: statusCode >= 500 ? 'Internal server error' : error.message,
-      },
-    })
-  })
 
   return app
 }
