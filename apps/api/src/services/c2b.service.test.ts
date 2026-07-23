@@ -10,7 +10,7 @@ vi.mock('./deposit-match.service.js', () => ({ maybeGrantDepositMatch: vi.fn() }
 import { pool } from '@betting/db'
 import { creditDeposit } from './wallet.service.js'
 import { maybeGrantDepositMatch } from './deposit-match.service.js'
-import { recordC2bPayment } from './c2b.service.js'
+import { recordC2bPayment, repostC2bPayment } from './c2b.service.js'
 
 const mockConnect = vi.mocked(pool.connect)
 
@@ -65,5 +65,41 @@ describe('recordC2bPayment', () => {
   it('rejects a non-positive amount', async () => {
     await expect(recordC2bPayment({ msisdn: '+254712000111', amount: 0, mpesaReceipt: 'X' }))
       .rejects.toMatchObject({ code: 'INVALID_AMOUNT' })
+  })
+})
+
+describe('repostC2bPayment', () => {
+  it('credits the wallet and grants a deposit match when the phone resolves to a player', async () => {
+    // BEGIN, payment lookup (unresolved), player lookup (match), UPDATE, COMMIT
+    const client = makeMockClient([
+      [],
+      [{ amount: '5000', mpesa_receipt: 'RCPT1', status: 'unresolved' }],
+      [{ id: 'p-1' }],
+      [],
+      [],
+    ])
+    mockConnect.mockResolvedValueOnce(client as any)
+
+    await repostC2bPayment('pay-1', '+254712000111', 'admin-1')
+
+    expect(creditDeposit).toHaveBeenCalledWith(client, 'p-1', 5000, 'c2b-repost:RCPT1', expect.any(Object))
+    expect(maybeGrantDepositMatch).toHaveBeenCalledWith('p-1', 5000)
+  })
+
+  it('does not credit or grant a deposit match when the phone matches no player', async () => {
+    // BEGIN, payment lookup (unresolved), player lookup (none), ROLLBACK
+    const client = makeMockClient([
+      [],
+      [{ amount: '5000', mpesa_receipt: 'RCPT2', status: 'unresolved' }],
+      [],
+      [],
+    ])
+    mockConnect.mockResolvedValueOnce(client as any)
+
+    await expect(repostC2bPayment('pay-2', '+254799999999', 'admin-1'))
+      .rejects.toMatchObject({ code: 'PLAYER_NOT_FOUND' })
+
+    expect(creditDeposit).not.toHaveBeenCalled()
+    expect(maybeGrantDepositMatch).not.toHaveBeenCalled()
   })
 })
