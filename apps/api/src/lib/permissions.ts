@@ -66,6 +66,10 @@ export const PERMISSION_CATALOG: PermissionGroup[] = [
     { key: 'campaigns.view', label: 'View campaigns' },
     { key: 'campaigns.manage', label: 'Create/edit campaigns' },
   ] },
+  { area: 'taxes', label: 'Taxes', permissions: [
+    { key: 'taxes.view', label: 'View tax rules' },
+    { key: 'taxes.edit', label: 'Edit tax rules' },
+  ] },
   { area: 'staff', label: 'Staff', permissions: [
     { key: 'staff.view', label: 'View staff' },
     { key: 'staff.create', label: 'Create staff' },

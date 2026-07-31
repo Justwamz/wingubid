@@ -9,6 +9,7 @@ import { IntegrationsTab } from '@/components/IntegrationsTab'
 import { PaymentsTab } from '@/components/PaymentsTab'
 import { WithdrawalsTab } from '@/components/WithdrawalsTab'
 import { GameSettingsTab } from '@/components/GameSettingsTab'
+import { TaxesTab } from '@/components/TaxesTab'
 import { ReconciliationTab } from '@/components/ReconciliationTab'
 import { ChatModerationTab } from '@/components/ChatModerationTab'
 import { StaffTab } from '@/components/StaffTab'
@@ -511,13 +512,13 @@ const TAB_PERMISSION: Record<string, string> = {
   stats: 'stats.view', promotions: 'promotions.view', payments: 'payments.view',
   integrations: 'integrations.view', users: 'players.view', transactions: 'transactions.view',
   withdrawals: 'withdrawals.view', reconciliation: 'reconciliation.view', chat: 'chat.view',
-  settings: 'settings.view', staff: 'staff.view', bonuses: 'bonuses.view', campaigns: 'campaigns.view',
+  settings: 'settings.view', taxes: 'taxes.view', staff: 'staff.view', bonuses: 'bonuses.view', campaigns: 'campaigns.view',
 }
-const ALL_TABS = ['stats', 'promotions', 'payments', 'integrations', 'users', 'transactions', 'withdrawals', 'reconciliation', 'chat', 'settings', 'staff', 'bonuses', 'campaigns'] as const
+const ALL_TABS = ['stats', 'promotions', 'payments', 'integrations', 'users', 'transactions', 'withdrawals', 'reconciliation', 'chat', 'settings', 'taxes', 'staff', 'bonuses', 'campaigns'] as const
 
 export default function AdminDashboardPage() {
   const router = useRouter()
-  const [tab, setTab] = useState<'stats' | 'promotions' | 'payments' | 'integrations' | 'users' | 'transactions' | 'withdrawals' | 'reconciliation' | 'chat' | 'settings' | 'staff' | 'bonuses' | 'campaigns'>('stats')
+  const [tab, setTab] = useState<'stats' | 'promotions' | 'payments' | 'integrations' | 'users' | 'transactions' | 'withdrawals' | 'reconciliation' | 'chat' | 'settings' | 'taxes' | 'staff' | 'bonuses' | 'campaigns'>('stats')
   const [me, setMe] = useState<Me | null>(null)
   const [stats, setStats] = useState<Stats | null>(null)
   const [loading, setLoading] = useState(true)
@@ -847,6 +848,7 @@ export default function AdminDashboardPage() {
       {tab === 'reconciliation' && <ReconciliationTab />}
       {tab === 'chat' && <ChatModerationTab />}
       {tab === 'settings' && <GameSettingsTab />}
+      {tab === 'taxes' && <TaxesTab />}
       {tab === 'staff' && <StaffTab />}
       {tab === 'bonuses' && <BonusesTab />}
       {tab === 'campaigns' && <CampaignsTab />}
