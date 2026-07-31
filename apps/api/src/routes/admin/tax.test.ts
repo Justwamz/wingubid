@@ -51,16 +51,24 @@ describe('PUT /admin/tax-rules', () => {
     expect(res.statusCode).toBe(200)
     expect(res.json().ok).toBe(true)
     expect(mockQuery).toHaveBeenCalledWith(
-      expect.stringContaining('ON CONFLICT (country, tax_type) DO UPDATE SET rate = EXCLUDED.rate, enabled = EXCLUDED.enabled'),
-      ['KE', 'wager_tax', 15, true],
+      expect.stringContaining('INSERT INTO tax_rules (country, tax_type, rate, enabled, updated_at, updated_by)'),
+      ['KE', 'wager_tax', 15, true, 'admin-1'],
+    )
+    expect(mockQuery).toHaveBeenCalledWith(
+      expect.stringContaining('updated_at = NOW(), updated_by = EXCLUDED.updated_by'),
+      ['KE', 'wager_tax', 15, true, 'admin-1'],
     )
   })
 
   it('403s when the admin lacks taxes.edit', async () => {
     mockGetPermissions.mockResolvedValueOnce(new Set(['taxes.view']))
+    mockQuery.mockClear()
     const res = await app.inject({ method: 'PUT', url: '/admin/tax-rules', headers: { Authorization: 'Bearer t' },
       payload: { country: 'KE', taxType: 'wager_tax', rate: 15, enabled: true } })
     expect(res.statusCode).toBe(403)
+    for (const call of mockQuery.mock.calls) {
+      expect(String(call[0])).not.toContain('INSERT INTO tax_rules')
+    }
   })
 
   it('400s on an invalid country', async () => {
@@ -91,6 +99,14 @@ describe('PUT /admin/tax-rules', () => {
     mockGetPermissions.mockResolvedValueOnce(new Set(['taxes.edit']))
     const res = await app.inject({ method: 'PUT', url: '/admin/tax-rules', headers: { Authorization: 'Bearer t' },
       payload: { country: 'KE', taxType: 'wager_tax', rate: -1, enabled: true } })
+    expect(res.statusCode).toBe(400)
+    expect(res.json().error.code).toBe('VALIDATION_ERROR')
+  })
+
+  it('400s on a rate with more than 2 decimal places', async () => {
+    mockGetPermissions.mockResolvedValueOnce(new Set(['taxes.edit']))
+    const res = await app.inject({ method: 'PUT', url: '/admin/tax-rules', headers: { Authorization: 'Bearer t' },
+      payload: { country: 'KE', taxType: 'wager_tax', rate: 12.345, enabled: true } })
     expect(res.statusCode).toBe(400)
     expect(res.json().error.code).toBe('VALIDATION_ERROR')
   })

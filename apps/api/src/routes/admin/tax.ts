@@ -7,7 +7,7 @@ import { requirePermission } from '../../middleware/requirePermission.js'
 const putBody = z.object({
   country: z.enum(['KE', 'UG', 'TZ', 'RW']),
   taxType: z.enum(['wager_tax', 'withdrawal_tax']),
-  rate: z.number().min(0).max(100),
+  rate: z.number().min(0).max(100).multipleOf(0.01, 'Rate can have at most 2 decimal places.'),
   enabled: z.boolean(),
 })
 
@@ -28,10 +28,12 @@ export async function adminTaxRoutes(app: FastifyInstance) {
     }
     const d = parsed.data
     await pool.query(
-      `INSERT INTO tax_rules (country, tax_type, rate, enabled)
-       VALUES ($1, $2, $3, $4)
-       ON CONFLICT (country, tax_type) DO UPDATE SET rate = EXCLUDED.rate, enabled = EXCLUDED.enabled`,
-      [d.country, d.taxType, d.rate, d.enabled],
+      `INSERT INTO tax_rules (country, tax_type, rate, enabled, updated_at, updated_by)
+       VALUES ($1, $2, $3, $4, NOW(), $5)
+       ON CONFLICT (country, tax_type)
+       DO UPDATE SET rate = EXCLUDED.rate, enabled = EXCLUDED.enabled,
+                     updated_at = NOW(), updated_by = EXCLUDED.updated_by`,
+      [d.country, d.taxType, d.rate, d.enabled, req.adminId],
     )
     return reply.send({ ok: true })
   })
