@@ -42,6 +42,7 @@ import { adminPaymentConfigRoutes } from './routes/admin/payment-configs.js'
 import { adminSmsConfigRoutes } from './routes/admin/sms-config.js'
 import { adminEmailConfigRoutes } from './routes/admin/email-config.js'
 import { adminGameSettingsRoutes } from './routes/admin/game-settings.js'
+import { adminTaxRoutes } from './routes/admin/tax.js'
 import { adminWithdrawalRoutes } from './routes/admin/withdrawals.js'
 import { adminC2bRoutes } from './routes/admin/c2b.js'
 import { adminNotificationRoutes } from './routes/admin/notifications.js'
@@ -158,6 +159,7 @@ export function buildServer() {
   app.register(adminSmsConfigRoutes)
   app.register(adminEmailConfigRoutes)
   app.register(adminGameSettingsRoutes)
+  app.register(adminTaxRoutes)
   app.register(adminWithdrawalRoutes)
   app.register(adminC2bRoutes)
   app.register(adminNotificationRoutes)
